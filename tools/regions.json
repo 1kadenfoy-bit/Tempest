@@ -1,0 +1,6 @@
+{
+  "$comment": "Regions whose base map is cut from the Protomaps daily build and served with the app. Bounding boxes are west, south, east, north.",
+  "regions": [
+    { "id": "sea-to-sky", "name": "North Shore and Sea to Sky", "bbox": [-123.40, 49.25, -122.70, 50.35], "maxzoom": 14 }
+  ]
+}
