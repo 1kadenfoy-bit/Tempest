@@ -1,0 +1,191 @@
+[
+ {
+  "file": "01-Home",
+  "title": "Home: sheet at its minimum, pin on you",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "02-MapLayers",
+  "title": "Map layers selected",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "03-LayerMenu",
+  "title": "Layer menu: built and planned layers",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "04-ModelMenu",
+  "title": "Model selected, with i per source",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "05-ModelInfo",
+  "title": "Model info, from the i",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "06-SheetUp",
+  "title": "Details pulled up: top",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "07-SheetScroll",
+  "title": "Details pulled up: scrolled",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "08-SaveArea",
+  "title": "Save area for offline",
+  "group": "Template",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "09-Tokens",
+  "title": "Tokens",
+  "group": "Elements",
+  "width": 1280,
+  "height": 1000
+ },
+ {
+  "file": "10-Components",
+  "title": "Components",
+  "group": "Elements",
+  "width": 1280,
+  "height": 1500
+ },
+ {
+  "file": "11-DetailElements",
+  "title": "Detail elements",
+  "group": "Elements",
+  "width": 1280,
+  "height": 1260
+ },
+ {
+  "file": "12-AppIcon",
+  "title": "App icon and name",
+  "group": "Elements",
+  "width": 1280,
+  "height": 500
+ },
+ {
+  "file": "13-Precip",
+  "title": "Precipitation: slots filled",
+  "group": "Layer: precipitation",
+  "width": 1280,
+  "height": 1140
+ },
+ {
+  "file": "14-PrecipHome",
+  "title": "Precipitation: home",
+  "group": "Layer: precipitation",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "15-PrecipUp",
+  "title": "Precipitation details: top",
+  "group": "Layer: precipitation",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "16-PrecipScroll",
+  "title": "Precipitation details: scrolled",
+  "group": "Layer: precipitation",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "17-PrecipSettings",
+  "title": "Precipitation: layer settings",
+  "group": "Layer: precipitation",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "18-Temp",
+  "title": "Temperature: slots filled",
+  "group": "Layer: temperature",
+  "width": 1280,
+  "height": 1100
+ },
+ {
+  "file": "19-TempHome",
+  "title": "Temperature: home",
+  "group": "Layer: temperature",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "20-TempUp",
+  "title": "Temperature details: top",
+  "group": "Layer: temperature",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "21-TempScroll",
+  "title": "Temperature details: scrolled",
+  "group": "Layer: temperature",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "22-TempSettings",
+  "title": "Temperature: layer settings",
+  "group": "Layer: temperature",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "23-Wind",
+  "title": "Wind: slots filled",
+  "group": "Layer: wind",
+  "width": 1280,
+  "height": 1100
+ },
+ {
+  "file": "24-WindHome",
+  "title": "Wind: home",
+  "group": "Layer: wind",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "25-WindUp",
+  "title": "Wind details: top",
+  "group": "Layer: wind",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "26-WindScroll",
+  "title": "Wind details: scrolled",
+  "group": "Layer: wind",
+  "width": 390,
+  "height": 844
+ },
+ {
+  "file": "27-WindSettings",
+  "title": "Wind: layer settings",
+  "group": "Layer: wind",
+  "width": 390,
+  "height": 844
+ }
+]
