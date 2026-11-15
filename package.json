@@ -1,0 +1,41 @@
+{
+  "name": "tempest",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "tiles": "node tools/fetch-region.mjs",
+    "prebuild": "node tools/fetch-region.mjs",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "screenshots": "playwright test --trace off",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run screenshots"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.20.5",
+    "eslint": "10.15.0",
+    "globals": "17.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "@openmeteo/weather-map-layer": "0.3.2",
+    "@protomaps/basemaps": "5.7.2",
+    "maplibre-contour": "0.1.1",
+    "maplibre-gl": "6.18.0",
+    "pmtiles": "4.5.0"
+  }
+}
