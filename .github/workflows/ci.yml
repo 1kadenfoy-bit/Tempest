@@ -30,15 +30,16 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      # The regional base map is cut from the Protomaps daily build. Keep it for a
-      # week so CI does not download it on every push.
+      # The base map is cut from the Protomaps daily build. Keep it for a week
+      # so CI does not download it on every push. CI builds only the pieces
+      # the tests use (npm run tiles, run before build).
       - name: Week number
         id: week
         run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
         with:
           path: public/tiles
-          key: tiles-${{ hashFiles('tools/regions.json', 'tools/pmtiles-extract.mjs') }}-${{ steps.week.outputs.week }}
+          key: basemap-ci-${{ hashFiles('tools/regions.json', 'tools/build-basemap.mjs', 'tools/lib/*.mjs') }}-${{ steps.week.outputs.week }}
 
       - name: Build
         run: npm run build

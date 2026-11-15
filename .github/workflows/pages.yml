@@ -37,7 +37,9 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: public/tiles
-          key: tiles-${{ hashFiles('tools/regions.json', 'tools/pmtiles-extract.mjs') }}-${{ steps.week.outputs.week }}
+          key: basemap-all-${{ hashFiles('tools/regions.json', 'tools/build-basemap.mjs', 'tools/lib/*.mjs') }}-${{ steps.week.outputs.week }}
+      - name: Base map for all of BC (about 680 MB in 28 files)
+        run: npm run tiles:all
       - name: Build
         run: npm run build
         env:

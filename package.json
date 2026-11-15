@@ -9,8 +9,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "tiles": "node tools/fetch-region.mjs",
-    "prebuild": "node tools/fetch-region.mjs",
+    "tiles": "node tools/build-basemap.mjs --only=overview,bc-6-10-21,detail-sea-to-sky",
+    "prebuild": "node tools/build-basemap.mjs --only=overview,bc-6-10-21,detail-sea-to-sky",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc",
@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "screenshots": "playwright test --trace off",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run screenshots"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run screenshots",
+    "tiles:all": "node tools/build-basemap.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -32,10 +33,14 @@
     "vitest": "5.1.0"
   },
   "dependencies": {
+    "@mapbox/point-geometry": "1.1.0",
+    "@mapbox/vector-tile": "3.0.0",
+    "@maplibre/vt-pbf": "4.3.3",
     "@openmeteo/weather-map-layer": "0.3.2",
     "@protomaps/basemaps": "5.7.2",
     "maplibre-contour": "0.1.1",
     "maplibre-gl": "6.18.0",
+    "pbf": "5.1.2",
     "pmtiles": "4.5.0"
   }
 }

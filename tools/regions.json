@@ -1,6 +1,37 @@
 {
-  "$comment": "Regions whose base map is cut from the Protomaps daily build and served with the app. Bounding boxes are west, south, east, north.",
-  "regions": [
-    { "id": "sea-to-sky", "name": "North Shore and Sea to Sky", "bbox": [-123.40, 49.25, -122.70, 50.35], "maxzoom": 14 }
+  "$comment": "Base map built by tools/build-basemap.mjs from the Protomaps daily build. Bounding boxes are west, south, east, north.",
+  "basemap": {
+    "bbox": [
+      -139.1,
+      48.2,
+      -114.0,
+      60.0
+    ],
+    "overviewMaxZoom": 8,
+    "maxZoom": 13,
+    "detailZoom": 14,
+    "pieceLimitMB": 95
+  },
+  "detailRegions": [
+    {
+      "id": "sea-to-sky",
+      "name": "North Shore and Sea to Sky",
+      "bbox": [
+        -123.4,
+        49.25,
+        -122.7,
+        50.35
+      ]
+    },
+    {
+      "id": "kootenay-pass",
+      "name": "Kootenay Pass to Whitewater",
+      "bbox": [
+        -117.55,
+        49.0,
+        -116.75,
+        49.7
+      ]
+    }
   ]
 }
