@@ -13,6 +13,7 @@ import { loadBasemap } from '../map/basemap-router';
 import { RangeOrWholeSource } from '../map/range-source';
 import { topoStyle } from '../map/style';
 import { addTerrain } from '../map/terrain';
+import { measureViewportGap } from '../shell/viewport';
 import { applyTokens } from '../theme/tokens';
 
 applyTokens(document);
@@ -39,7 +40,9 @@ function device(): void {
   log(`date: ${new Date().toISOString()}`);
   log(`browser: ${navigator.userAgent}`);
   log(`home-screen app: ${standalone ? 'yes' : 'no'}`);
-  log(`screen: ${innerWidth}x${innerHeight} @${devicePixelRatio}x, safe area top ${cs.paddingTop} bottom ${cs.paddingBottom}`);
+  log(`screen: ${innerWidth}x${innerHeight} of ${screen.width}x${screen.height} @${devicePixelRatio}x, safe area top ${cs.paddingTop} bottom ${cs.paddingBottom}`);
+  const vv = window.visualViewport;
+  log(`layout: inner ${innerWidth}x${innerHeight}, outer ${outerWidth}x${outerHeight}, visual ${vv ? `${Math.round(vv.width)}x${Math.round(vv.height)} at ${Math.round(vv.offsetTop)}` : 'n/a'}, bottom gap measured ${measureViewportGap()} px`);
   log(`webgl2: ${gl2 ? 'yes' : 'no'}`);
   log(`cross-origin isolated: ${String(globalThis.crossOriginIsolated)}; SharedArrayBuffer: ${typeof SharedArrayBuffer !== 'undefined' ? 'yes' : 'no'}`);
   log(`weather fast path: ${fastPathAvailable() ? 'yes' : 'NO (slow path)'}`);

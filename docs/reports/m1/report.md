@@ -66,3 +66,11 @@ Differences from v8, all on purpose:
 1. **Merge pull request #2 (M0).** #1 closed itself when I rewrote `main` to hide your email. #2 has the same content. The M1 pull request follows once M0 is in.
 2. **Try M1 on the phone** and tell me what feels off: sheet drag, panel growth, readout and elevation, map look.
 3. **Which areas you go to,** for trail detail. For example Whistler backcountry, Duffey Lake, Rogers Pass, the Coquihalla.
+
+## Changes after Kaden's first look (Nov 15)
+
+1. **Bands at the top and bottom of the installed app:** the app now measures whether iOS lays it out shorter than the screen, and stretches the map and sheet to the real edges if so. Not verifiable here; the phone test page now reports the measurements ("layout:" line).
+2. **The window row stays when the sheet is pulled up.**
+3. **The sheet tucks away:** drag it down past its usual position and only the handle stays. Tap or drag the handle to bring it back. The map buttons follow it down.
+4. **No page zoom:** pinching only zooms the map. The page's own pinch is blocked, including over open panels.
+5. **North Shore at the finest map level (zoom 15),** Horseshoe Bay to Deep Cove, up to Cypress, Grouse and Seymour. 4.2 MB.

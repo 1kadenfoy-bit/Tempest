@@ -8,7 +8,7 @@
   -114,
   60
  ],
- "maxzoom": 14,
+ "maxzoom": 15,
  "vector_layers": [
   {
    "id": "boundaries",
@@ -711,6 +711,20 @@
     22
    ],
    "bytes": 14006447
+  },
+  {
+   "file": "detail-north-shore.pmtiles",
+   "minzoom": 15,
+   "maxzoom": 15,
+   "tile": null,
+   "bbox": [
+    -123.32,
+    49.29,
+    -122.85,
+    49.5
+   ],
+   "name": "North Shore: Horseshoe Bay to Deep Cove, up to Cypress, Grouse and Seymour",
+   "bytes": 4203645
   },
   {
    "file": "detail-sea-to-sky.pmtiles",

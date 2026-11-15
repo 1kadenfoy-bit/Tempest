@@ -96,6 +96,47 @@ test('sheet pulls up under the top bar and back down', async ({ page }) => {
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'collapsed');
 });
 
+test('sheet tucks away to its handle and comes back', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  const h = await box(page, '#sheet-handle');
+  await page.mouse.move(h.x + h.width / 2, h.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(h.x + h.width / 2, h.y + 150, { steps: 8 });
+  await page.mouse.move(h.x + h.width / 2, h.y + 320, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'tucked');
+  await page.waitForTimeout(400);
+  // Only the handle shows: 28 px plus the 34 px bottom inset.
+  expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 62, 0);
+  // Thumb buttons follow the sheet down.
+  const layers = await box(page, '#map-layers');
+  expect(layers.y + layers.height).toBeCloseTo(844 - 62 - 16, 0);
+  await page.screenshot({ path: 'test-results/screens/m1-sheet-tucked.png' });
+  await page.click('#sheet-handle');
+  await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'collapsed');
+});
+
+test('the window row stays when the sheet is pulled up', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  await page.click('#sheet-handle');
+  await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'up');
+  await expect(page.locator('.slot-window')).toBeVisible();
+});
+
+test('North Shore has the finest map detail (zoom 15)', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  // Lonsdale Quay, North Vancouver.
+  await onMap(page, (m) => m.jumpTo({ center: [-123.081, 49.31], zoom: 15.5 }));
+  await page.waitForTimeout(500);
+  await page.waitForFunction(() => document.body.dataset.idle === 'true');
+  await page.waitForTimeout(1000);
+  expect(await onMap(page, (m) => m.queryRenderedFeatures().length)).toBeGreaterThan(50);
+  await page.screenshot({ path: 'test-results/screens/m1-north-shore-z15.png' });
+});
+
 test('a tap moves the pin; locate-me brings it back', async ({ page }) => {
   await page.goto(HOME);
   await ready(page);

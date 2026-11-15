@@ -1,5 +1,5 @@
 {
-  "$comment": "Base map built by tools/build-basemap.mjs from the Protomaps daily build. Bounding boxes are west, south, east, north.",
+  "$comment": "Base map built by tools/build-basemap.mjs from the Protomaps daily build. Bounding boxes are west, south, east, north. Detail regions add zoom 14 (trails) by default; 'zooms' sets another range.",
   "basemap": {
     "bbox": [
       -139.1,
@@ -13,6 +13,20 @@
     "pieceLimitMB": 95
   },
   "detailRegions": [
+    {
+      "id": "north-shore",
+      "name": "North Shore: Horseshoe Bay to Deep Cove, up to Cypress, Grouse and Seymour",
+      "bbox": [
+        -123.32,
+        49.29,
+        -122.85,
+        49.5
+      ],
+      "zooms": [
+        15,
+        15
+      ]
+    },
     {
       "id": "sea-to-sky",
       "name": "North Shore and Sea to Sky",

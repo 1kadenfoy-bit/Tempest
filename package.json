@@ -9,8 +9,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "tiles": "node tools/build-basemap.mjs --only=overview,bc-6-10-21,detail-sea-to-sky",
-    "prebuild": "node tools/build-basemap.mjs --only=overview,bc-6-10-21,detail-sea-to-sky",
+    "tiles": "node tools/build-basemap.mjs --only=overview,bc-6-10-21,detail-sea-to-sky,detail-north-shore",
+    "prebuild": "node tools/build-basemap.mjs --only=overview,bc-6-10-21,detail-sea-to-sky,detail-north-shore",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc",

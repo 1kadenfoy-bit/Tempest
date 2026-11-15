@@ -46,7 +46,7 @@ export function openPanel(opts: PanelOptions): void {
   // Anchor to the side of the screen the control is on, and grow from it.
   const r = opts.origin.getBoundingClientRect();
   const fromBottom = r.top > window.innerHeight / 2;
-  if (fromBottom) panel.style.bottom = 'calc(var(--bottom-inset) + 16px)';
+  if (fromBottom) panel.style.bottom = 'calc(var(--bottom-inset) + 16px - var(--viewport-gap))';
   else panel.style.top = `${r.top}px`;
   document.body.append(scrim, panel);
   const p = panel.getBoundingClientRect();

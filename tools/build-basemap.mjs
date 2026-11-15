@@ -84,8 +84,9 @@ for (let px = lonToX(BC[0], PZ); px <= lonToX(BC[2], PZ); px++) {
 
 // Zoom-14 detail for mountain regions
 for (const r of cfg.detailRegions) {
-  const found = await planTiles(arc, { bbox: r.bbox, minZoom: DETAIL, maxZoom: DETAIL });
-  await piece(`detail-${r.id}`, { found, bbox: r.bbox }, { group: `detail-${r.id}`, minzoom: DETAIL, maxzoom: DETAIL, tile: null, bbox: r.bbox, name: r.name });
+  const [lo, hi] = r.zooms ?? [DETAIL, DETAIL];
+  const found = await planTiles(arc, { bbox: r.bbox, minZoom: lo, maxZoom: hi });
+  await piece(`detail-${r.id}`, { found, bbox: r.bbox }, { group: `detail-${r.id}`, minzoom: lo, maxzoom: hi, tile: null, bbox: r.bbox, name: r.name });
 }
 
 const total = files.reduce((a, f) => a + f.bytes, 0);
@@ -95,7 +96,7 @@ const manifest = {
   source: url,
   attribution: '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
   bbox: BC,
-  maxzoom: DETAIL,
+  maxzoom: Math.max(DETAIL, ...cfg.detailRegions.map((r) => r.zooms?.[1] ?? DETAIL)),
   vector_layers: (await arc.archive.getMetadata()).vector_layers,
   files: files.map((f) => ({ file: f.file, minzoom: f.minzoom, maxzoom: f.maxzoom, tile: f.tile, ...(f.bbox ? { bbox: f.bbox, name: f.name } : {}), bytes: f.bytes })),
 };

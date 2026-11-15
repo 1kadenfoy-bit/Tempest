@@ -14,10 +14,12 @@ import { closePanel, isOpenFrom, openPanel } from './shell/panel';
 import { createPin, nameNear, pinLabel, type PinState } from './shell/pin';
 import { loadPrefs, savePrefs } from './shell/prefs';
 import { setupSheet } from './shell/sheet';
+import { setupViewport } from './shell/viewport';
 import { applyTokens } from './theme/tokens';
 
 applyTokens(document);
 applyInsetOverride(document, location.search);
+setupViewport(document);
 hydrateIcons(document);
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;

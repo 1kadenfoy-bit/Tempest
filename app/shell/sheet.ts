@@ -1,23 +1,40 @@
-// The bottom sheet: collapsed or pulled up, by tap on the handle or by drag.
-export type SheetState = 'collapsed' | 'up';
+// The bottom sheet has three positions: tucked away (only the handle shows,
+// so the map is clear), collapsed (the scrubber), and pulled up (details).
+// Drag between them, or tap the handle: tucked → collapsed → up → collapsed.
+export type SheetState = 'tucked' | 'collapsed' | 'up';
 
 export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s: SheetState) => void) {
   const scroll = sheet.querySelector<HTMLElement>('.sheet-scroll')!;
+
+  // Visible heights of the two lower positions, from CSS lengths.
+  const probe = (len: string) => {
+    const el = document.createElement('div');
+    el.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;height:${len}`;
+    document.body.append(el);
+    return el;
+  };
+  const collapsedProbe = probe('var(--sheet-collapsed)');
+  const tuckedProbe = probe('var(--sheet-tucked)');
+  /** Distance the sheet is moved down for each position. */
+  const offsets = (): Record<SheetState, number> => ({
+    up: 0,
+    collapsed: Math.max(0, sheet.offsetHeight - collapsedProbe.offsetHeight),
+    tucked: Math.max(0, sheet.offsetHeight - tuckedProbe.offsetHeight),
+  });
+
+  const labels: Record<SheetState, string> = {
+    tucked: 'Show the time and pin details',
+    collapsed: 'Pull up for details',
+    up: 'Lower the details',
+  };
   const set = (s: SheetState) => {
     sheet.dataset.state = s;
     document.body.dataset.sheet = s;
-    handle.setAttribute('aria-label', s === 'up' ? 'Lower the details' : 'Pull up for details');
-    if (s === 'collapsed') scroll.scrollTop = 0;
+    handle.setAttribute('aria-label', labels[s]);
+    if (s !== 'up') scroll.scrollTop = 0;
     onChange(s);
   };
   set('collapsed');
-
-  // How far down the sheet sits when collapsed: its height minus the visible
-  // collapsed part (the --sheet-collapsed length, measured with a probe).
-  const probe = document.createElement('div');
-  probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:var(--sheet-collapsed)';
-  document.body.append(probe);
-  const collapsedOffset = () => Math.max(0, sheet.offsetHeight - probe.offsetHeight);
 
   let startY = 0;
   let startOffset = 0;
@@ -36,7 +53,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     moved = false;
     startY = lastY = e.clientY;
     lastT = e.timeStamp;
-    startOffset = sheet.dataset.state === 'up' ? 0 : collapsedOffset();
+    startOffset = offsets()[sheet.dataset.state as SheetState];
     pointerId = e.pointerId;
   };
   const onMove = (e: PointerEvent) => {
@@ -46,8 +63,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     if (!moved) sheet.setPointerCapture(pointerId);
     moved = true;
     sheet.dataset.dragging = 'true';
-    const max = collapsedOffset();
-    const offset = Math.min(max, Math.max(0, startOffset + dy));
+    const offset = Math.min(offsets().tucked, Math.max(0, startOffset + dy));
     sheet.style.transform = `translateY(${offset}px)`;
     velocity = (e.clientY - lastY) / Math.max(1, e.timeStamp - lastT);
     lastY = e.clientY;
@@ -59,15 +75,27 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     delete sheet.dataset.dragging;
     sheet.style.transform = '';
     if (!moved) return;
-    const max = collapsedOffset();
-    const offset = Math.min(max, Math.max(0, startOffset + (e.clientY - startY)));
-    const goUp = velocity < -0.4 || (velocity <= 0.4 && offset < max / 2);
-    set(goUp ? 'up' : 'collapsed');
+    const o = offsets();
+    const offset = Math.min(o.tucked, Math.max(0, startOffset + (e.clientY - startY)));
+    const order: SheetState[] = ['up', 'collapsed', 'tucked'];
+    let next: SheetState;
+    if (Math.abs(velocity) > 0.5) {
+      // A flick moves one position in its direction.
+      const from = order.indexOf(sheet.dataset.state as SheetState);
+      next = order[Math.min(2, Math.max(0, from + (velocity > 0 ? 1 : -1)))]!;
+    } else {
+      next = order.reduce((best, s) => (Math.abs(o[s] - offset) < Math.abs(o[best] - offset) ? s : best), 'up' as SheetState);
+    }
+    set(next);
   };
   sheet.addEventListener('pointerdown', onDown);
   sheet.addEventListener('pointermove', onMove);
   sheet.addEventListener('pointerup', onUp);
   sheet.addEventListener('pointercancel', onUp);
-  handle.addEventListener('click', () => { if (!moved) set(sheet.dataset.state === 'up' ? 'collapsed' : 'up'); });
+  handle.addEventListener('click', () => {
+    if (moved) return;
+    const s = sheet.dataset.state as SheetState;
+    set(s === 'collapsed' ? 'up' : 'collapsed');
+  });
   return { set, get: () => sheet.dataset.state as SheetState };
 }
