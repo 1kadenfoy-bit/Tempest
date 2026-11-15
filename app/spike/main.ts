@@ -164,10 +164,11 @@ async function pmtilesFromStorage(): Promise<void> {
     const dir = await navigator.storage.getDirectory();
     const fh = await dir.getFileHandle('sea-to-sky.pmtiles', { create: true });
     const t0 = performance.now();
-    const res = await fetch('tiles/sea-to-sky.pmtiles');
+    const res = await fetch('tiles/sea-to-sky.pmtiles', { cache: 'no-store' });
     const w = await fh.createWritable();
     await res.body!.pipeTo(w);
     const file = await fh.getFile();
+    if (file.size < 1e6) throw new Error(`map file arrived truncated (${file.size} bytes)`);
     log(`map file saved to device storage: ${mb(file.size)} in ${ms(performance.now() - t0)}`);
     const archive = new PMTiles(new FileSliceSource(file));
     const h = await archive.getHeader();

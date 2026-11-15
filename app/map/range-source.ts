@@ -12,7 +12,13 @@ export class RangeOrWholeSource implements Source {
   getKey() { return this.url; }
   async getBytes(offset: number, length: number, signal?: AbortSignal): Promise<RangeResponse> {
     if (!this.whole) {
-      const res = await fetch(this.url, { headers: { Range: `bytes=${offset}-${offset + length - 1}` }, ...(signal ? { signal } : {}) });
+      // Bypass the HTTP cache: browsers can mix cached byte ranges with a host's
+      // compressed full copy and return a truncated body (seen on GitHub Pages).
+      const res = await fetch(this.url, {
+        headers: { Range: `bytes=${offset}-${offset + length - 1}` },
+        cache: 'no-store',
+        ...(signal ? { signal } : {}),
+      });
       if (res.status === 206) {
         this.partial = true;
         return { data: await res.arrayBuffer() };
