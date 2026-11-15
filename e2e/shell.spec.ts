@@ -175,6 +175,9 @@ test.describe('shell pixels (map hidden)', () => {
     await hideMap(page);
     await page.click('#sheet-handle');
     await page.waitForTimeout(500);
-    await expect(page).toHaveScreenshot('shell-up.png', live(page));
+    // The pulled-up sheet scrolls, and text in a scrolling layer is smoothed a
+    // little differently on each machine (about 1.4% of pixels, all along text
+    // edges, seen in CI). A layout change moves far more than 3%.
+    await expect(page).toHaveScreenshot('shell-up.png', { ...live(page), maxDiffPixelRatio: 0.03 });
   });
 });
