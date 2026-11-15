@@ -1,31 +1,33 @@
 # Preview hosting
 
-## Recommendation: Cloudflare (free plan), connected to the GitHub repository
+Decided with Kaden, Nov 15, 2026: **GitHub Pages while testing, his home server for the final version.** The app is only static files (no backend), so moving it later is copying a folder.
 
-Why:
+## Now: GitHub Pages
 
-- **It can send the security headers** the weather library's fast path needs, from `public/_headers`. GitHub Pages cannot.
-- **It builds private repositories.** The repo is private, and free GitHub Pages does not host private repos.
-- Every push builds; each branch gets its own preview address, so a milestone can be checked on the phone before it is merged.
-- Free plan: 25 MiB per file (our largest file, the Sea to Sky base map, is 19.9 MB), unlimited bandwidth on static files.
+- `.github/workflows/pages.yml` builds and publishes on every push to `main` and to milestone branches (`claude/**`), so the address always shows the latest work. It skips while the repository is private.
+- Address: `https://1kadenfoy-bit.github.io/Tempest/`, with the phone test page at `…/Tempest/spike.html`.
+- The build is made with `BASE_PATH=/Tempest/`, because Pages serves the site under the repository name.
+- Limits: 1 GB per site, 100 MB per file, about 100 GB of traffic a month. The Sea to Sky base map is 20 MB.
+- **No security headers.** GitHub Pages cannot send the cross-origin isolation headers, so the weather library runs on its slower path. The phone tests show whether that is noticeable. If it is, a small service worker can add the headers in the browser (to try in M1).
+- Making the repository public also settles the GPL question for the starter library and its decoder.
 
-Not settled from the docs (their site is outside this session's network): whether Cloudflare's static hosting answers partial requests. The app no longer depends on it. If the host sends the whole map file, the app keeps it and slices it, and the phone test page reports which happened.
+### Kaden's steps
 
-Runner-up: Netlify (also reads `_headers`, builds private repos).
+1. On github.com, open the Tempest repository → **Settings**.
+2. **General** → scroll to **Danger Zone** → **Change repository visibility** → **Public**, and confirm.
+3. **Pages** (left menu) → under **Build and deployment**, set **Source** to **GitHub Actions**.
+4. Tell Claude. Claude re-runs the publish and sends the address.
 
-## Setup (Kaden, about 10 minutes)
+## Later: the home server
 
-Cloudflare has been moving static sites from "Pages" to "Workers"; the dashboard wording may differ from this.
+A 2016 MacBook Pro running Ubuntu. To decide when the final version is near:
 
-1. Create a free account at cloudflare.com.
-2. In the dashboard: **Workers & Pages → Create → Import a repository** (or **Pages → Connect to Git**).
-3. Connect GitHub and allow access to the `Tempest` repository only.
-4. Build settings:
-   - Framework preset: **None** (or Vite)
-   - Build command: `npm run build`
-   - Output directory: `dist`
-   - Environment variable: `NODE_VERSION` = `22`
-5. Save and deploy. The site address ends in `.pages.dev` or `.workers.dev`.
-6. Send Claude the address. Branch previews appear under the same project.
+- How the phone reaches it away from home: a Cloudflare Tunnel (free, no open router ports) or Tailscale (a VPN app on the phone).
+- A secure (https) address, which home-screen install, offline storage and the fast weather path need. The tunnel provides one.
+- Updates: a small script that pulls the new version from GitHub and rebuilds.
+- It can also hold the whole-BC map files without size limits, and could later process raw ECCC model data as an extra source (architecture: "a home server is an optional extra source").
 
-The build cuts the Sea to Sky base map from the Protomaps daily build each time (about 20 MB, 10 s), so no map file sits in the repository.
+## Considered
+
+- **Cloudflare (free plan, no card):** sends the headers and builds private repositories. Kept as the fallback if GitHub Pages falls short.
+- **Claude Code's own preview:** only exists while a session runs; it can't be installed to the home screen or relied on outdoors.

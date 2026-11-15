@@ -10,6 +10,8 @@ const isolation = {
 };
 
 export default defineConfig({
+  // GitHub Pages serves the app under /Tempest/; local runs use the root.
+  base: process.env.BASE_PATH ?? '/',
   server: { headers: isolation, host: true },
   preview: { headers: isolation, host: true, port: 4173, strictPort: true },
   build: {
