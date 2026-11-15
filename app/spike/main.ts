@@ -9,12 +9,13 @@ import { formatRunAge, nearestStepIndex } from '../../core/time/run-age';
 import { precipitationStrip } from '../../layers/precipitation/fill';
 import { fastPathAvailable, showWeatherFill } from '../../render/openmeteo-starter';
 import { readRegionSeries, type BBox } from '../../render/openmeteo-starter/region-series';
-import { RangeOrWholeSource, baseStyle, registerPmtiles } from '../map/basemap';
+import { loadBasemap } from '../map/basemap-router';
+import { RangeOrWholeSource } from '../map/range-source';
+import { topoStyle } from '../map/style';
 import { addTerrain } from '../map/terrain';
 import { applyTokens } from '../theme/tokens';
 
 applyTokens(document);
-registerPmtiles();
 
 const out = document.getElementById('out')!;
 const log = (line: string) => { out.textContent += line + '\n'; };
@@ -52,7 +53,7 @@ async function storage(): Promise<void> {
   log(`storage: quota ${mb(est.quota ?? 0)}, used ${mb(est.usage ?? 0)}`);
   log(`persisted before: ${String(await s.persisted?.())}; persist() granted: ${String(await s.persist?.())}`);
   log(`opfs: ${typeof s.getDirectory === 'function' ? 'yes' : 'no'}`);
-  const probe = new RangeOrWholeSource(new URL('tiles/sea-to-sky.pmtiles', location.href).href);
+  const probe = new RangeOrWholeSource(new URL('tiles/detail-sea-to-sky.pmtiles', location.href).href);
   await probe.getBytes(0, 127);
   log(`host answers partial requests: ${probe.partial ? 'yes' : 'NO (whole file sent)'}`);
 }
@@ -80,7 +81,8 @@ async function fps(map: maplibregl.Map, label: string): Promise<void> {
 
 async function mapTests(): Promise<maplibregl.Map> {
   const t0 = performance.now();
-  const map = new maplibregl.Map({ container: 'map', style: baseStyle('tiles/sea-to-sky.pmtiles'), center: [-123.05, 49.5], zoom: 9, attributionControl: { compact: true } });
+  const basemap = await loadBasemap(document.baseURI);
+  const map = new maplibregl.Map({ container: 'map', style: topoStyle(basemap.source), center: [-123.05, 49.5], zoom: 9, attributionControl: { compact: true } });
   await new Promise<void>((r) => map.once('load', () => r()));
   const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
   addTerrain(map, firstLabel);
@@ -162,9 +164,9 @@ class FileSliceSource implements Source {
 async function pmtilesFromStorage(): Promise<void> {
   try {
     const dir = await navigator.storage.getDirectory();
-    const fh = await dir.getFileHandle('sea-to-sky.pmtiles', { create: true });
+    const fh = await dir.getFileHandle('detail-sea-to-sky.pmtiles', { create: true });
     const t0 = performance.now();
-    const res = await fetch('tiles/sea-to-sky.pmtiles', { cache: 'no-store' });
+    const res = await fetch('tiles/detail-sea-to-sky.pmtiles', { cache: 'no-store' });
     const w = await fh.createWritable();
     await res.body!.pipeTo(w);
     const file = await fh.getFile();
@@ -175,7 +177,7 @@ async function pmtilesFromStorage(): Promise<void> {
     const t1 = performance.now();
     let n = 0;
     for (let k = 0; k < 200; k++) {
-      const z = 10 + (k % 5);
+      const z = 14;
       const scale = 2 ** z;
       const x = Math.floor(((-123.4 + Math.random() * 0.7 + 180) / 360) * scale);
       const lat = (49.25 + Math.random() * 1.1) * Math.PI / 180;

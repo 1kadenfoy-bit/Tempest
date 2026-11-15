@@ -3,14 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#11151A" />
-    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="theme-color" content="" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tempest" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="apple-touch-icon" href="icon-180.png" />
     <title>Tempest</title>
   </head>
   <body>
     <div id="map" aria-label="Map"></div>
-    <div id="status" class="pill" role="status">Loading map…</div>
-    <a id="spike-link" class="pill" href="spike.html">Phone tests</a>
+
+    <header class="topbar" aria-label="Layer and model">
+      <div class="topbar-main">
+        <div class="slot slot-layer" aria-label="Layer name: filled by the layer">Layer name · from the layer</div>
+        <div class="slot slot-model" aria-label="Model: filled by the layer">Model</div>
+      </div>
+    </header>
+
+    <div class="thumbs">
+      <button class="thumb" id="locate" aria-label="Go to my location" data-icon="locate"></button>
+      <button class="thumb" id="map-layers" aria-label="Map layers" data-icon="layers" aria-haspopup="dialog" aria-expanded="false"></button>
+    </div>
+
+    <section class="sheet" id="sheet" aria-label="Details for the pin" data-state="collapsed">
+      <button class="sheet-handle" id="sheet-handle" aria-label="Pull up for details"><span></span></button>
+      <div class="sheet-scroll" id="sheet-scroll">
+        <div class="sheet-scrubber">
+          <div class="time-row">
+            <div class="time-col">
+              <span class="time-line"><span class="time" id="cursor-time"></span><span class="time-note" id="cursor-note"></span></span>
+              <button class="place" id="place-line" aria-label="Centre the map on the pin"><span data-icon="pin-small"></span><span id="place-text">Finding your location…</span></button>
+            </div>
+          </div>
+          <div class="slot slot-window">Window · summary from the layer</div>
+          <div class="chart-block"><div class="slot slot-chart">Layer chart · drawn by the layer</div></div>
+          <div class="slot slot-week">Week strip · comes with the time cursor</div>
+          <div class="slot slot-legend">Legend · the layer’s data scale</div>
+        </div>
+        <div class="details">
+          <div class="subject" id="subject"><span class="subject-place" id="subject-place"></span><span class="subject-time" id="subject-time"></span></div>
+          <div class="slot slot-details">Details · cards from the layer</div>
+        </div>
+      </div>
+    </section>
+
     <script type="module" src="/app/main.ts"></script>
   </body>
 </html>

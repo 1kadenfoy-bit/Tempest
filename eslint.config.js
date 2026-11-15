@@ -14,7 +14,11 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {
-    files: ['tools/**/*.mjs', '*.config.{js,ts}'],
+    files: ['public/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
+    files: ['tools/**/*.{mjs,ts}', '*.config.{js,ts}'],
     languageOptions: { globals: { ...globals.node } },
   },
   // Core logic has no UI code and never sees a provider or the renderer.

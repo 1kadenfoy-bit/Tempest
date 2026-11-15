@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { appManifest } from './tools/vite-plugin-app-manifest.ts';
 
 // Cross-origin isolation lets the starter weather library share decoded data with
 // its workers (SharedArrayBuffer). The same headers are sent by the preview host
@@ -12,6 +13,7 @@ const isolation = {
 export default defineConfig({
   // GitHub Pages serves the app under /Tempest/; local runs use the root.
   base: process.env.BASE_PATH ?? '/',
+  plugins: [appManifest()],
   server: { headers: isolation, host: true },
   preview: { headers: isolation, host: true, port: 4173, strictPort: true },
   build: {
