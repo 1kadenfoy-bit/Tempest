@@ -50,6 +50,10 @@ jobs:
       - name: Screenshot tests (390 x 844)
         run: npm run screenshots
 
+      - name: Where pixel tests differ
+        if: failure()
+        run: node tools/diff-report.mjs
+
       - name: Keep screenshots
         if: always()
         uses: actions/upload-artifact@v7
