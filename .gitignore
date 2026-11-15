@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+blob-report/
+# Regional map files are cut at build time by tools/fetch-region.mjs
+public/tiles/*.pmtiles
+*.log
+.DS_Store

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # The regional base map is cut from the Protomaps daily build. Keep it for a
+      # week so CI does not download it on every push.
+      - name: Week number
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: public/tiles
+          key: tiles-${{ hashFiles('tools/regions.json', 'tools/pmtiles-extract.mjs') }}-${{ steps.week.outputs.week }}
+
+      - name: Build
+        run: npm run build
+
+      - name: Install browser for screenshot tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Screenshot tests (390 x 844)
+        run: npm run screenshots
+
+      - name: Keep screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: test-results/
+          retention-days: 14
