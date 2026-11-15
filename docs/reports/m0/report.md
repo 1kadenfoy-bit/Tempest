@@ -62,18 +62,20 @@ All of BC's base map to zoom 13 would be about 665 MB.
 | # | Spike | Result |
 | --- | --- | --- |
 | 1 | Open-Meteo map files | Yes, HRDPS is there; partial reads work |
-| 2 | Phone performance | **Needs your phone** |
+| 2 | Phone performance | **60 fps panning with weather** in Safari and from the home screen; weather draws in 0.6–1.2 s |
 | 3 | Download sizes | Done (above) |
 | 4 | Avalanche Canada | Terms read; email drafted for you |
 | 5 | Trail coverage | Partly: 3,820 named paths in the Sea to Sky base map; difficulty tags need a separate extract. The query server refuses this cloud machine |
 | 6 | Probability | Deferred, as planned |
-| 7 | Security headers | Work on desktop; the weather still draws without them. **Phone pending** |
-| 8 | Region file end to end | Works: 48 h of Sea to Sky rain in 292 kB, cut in 7 s, saved and read back. **Phone pending** |
-| 9 | Map file in phone storage | Works on desktop: 200 tile reads in about 0.25 s. **Phone pending** |
+| 7 | Security headers | Not needed: the phone holds 60 fps on the slower path |
+| 8 | Region file end to end | Works on the phone: 48 h of Sea to Sky rain in 292 kB, cut in 3 s, saved and read back |
+| 9 | Map file in phone storage | Works on the phone. 35 GB offered; storage is kept for good only as a home-screen app |
 
 Each has a write-up in `docs/spikes/`.
 
 ## Plan changes I propose
+
+0. **From the phone tests, for M1:** the home-screen app currently starts below the status bar (top safe area 0 px), but v8 runs the map under it. M1 sets the status bar to translucent so the map fills the screen, and uses the real safe-area inset for the top bar. M1 also adds the app manifest and a service worker, which should cut the 3.4 s cold start. Saved areas (M8) should be offered in the home-screen app, where iOS keeps storage for good.
 
 1. **M1: the base map beyond the Sea to Sky** will be cut into regional pieces small enough for the host. The home server can later hold all of BC without limits. Until then the map covers the Sea to Sky only.
 2. **M2: where freezing level and snow line come from.** They aren't in the map files. Options: Open-Meteo's point forecast for the pin (simple, but no map line), or work them out from the pressure-level temperatures in the map files (gives a map line, and reuses M4's method). I lean to the second, and would bring part of M4's terrain work forward.
@@ -83,7 +85,7 @@ Each has a write-up in `docs/spikes/`.
 ## What I need from you
 
 1. **Make the repository public and turn on GitHub Pages** (2 minutes; steps in `docs/hosting.md`). Your Gmail address is visible as the author of the first two commits once it's public.
-2. **Run the phone tests** twice once the site is up: once in Safari, once after Share → Add to Home Screen. Tap Copy results each time and paste them to me.
+2. ~~Run the phone tests~~: done, results in spikes 2, 7, 8 and 9.
 3. **Send the Avalanche Canada email** when it suits you. The draft is in `docs/spikes/04-avalanche-canada.md`.
 4. **Confirm the defaults** taken for you (decisions, section 2): start region North Shore and Sea to Sky; iPhone home-screen web app first; metric; free sources only; no routes in the first build; dark two-peak icon; temperature day/night averages in the TODAY card; layer menu shows only built layers; top bar 8 px below the status bar; the recommended stack; the GPL library behind one seam.
 5. ~~GPL question~~: settled by making the repository public.

@@ -14,7 +14,7 @@ Nov 15, 2026. From `docs/06-decisions-and-open-items.md`, section 5, and the "no
 | Mapterhorn in BC | 30 m everywhere, plus NRCan 2 m lidar ("Canada DTM 2018–2024") in parts; Sea to Sky has zoom 13–15, parts of the Kootenays to 16. Serves `tiles.mapterhorn.com/{z}/{x}/{y}.webp` (Terrarium, 512 px, CORS `*`) | mapterhorn.com, `download_urls.json`, `attribution.json` |
 | Protomaps base map | Daily builds at `build.protomaps.com/YYYYMMDD.pmtiles` (139 GB), max zoom 15, **no CORS**: must be cut and hosted by us | spike 3, headers |
 | Avalanche Canada terms | No API terms; website terms forbid copying without written consent. **API moved** to `avcan-services-api.prod.avalanche.ca` and `weather.prod.avalanche.ca` | spike 4 |
-| iOS storage grant and eviction | Pending Kaden's phone run | spike 9 |
+| iOS storage grant and eviction | 35.4 GB quota offered. `persist()` granted only as a home-screen app, not in Safari | spike 9 |
 | Open-Meteo point API | Answers, but refused this cloud machine all day ("daily limit exceeded", shared address) | spike 1 |
 | Overpass | Connection cut from this cloud machine | spike 5 |
 

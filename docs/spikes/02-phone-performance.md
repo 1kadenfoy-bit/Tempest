@@ -1,6 +1,6 @@
 # Spike 2: phone performance
 
-Nov 15, 2026. **Waiting on Kaden's phone.**
+Nov 15, 2026. **Answered on Kaden's iPhone.**
 
 ## Question
 
@@ -22,6 +22,19 @@ Capacitor is not scheduled, so the WebView question is tested in iPhone Safari a
 
 In headless Chromium on this cloud machine (software graphics, no GPU), every step runs without errors: base map first draw about 1.1 s, weather first draw about 1.8 to 2.0 s. The frame rates here (about 27 fps) say nothing about a phone, because there is no graphics chip.
 
-## Needed
+## Result on the iPhone (Nov 15, 2026)
 
-Kaden runs the page twice (Safari, then from the home screen), taps Copy results and pastes them back. Targets from the architecture: 60 fps panning with one fill, weather first draw under 2 s uncached.
+Kaden's iPhone (390 pt wide, 3x screen; Safari 27 on iOS reporting 18.7), app on GitHub Pages, so **slow path** (not cross-origin isolated).
+
+| Measure | Safari | Home-screen app | Target |
+| --- | --- | --- | --- |
+| Base map, hillshade, contours: first draw | 0.5 s (files cached from an earlier visit) | 3.4 s (cold start) | – |
+| Pan and zoom, no weather | 60 fps, 0 of 391 frames slow, worst 23 ms | 59 fps, 1 of 387 slow, worst 84 ms | 60 fps |
+| HRDPS precipitation: first draw | 0.6 s | 1.2 s | < 2 s uncached |
+| Pan and zoom with weather | 60 fps, 0 of 390 slow, worst 33 ms | 60 fps, 1 of 391 slow, worst 35 ms | 60 fps |
+
+## Consequence
+
+- **The phone holds 60 fps with one weather fill, even on the library's slow path.** The drawing-speed risk the architecture ranked first is retired for this stack.
+- Cross-origin isolation is not needed for now; GitHub Pages is fine for testing. Revisit if wind particles (M7) or the app's own renderer (M3) need it.
+- The 3.4 s cold start as a home-screen app is first-load network time. M1's service worker (needed for install and offline anyway) will cache the app files and should bring it under a second.

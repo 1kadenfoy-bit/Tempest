@@ -1,6 +1,6 @@
 # Spike 7: security headers
 
-Nov 15, 2026. **Desktop answered; iPhone pending.**
+Nov 15, 2026. **Answered.**
 
 ## Question
 
@@ -28,3 +28,7 @@ Host on a service that reads a `_headers` file (see `docs/hosting.md`). If the p
 ## On GitHub Pages (Nov 15, 2026)
 
 The app is hosted on GitHub Pages for testing (see `docs/hosting.md`). As expected it is **not** cross-origin isolated there, and the weather draws on the slow path. In Chromium the weather's first draw took 2.3–2.5 s, against 1.8–2.0 s with the headers. The phone run will show whether panning suffers.
+
+## On the iPhone (Nov 15, 2026)
+
+Neither Safari nor the home-screen app was isolated on GitHub Pages, as expected. **The slow path still held 60 fps** while panning with weather, and the weather's first draw took 0.6 s in Safari and 1.2 s from the home screen (spike 2). So the headers are not needed for this stack on this phone.

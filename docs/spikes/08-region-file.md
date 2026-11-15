@@ -1,6 +1,6 @@
 # Spike 8: a region file end to end
 
-Nov 15, 2026. **Answered in Chromium; iPhone pending.**
+Nov 15, 2026. **Answered, including on the iPhone.**
 
 ## Question
 
@@ -27,6 +27,10 @@ On the phone test page, in the browser itself (the library's decoder runs only i
 | Mt Seymour 48 h total | 37.9 mm |
 
 The size matches the architecture's estimate (about 0.6 MB per variable for 200 × 200 km).
+
+## On the iPhone (Nov 15, 2026)
+
+Safari and the home-screen app both cut the file in **3.0 s**, saved and read it back in about 40 ms, read all 48 steps at the pin in about 1 ms, and got the same 37.9 mm total.
 
 ## Consequence
 

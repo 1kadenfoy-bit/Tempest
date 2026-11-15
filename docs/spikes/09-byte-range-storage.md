@@ -1,6 +1,6 @@
 # Spike 9: byte-range reads from device storage
 
-Nov 15, 2026. **Answered in Chromium; iPhone pending.**
+Nov 15, 2026. **Answered, including on the iPhone.**
 
 ## Question
 
@@ -18,7 +18,19 @@ On the phone test page: streamed the 19.9 MB Sea to Sky base map into OPFS, then
 
 Also tested: a host that ignores partial requests. `RangeOrWholeSource` (`app/map/range-source.ts`) asks for a byte range and, if the host sends the whole file instead, keeps it and slices it. It works with a plain Python server, which does not support ranges. Unit tested both ways.
 
-## Needed from the phone
+## On the iPhone (Nov 15, 2026)
+
+| Measure | Safari | Home-screen app |
+| --- | --- | --- |
+| Storage quota offered | 35.4 GB | 35.4 GB |
+| `persist()` granted | **no** | **yes** |
+| Private file system (OPFS) | works | works |
+| Save 19.9 MB map file | 1.5 s | 1.6 s |
+| 200 random tile reads from device storage | 276 ms | 244 ms |
+
+**As a home-screen app, iOS grants persistent storage**, so saved areas should not be evicted when space runs low; in plain Safari they could be. That answers the open storage question in decision 5 for now. Saved areas should be offered only in the home-screen app, or with a clear warning in Safari.
+
+## Originally needed from the phone
 
 The phone run reports the iOS storage quota, whether `persist()` is granted (most likely only as a home-screen app), whether OPFS writing works, and tile read speed. iOS limits and eviction are the open part of decision 5.
 
