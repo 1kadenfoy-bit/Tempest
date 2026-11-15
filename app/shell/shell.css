@@ -114,6 +114,9 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   overscroll-behavior: contain;
 }
 .sheet[data-state='up'] .sheet-scroll { overflow-y: auto; touch-action: pan-y; }
+/* Phones overlay their scrollbars; keep desktop browsers the same. */
+.sheet-scroll, .panel-body { scrollbar-width: none; }
+.sheet-scroll::-webkit-scrollbar, .panel-body::-webkit-scrollbar { display: none; }
 .sheet-scrubber { display: flex; flex-direction: column; gap: 6px; }
 .time-row { height: var(--touch-min); display: flex; align-items: center; justify-content: space-between; }
 .time-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
