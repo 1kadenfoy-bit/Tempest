@@ -9,7 +9,7 @@ Open https://1kadenfoy-bit.github.io/Tempest/. Remove the old home-screen icon a
 - **The map opens on you.** It asks for your location once. The pin sits on you, labelled "You" with your elevation from the terrain data. If you say no, or there's no fix, the pin goes to the last place you used, labelled "Last pin".
 - **Tap anywhere** to move the pin. The readout and the place line show the nearest named place (a peak first) and its elevation. **Locate-me** brings the pin back to you.
 - **The map covers all of BC.** Zoom in close on the North Shore, the Sea to Sky or the Kootenay Pass to Whitewater area to see trails. Elsewhere the map stops adding detail at a medium-close zoom and just enlarges, so trails don't show there.
-- **Map layers button:** the map panel grows out of it, and the map dims behind it. Hillshade and Contours switch on and off, and the app remembers your choice. Close it with ×, by tapping the dimmed map, or with the button again.
+- **Map layers button:** the map panel grows out of it, and the map dims behind it. Hillshade and Contours switch on and off, and the app remembers your choice. Close it with × or by tapping the dimmed map.
 - **The bottom sheet:** tap or drag the handle to pull it up under the top bar, and drag it down again. Tap the place line ("Your location · 1,316 m") to centre the map on the pin.
 - **Installable:** Share → Add to Home Screen gives the Tempest icon and a full-screen app, with the map running up behind the status bar as in v8. The app's own files are kept on the phone, so it should open faster than the 3.4 s you measured.
 
