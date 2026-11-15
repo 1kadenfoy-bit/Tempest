@@ -20,6 +20,7 @@ const onMap = <T>(page: Page, fn: (m: MapHandle, arg: string) => T, arg = '') =>
 
 async function ready(page: Page) {
   await expect(page.locator('body')).toHaveAttribute('data-pin', 'ready', { timeout: 45_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 90_000 });
   await page.waitForFunction(() => document.body.dataset.idle === 'true');
 }
 
@@ -41,9 +42,62 @@ test('home: shell sits where the v8 template puts it', async ({ page }) => {
   expect(layers.y + layers.height).toBeCloseTo(844 - 336, 0);
   // Pin and readout describe your location with its elevation.
   await expect(page.locator('.pin-readout')).toContainText(/You · [\d,]+ m/);
+  // The readout stays inside the screen.
+  const r = await box(page, '.pin-readout');
+  expect(r.x).toBeGreaterThanOrEqual(8);
+  expect(r.x + r.width).toBeLessThanOrEqual(390 - 8 + 1);
   await expect(page.locator('#place-text')).toContainText(/Your location · [\d,]+ m/);
   await page.screenshot({ path: 'test-results/screens/m1-home.png' });
   expect(errors).toEqual([]);
+});
+
+test('precipitation: top bar, readout, summary and fills', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  await expect(page.locator('#layer-name')).toHaveText('Precipitation');
+  await expect(page.locator('#model-pill')).toHaveText('HRDPS');
+  await expect(page.locator('#run-age')).toHaveText(/^\d\dZ run · \d+ [hd] old$/);
+  await expect(page.locator('.pin-readout strong')).toHaveText(/^(\d+\.\d mm\/h (rain|mixed|snow)|Dry)$/);
+  await expect(page.locator('#summary-sub')).toContainText('–');
+  await expect(page.locator('.legend')).toContainText('0.1 to 6+ mm/h');
+  const fills = await page.evaluate(() => (window as unknown as { tempestMap: { getStyle(): { layers: { id: string }[] } } }).tempestMap.getStyle().layers.map((l) => l.id).filter((id) => id.startsWith('wx-')));
+  expect(fills).toEqual(['wx-precip-rain', 'wx-precip-mixed', 'wx-precip-snow']);
+  await page.screenshot({ path: 'test-results/screens/m2-home.png' });
+});
+
+test('one cursor: drag the chart, Now, play', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  const time = page.locator('#cursor-time');
+  const before = await time.textContent();
+  const c = await box(page, '#chart');
+  // Dragging left moves forward in time; the data slides under the needle.
+  await page.mouse.move(c.x + c.width * 0.8, c.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(c.x + c.width * 0.3, c.y + 30, { steps: 10 });
+  await page.mouse.up();
+  await expect(time).not.toHaveText(before!);
+  await expect(page.locator('#cursor-note')).toHaveText(/^in \d+ h$/);
+  await page.click('#now-button');
+  await expect(page.locator('#cursor-note')).toHaveText(/now|in 1 h|1 h ago/);
+  const t0 = await time.textContent();
+  await page.click('#play-button');
+  await expect(time).not.toHaveText(t0!, { timeout: 3000 });
+  await page.click('#play-button');
+});
+
+test('window control sets the chart span and the week box together', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  const wide = (await box(page, '#week-box')).width;
+  await page.click('#window-button');
+  await page.getByRole('dialog', { name: 'Window' }).getByRole('button', { name: '24 h' }).click();
+  await expect(page.locator('#window-label')).toHaveText('24 h');
+  await page.waitForTimeout(100);
+  expect((await box(page, '#week-box')).width).toBeCloseTo(wide / 2, -1);
+  await page.reload();
+  await ready(page);
+  await expect(page.locator('#window-label')).toHaveText('24 h');
 });
 
 test('map panel grows from its button, switches terrain, and remembers', async ({ page }) => {
@@ -122,7 +176,7 @@ test('the window row stays when the sheet is pulled up', async ({ page }) => {
   await ready(page);
   await page.click('#sheet-handle');
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'up');
-  await expect(page.locator('.slot-window')).toBeVisible();
+  await expect(page.locator('.window-row')).toBeVisible();
 });
 
 test('North Shore has the finest map detail (zoom 15)', async ({ page }) => {
@@ -192,7 +246,10 @@ test.describe('shell pixels (map hidden)', () => {
   });
   // Layout only: live values (place, elevation, times) are checked by the
   // tests above and can differ by a metre between machines.
-  const live = (page: Page) => ({ mask: ['#place-text', '#subject-place', '#cursor-time', '#cursor-note', '#subject-time'].map((s) => page.locator(s)), maxDiffPixelRatio: 0.01 });
+  const live = (page: Page) => ({
+    mask: ['#place-text', '#subject-place', '#cursor-time', '#cursor-note', '#subject-time', '#run-age', '.window-summary', '.chart-block', '.week'].map((s) => page.locator(s)),
+    maxDiffPixelRatio: 0.01,
+  });
   const hideMap = (page: Page) =>
     page.addStyleTag({ content: '#map canvas, .maplibregl-marker, .maplibregl-ctrl { visibility: hidden !important; }' });
 

@@ -4,10 +4,12 @@ import './spike.css';
 import { maplibregl } from '../map/maplibre';
 import { PMTiles, type RangeResponse, type Source } from 'pmtiles';
 import { fetchRunMetadata, stepFileUrl } from '../../adapters/openmeteo-maps/run-metadata';
+import { fetchPointSeries } from '../../adapters/openmeteo-maps/point-series';
+import { comparePrecip, fetchApiSeries } from '../../adapters/openmeteo-maps/point-api';
 import { REGION_FILE_VERSION, decodeRegionFile, encodeRegionFile } from '../../core/region-file/format';
 import { formatRunAge, nearestStepIndex } from '../../core/time/run-age';
-import { precipitationStrip } from '../../layers/precipitation/fill';
-import { fastPathAvailable, showWeatherFill } from '../../render/openmeteo-starter';
+import { precipFills } from '../../layers/precipitation/fill';
+import { fastPathAvailable, showWeatherFills } from '../../render/openmeteo-starter';
 import { readRegionSeries, type BBox } from '../../render/openmeteo-starter/region-series';
 import { loadBasemap } from '../map/basemap-router';
 import { RangeOrWholeSource } from '../map/range-source';
@@ -96,7 +98,7 @@ async function mapTests(): Promise<maplibregl.Map> {
   const run = await fetchRunMetadata('cmc_gem_hrdps');
   const i = Math.max(1, nearestStepIndex(run.validTimes, new Date()));
   const t1 = performance.now();
-  showWeatherFill(map, { fileUrl: stepFileUrl(run.model, run.referenceTime, run.validTimes[i]!), variable: 'precipitation', stepHours: 1, strip: precipitationStrip(), ...(firstLabel ? { beforeLayerId: firstLabel } : {}) });
+  showWeatherFills(map, precipFills(stepFileUrl(run.model, run.referenceTime, run.validTimes[i]!), 1), firstLabel);
   await idle(map);
   log(`HRDPS precipitation first draw: ${ms(performance.now() - t1)} (${formatRunAge(run.referenceTime, new Date())})`);
   await fps(map, 'pan/zoom with weather');
@@ -193,10 +195,32 @@ async function pmtilesFromStorage(): Promise<void> {
   }
 }
 
+/** M2 acceptance: the pin's numbers against Open-Meteo's own point forecast. */
+async function pointCheck(): Promise<void> {
+  const run = await fetchRunMetadata('cmc_gem_hrdps');
+  const places = [
+    { name: 'Mt Seymour', lat: 49.3895, lon: -122.948 },
+    { name: 'Whistler', lat: 50.1163, lon: -122.9574 },
+    { name: 'Vancouver', lat: 49.2827, lon: -123.1207 },
+  ];
+  for (const pl of places) {
+    const app = await fetchPointSeries(run, ['precipitation'], pl.lat, pl.lon);
+    let api;
+    try {
+      api = await fetchApiSeries(run.model, pl.lat, pl.lon);
+    } catch (err) {
+      log(`point check: Open-Meteo refused (${String((err as Error).message)})`);
+      return;
+    }
+    const c = comparePrecip(app.times, app.values.precipitation ?? [], api);
+    log(`point check ${pl.name}: ${c.hours} h compared, ${c.matchedWithin01} within 0.1 mm, max diff ${c.maxDiffMm.toFixed(2)} mm, totals ${c.appTotalMm.toFixed(1)} vs ${c.apiTotalMm.toFixed(1)} mm (map files run ${run.referenceTime.toISOString().slice(11, 13)}Z)`);
+  }
+}
+
 async function runAll(): Promise<void> {
   out.textContent = '';
   const steps: [string, () => Promise<unknown>][] = [
-    ['device', async () => device()], ['storage', storage], ['map', mapTests], ['region file', regionFile], ['map file storage', pmtilesFromStorage],
+    ['device', async () => device()], ['point check', pointCheck], ['storage', storage], ['map', mapTests], ['region file', regionFile], ['map file storage', pmtilesFromStorage],
   ];
   for (const [name, fn] of steps) {
     try { await fn(); } catch (err) { log(`${name}: FAILED (${String(err)})`); }

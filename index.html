@@ -18,8 +18,11 @@
 
     <header class="topbar" aria-label="Layer and model">
       <div class="topbar-main">
-        <div class="slot slot-layer" aria-label="Layer name: filled by the layer">Layer name · from the layer</div>
-        <div class="slot slot-model" aria-label="Model: filled by the layer">Model</div>
+        <div class="layer-title">
+          <span class="layer-name" id="layer-name">Precipitation</span>
+          <span class="run-age" id="run-age">Finding the latest run…</span>
+        </div>
+        <div class="model-pill" id="model-pill" aria-label="Model">HRDPS</div>
       </div>
     </header>
 
@@ -37,11 +40,35 @@
               <span class="time-line"><span class="time" id="cursor-time"></span><span class="time-note" id="cursor-note"></span></span>
               <button class="place" id="place-line" aria-label="Centre the map on the pin"><span data-icon="pin-small"></span><span id="place-text">Finding your location…</span></button>
             </div>
+            <div class="time-controls">
+              <button class="pill-button" id="now-button">Now</button>
+              <button class="round-button" id="play-button" aria-label="Play through time" data-icon="play"></button>
+            </div>
           </div>
-          <div class="slot slot-window">Window · summary from the layer</div>
-          <div class="chart-block"><div class="slot slot-chart">Layer chart · drawn by the layer</div></div>
-          <div class="slot slot-week">Week strip · comes with the time cursor</div>
-          <div class="slot slot-legend">Legend · the layer’s data scale</div>
+          <div class="window-row">
+            <button class="window-button" id="window-button" aria-haspopup="dialog" aria-expanded="false"><span id="window-label">48 h</span><span data-icon="chevron"></span></button>
+            <div class="window-summary" id="window-summary"><span class="summary-main" id="summary-main"></span><span class="summary-sub" id="summary-sub"></span></div>
+          </div>
+          <div class="chart-block">
+            <div class="chart" id="chart" aria-label="Hourly precipitation across the window. Drag to move through time.">
+              <canvas id="chart-canvas"></canvas>
+              <div class="chart-now" id="chart-now"></div>
+              <div class="chart-needle"></div>
+              <div class="chart-status" id="chart-status"></div>
+            </div>
+            <div class="chart-axis" id="chart-axis"></div>
+          </div>
+          <div class="week" id="week">
+            <div class="week-days" id="week-days"></div>
+            <div class="week-track" id="week-track">
+              <div class="week-model" id="week-model"></div>
+              <span class="week-beyond" id="week-beyond">Beyond model</span>
+              <div class="week-dividers" id="week-dividers"></div>
+            </div>
+            <div class="week-now" id="week-now"></div>
+            <div class="week-box" id="week-box" aria-label="Window on the week"></div>
+          </div>
+          <div class="legend-row" id="legend-row"></div>
         </div>
         <div class="details">
           <div class="subject" id="subject"><span class="subject-place" id="subject-place"></span><span class="subject-time" id="subject-time"></span></div>

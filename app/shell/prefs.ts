@@ -6,10 +6,11 @@ export interface Prefs {
   hillshade: boolean;
   contours: boolean;
   lastPin: LastPin | null;
+  windowHours: number;
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, lastPin: null };
+const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48 };
 
 export function loadPrefs(): Prefs {
   try {

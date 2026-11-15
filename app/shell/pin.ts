@@ -30,19 +30,41 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const text = el.querySelector<HTMLElement>('.readout-text')!;
   const marker = new maplibregl.Marker({ element: el, anchor: 'center' });
   let state: PinState | null = null;
+  let value = '';
   let seq = 0;
 
-  const render = () => {
+  const render = (notify = true) => {
     if (!state) return;
     const label = pinLabel(state).short;
     const elev = state.elevation === null ? '…' : formatElevation(state.elevation);
     text.innerHTML = '';
+    if (value) {
+      const strong = document.createElement('strong');
+      strong.textContent = value;
+      text.append(strong, ' ');
+    }
     const muted = document.createElement('span');
     muted.className = 'muted';
     muted.textContent = `${label} · ${elev}`;
     text.append(muted);
-    onChange(state);
+    keepInside();
+    if (notify) onChange(state);
   };
+
+  // Keep the readout on screen when the pin is near an edge.
+  const readout = el.querySelector<HTMLElement>('.pin-readout')!;
+  const BASE = -13;
+  const keepInside = () => {
+    readout.style.left = `${BASE}px`;
+    const r = readout.getBoundingClientRect();
+    if (!r.width) return;
+    const edge = 8;
+    let shift = 0;
+    if (r.right > innerWidth - edge) shift = innerWidth - edge - r.right;
+    if (r.left + shift < edge) shift = edge - r.left;
+    readout.style.left = `${BASE + shift}px`;
+  };
+  map.on('move', keepInside);
 
   const set = (next: Omit<PinState, 'elevation'>) => {
     state = { ...next, elevation: null };
@@ -54,7 +76,9 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
       .catch(() => { /* offline or no terrain: elevation stays unknown */ });
   };
 
-  return { set, get: () => state };
+  /** The layer's value for the pin at the cursor, shown first in bold. */
+  const setValue = (v: string) => { value = v; render(false); };
+  return { set, setValue, get: () => state };
 }
 
 /** Name of the closest labelled feature to a screen point, peaks first. */

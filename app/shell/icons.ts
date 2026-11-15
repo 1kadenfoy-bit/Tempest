@@ -8,6 +8,9 @@ export const icons = {
   layersPanel: svg(22, '<path d="m12 3.5 8 4.5-8 4.5-8-4.5 8-4.5z"/><path d="m4 12 8 4.5 8-4.5"/><path d="m4 16 8 4.5 8-4.5"/>'),
   close: svg(22, '<path d="M6 6l12 12M18 6 6 18"/>'),
   check: svg(16, '<path d="m5 12.5 4.5 4.5L19 7.5"/>', 2.4),
+  play: svg(20, '<path d="M8 5.5v13l11-6.5-11-6.5z"/>', 0, 'currentColor'),
+  pause: svg(20, '<path d="M8 5.5h3v13H8zM13 5.5h3v13h-3z"/>', 0, 'currentColor'),
+  chevron: svg(16, '<path d="m6 9 6 6 6-6"/>', 2.2),
   'pin-small': svg(14, '<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 2),
 } as const;
 
