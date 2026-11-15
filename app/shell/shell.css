@@ -136,9 +136,23 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
   padding: 6px 0; background: var(--sheet);
 }
-.subject-place { font: var(--type-stat); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subject-place { font: var(--type-panel-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .subject-time { font: var(--type-secondary); color: var(--ink-2); white-space: nowrap; }
-.slot-details { height: 320px; border-radius: var(--radius-button-tile-row); }
+.sheet[data-state='up'] .slot-window { display: none; }
+.card {
+  border-radius: var(--radius-button-tile-row);
+  background: var(--card);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.card-headline { flex-direction: row; gap: 12px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; }
+.card-title { font: var(--type-micro); font-weight: 600; letter-spacing: 0.06em; color: var(--ink-2); }
+.card-meta { font: var(--type-caption); color: var(--ink-2); }
+.slot-value { height: 36px; flex: 0 0 auto; }
+.slot-headline { height: 36px; flex: 1 1 0; }
+.slot-card-body { height: 52px; }
+.slot-card-tall { height: 120px; }
 
 /* Grow panels */
 .scrim {

@@ -7,7 +7,7 @@ Decided with Kaden, Nov 15, 2026: **GitHub Pages while testing, his home server 
 - `.github/workflows/pages.yml` builds and publishes on every push to `main` and to milestone branches (`claude/**`), so the address always shows the latest work. It skips while the repository is private.
 - Address: `https://1kadenfoy-bit.github.io/Tempest/`, with the phone test page at `…/Tempest/spike.html`.
 - The build is made with `BASE_PATH=/Tempest/`, because Pages serves the site under the repository name.
-- Limits: 1 GB per site, 100 MB per file, about 100 GB of traffic a month. The Sea to Sky base map is 20 MB.
+- Limits: 1 GB per site, 100 MB per file, about 100 GB of traffic a month. Since M1 the site carries the base map for all of BC: about 680 MB in 28 files, the largest 78 MB (`tools/build-basemap.mjs`). Adding zoom-14 detail regions costs 2 to 10 MB each; zoom 14 for all of BC (about 1.4 GB) would not fit.
 - **No security headers.** GitHub Pages cannot send the cross-origin isolation headers, so the weather library runs on its slower path. The phone tests show whether that is noticeable. If it is, a small service worker can add the headers in the browser (to try in M1).
 - Making the repository public also settles the GPL question for the starter library and its decoder.
 
