@@ -1,0 +1,42 @@
+// Turns design/tokens.json into CSS variables. The only place tokens are read
+// for the interface; components use var(--name).
+import tokens from '../../design/tokens.json';
+
+type ColorToken = { dark?: string; darkAlpha?: number; light?: string; lightAlpha?: number };
+type Theme = 'dark' | 'light';
+
+function withAlpha(hex: string, alpha: number | undefined): string {
+  if (alpha === undefined) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+export function colorToken(name: keyof typeof tokens.color, theme: Theme = 'dark'): string {
+  const t = tokens.color[name] as ColorToken;
+  const hex = (theme === 'dark' ? t.dark : t.light) ?? t.dark ?? '#000000';
+  return withAlpha(hex, theme === 'dark' ? t.darkAlpha : t.lightAlpha);
+}
+
+export function tokenCss(theme: Theme = 'dark'): string {
+  const lines: string[] = [];
+  for (const name of Object.keys(tokens.color) as (keyof typeof tokens.color)[]) {
+    lines.push(`--${name}: ${colorToken(name, theme)};`);
+  }
+  lines.push(`--font-display: ${tokens.font.display};`, `--font-body: ${tokens.font.body};`);
+  for (const [name, t] of Object.entries(tokens.type)) {
+    lines.push(`--type-${name}: ${t.weight} ${t.size}px var(--font-${t.family});`);
+  }
+  for (const [name, r] of Object.entries(tokens.radius)) {
+    lines.push(`--radius-${name}: ${typeof r === 'number' ? `${r}px` : r};`);
+  }
+  lines.push(`--screen-edge: ${tokens.space['screen-edge']}px;`, `--gap-controls: ${tokens.space['gap-controls']}px;`);
+  lines.push(`--touch-min: ${tokens.size['touch-target-min']}px;`, `--thumb: ${tokens.size['thumb-button']}px;`);
+  return `:root{${lines.join('')}}`;
+}
+
+export function applyTokens(doc: Document, theme: Theme = 'dark'): void {
+  const style = doc.createElement('style');
+  style.dataset.tokens = theme;
+  style.textContent = tokenCss(theme);
+  doc.head.prepend(style);
+}

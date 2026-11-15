@@ -1,0 +1,26 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+
+html, body { margin: 0; height: 100%; background: var(--map-ground); color: var(--ink); font: var(--type-body); }
+#map { position: fixed; inset: 0; }
+.pill {
+  position: fixed;
+  left: var(--screen-edge);
+  right: var(--screen-edge);
+  top: calc(env(safe-area-inset-top) + 8px);
+  min-height: var(--touch-min);
+  box-sizing: border-box;
+  padding: 8px 16px;
+  display: flex; align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-top-bar);
+  font: var(--type-secondary);
+  font-variant-numeric: tabular-nums;
+}
+#status b { font: var(--type-body); margin-right: 6px; }
+#spike-link {
+  top: auto; left: auto;
+  bottom: calc(env(safe-area-inset-bottom) + 34px);
+  color: var(--ink); text-decoration: none;
+}
+.maplibregl-ctrl-attrib { font-size: 11px; }
