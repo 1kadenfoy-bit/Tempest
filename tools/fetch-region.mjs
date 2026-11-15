@@ -3,7 +3,7 @@
 // public/tiles. Skips files that already exist. Finds the newest Protomaps daily
 // build, since old builds are removed after a while.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 
 const { regions } = JSON.parse(readFileSync(new URL('./regions.json', import.meta.url), 'utf8'));
 
@@ -17,6 +17,7 @@ async function latestBuild() {
   throw new Error('No Protomaps build found in the last 3 weeks');
 }
 
+mkdirSync('public/tiles', { recursive: true });
 let build;
 for (const r of regions) {
   const out = `public/tiles/${r.id}.pmtiles`;
