@@ -34,3 +34,36 @@ export function formatRelative(target: Date, now: Date): string {
   const text = abs >= 48 ? `${Math.round(abs / 24)} d` : `${abs} h`;
   return hours > 0 ? `in ${text}` : `${text} ago`;
 }
+
+const oneDecimal = new Intl.NumberFormat('en-CA', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/** "2.4 mm/h" (liquid rate). */
+export function formatRate(mmPerHour: number): string {
+  return `${oneDecimal.format(mmPerHour)} mm/h`;
+}
+
+/** "12 mm", or "0.4 mm" below 1. */
+export function formatMm(mm: number): string {
+  return `${mm < 1 && mm > 0 ? oneDecimal.format(mm) : intl.format(Math.round(mm))} mm`;
+}
+
+/** "21 cm", or "0.7 cm" below 1. */
+export function formatCm(cm: number): string {
+  return `${cm < 1 && cm > 0 ? oneDecimal.format(cm) : intl.format(Math.round(cm))} cm`;
+}
+
+/** Chart axis label: "Fri" at midnight, "12 PM" at noon, else "3 PM". */
+export function formatAxisTime(d: Date, timeZone = TIME_ZONE): string {
+  const { weekday, hour, period } = parts(d, timeZone);
+  if (hour === '12' && period === 'AM') return weekday;
+  return `${hour} ${period}`;
+}
+
+/** Week strip day label: "Today", else "Wed 11". */
+export function formatDayLabel(d: Date, today: Date, timeZone = TIME_ZONE): string {
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', day: 'numeric' });
+  const key = (x: Date) => new Intl.DateTimeFormat('en-CA', { timeZone, dateStyle: 'short' }).format(x);
+  if (key(d) === key(today)) return 'Today';
+  const p = fmt.formatToParts(d);
+  return `${p.find((x) => x.type === 'weekday')?.value} ${p.find((x) => x.type === 'day')?.value}`;
+}

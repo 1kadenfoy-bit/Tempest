@@ -20,3 +20,22 @@ describe('formatting', () => {
     expect(formatRelative(new Date('2026-11-16T19:00:00Z'), now)).toBe('in 3 d');
   });
 });
+
+import { formatAxisTime, formatCm, formatDayLabel, formatMm, formatRate } from './format';
+
+describe('amounts and labels', () => {
+  it('formats rates and amounts', () => {
+    expect(formatRate(2.44)).toBe('2.4 mm/h');
+    expect(formatMm(12.4)).toBe('12 mm');
+    expect(formatMm(0.42)).toBe('0.4 mm');
+    expect(formatCm(21.2)).toBe('21 cm');
+  });
+  it('labels the chart axis and week days in BC time', () => {
+    // 07:00 UTC is midnight in BC (UTC-7).
+    expect(formatAxisTime(new Date('2026-11-14T07:00:00Z'))).toBe('Sat');
+    expect(formatAxisTime(new Date('2026-11-14T19:00:00Z'))).toBe('12 PM');
+    const today = new Date('2026-11-15T20:00:00Z');
+    expect(formatDayLabel(new Date('2026-11-15T10:00:00Z'), today)).toBe('Today');
+    expect(formatDayLabel(new Date('2026-11-13T10:00:00Z'), today)).toBe('Fri 13');
+  });
+});
