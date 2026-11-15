@@ -34,19 +34,21 @@ Everything a coding agent needs to build Tempest. Put the contents of this folde
 A starting list. Claude Code will tell you if it hits another.
 
 ```
-*.open-meteo.com
-openmeteo-data-spatial.b-cdn.net
-*.weather.gc.ca
-*.protomaps.com
-*.mapterhorn.com
-*.avalanche.ca
-*.openstreetmap.org
-fonts.googleapis.com
-fonts.gstatic.com
-unpkg.com
-cdn.playwright.dev
-playwright.download.prss.microsoft.com
+api.open-meteo.com
+openmeteo.s3.amazonaws.com
+tiles.mapterhorn.com
+download.mapterhorn.com
+build.protomaps.com
+protomaps.github.io
+api.weather.gc.ca
+geo.weather.gc.ca
+dd.weather.gc.ca
+avcan-services-api.prod.avalanche.ca
+weather.prod.avalanche.ca
+overpass-api.de
 ```
+
+Updated in M0 (Nov 15, 2026): Open-Meteo's map data moved to the S3 bucket, Avalanche Canada's API moved, and the browser fonts come from protomaps.github.io. A personal "tempest" cloud environment with most of these hosts was created during M0.
 
 ## What you will be asked for
 

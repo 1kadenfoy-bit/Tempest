@@ -1,0 +1,26 @@
+# Spike 7: security headers
+
+Nov 15, 2026. **Desktop answered; iPhone pending.**
+
+## Question
+
+Does the starter library's fast path (cross-origin isolation, `SharedArrayBuffer`) work, and how slow is the fallback? The architecture asked this for a Capacitor WebView. Capacitor is not scheduled, so it is tested in iPhone Safari and as a home-screen web app.
+
+## What I tried
+
+- Served the app with `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` (Vite dev and preview servers, and `public/_headers` for the host).
+- Checked every outside server the page reads for CORS headers.
+- Served the same build from a plain server with no headers.
+
+## Result
+
+- With the headers, the page is cross-origin isolated (`crossOriginIsolated === true`) and the fast path is on.
+- Every outside server answers with `Access-Control-Allow-Origin: *`: the Open-Meteo bucket, `tiles.mapterhorn.com`, and `protomaps.github.io` (fonts and icons). So `require-corp` blocks nothing.
+- `build.protomaps.com` does **not** allow other sites. The app never reads it from the browser; the build cuts our own region file from it.
+- Without the headers the weather still draws (the library's slow path), and the status line says "slow path". On the desktop the difference is not visible; on a phone it may show as stutter when panning. The phone test page reports which path ran.
+- iPhone Safari has supported these headers since iOS 15.2. Whether a home-screen web app keeps them is what the phone run will show.
+- GitHub Pages cannot send these headers, and the repository is private, which free GitHub Pages does not host. That rules it out.
+
+## Consequence
+
+Host on a service that reads a `_headers` file (see `docs/hosting.md`). If the phone shows the fast path off as a home-screen app, the library still works, and the app's own renderer (M3) does not depend on it.
