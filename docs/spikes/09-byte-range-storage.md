@@ -21,3 +21,7 @@ Also tested: a host that ignores partial requests. `RangeOrWholeSource` (`app/ma
 ## Needed from the phone
 
 The phone run reports the iOS storage quota, whether `persist()` is granted (most likely only as a home-screen app), whether OPFS writing works, and tile read speed. iOS limits and eviction are the open part of decision 5.
+
+## Finding on GitHub Pages (Nov 15, 2026)
+
+GitHub Pages answers partial requests (206), but sends full downloads gzip-compressed. In Chromium, a full download made after a partial request came back from the browser cache **truncated to 16 kB, with status 200**. Asking with `cache: 'no-store'` returns the full 19.9 MB. Both the map reader and the save path now skip the HTTP cache; the app keeps its own copy in device storage anyway. M3's save flow must do the same and check the saved size.

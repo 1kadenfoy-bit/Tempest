@@ -24,3 +24,7 @@ Does the starter library's fast path (cross-origin isolation, `SharedArrayBuffer
 ## Consequence
 
 Host on a service that reads a `_headers` file (see `docs/hosting.md`). If the phone shows the fast path off as a home-screen app, the library still works, and the app's own renderer (M3) does not depend on it.
+
+## On GitHub Pages (Nov 15, 2026)
+
+The app is hosted on GitHub Pages for testing (see `docs/hosting.md`). As expected it is **not** cross-origin isolated there, and the weather draws on the slow path. In Chromium the weather's first draw took 2.3–2.5 s, against 1.8–2.0 s with the headers. The phone run will show whether panning suffers.
