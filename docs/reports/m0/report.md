@@ -28,7 +28,7 @@ Differences, all expected at M0:
 
 ## Decisions I made
 
-- **Hosting: Cloudflare, free plan,** connected to GitHub. GitHub Pages is out: your repo is private, and Pages can't send the security headers the weather library wants. Steps in `docs/hosting.md`.
+- **Hosting (decided with you after the first draft): GitHub Pages while testing, your home server for the final version.** The repository becomes public, which also settles the GPL question. GitHub Pages can't send the security headers, so the weather draws on the library's slower path; the phone tests will show whether that matters. Steps in `docs/hosting.md`.
 - **Our own map files.** The Protomaps daily build can't be read by other websites, so the build cuts our own region file from it (Sea to Sky, 20 MB). It isn't stored in the repository.
 - **Terrain up to zoom 12 only.** Finer terrain costs about 40 times more space for little visible gain on BC's 30 m data (spike 3).
 - **A fallback for hosts that won't send part of a file.** If the host sends the whole map file, the app keeps it and works anyway.
@@ -75,15 +75,15 @@ Each has a write-up in `docs/spikes/`.
 
 ## Plan changes I propose
 
-1. **M1 needs big-file storage for the base map beyond the Sea to Sky.** Normal hosting caps files at 25 MB. I propose Cloudflare R2 (free up to 10 GB) on the same account, with a BC base map cut into pieces. Until then the map covers the Sea to Sky only.
+1. **M1: the base map beyond the Sea to Sky** will be cut into regional pieces small enough for the host. The home server can later hold all of BC without limits. Until then the map covers the Sea to Sky only.
 2. **M2: where freezing level and snow line come from.** They aren't in the map files. Options: Open-Meteo's point forecast for the pin (simple, but no map line), or work them out from the pressure-level temperatures in the map files (gives a map line, and reuses M4's method). I lean to the second, and would bring part of M4's terrain work forward.
 3. **Consider HRDPS West (1 km) as the main high-resolution model** once M6 adds model choice. It is the finest BC detail available, but it updates only twice a day.
 4. **Pixel-perfect screenshot tests start in M1,** with weather answered from saved test files. M0's live data changes every hour, so its tests check structure instead.
 
 ## What I need from you
 
-1. **Set up hosting** (about 10 minutes): make a free Cloudflare account and connect the Tempest repository. Steps in `docs/hosting.md`. Send me the site address.
+1. **Make the repository public and turn on GitHub Pages** (2 minutes; steps in `docs/hosting.md`). Your Gmail address is visible as the author of the first two commits once it's public.
 2. **Run the phone tests** twice once the site is up: once in Safari, once after Share → Add to Home Screen. Tap Copy results each time and paste them to me.
 3. **Send the Avalanche Canada email** when it suits you. The draft is in `docs/spikes/04-avalanche-canada.md`.
 4. **Confirm the defaults** taken for you (decisions, section 2): start region North Shore and Sea to Sky; iPhone home-screen web app first; metric; free sources only; no routes in the first build; dark two-peak icon; temperature day/night averages in the TODAY card; layer menu shows only built layers; top bar 8 px below the status bar; the recommended stack; the GPL library behind one seam.
-5. **A decision on the GPL question, when convenient.** The library and its file decoder are both GPL-2.0. Keeping the repository private is fine while only you use the app. If you share it with friends, the simple answer is to make the repository public.
+5. ~~GPL question~~: settled by making the repository public.
