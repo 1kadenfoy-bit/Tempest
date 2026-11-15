@@ -149,6 +149,9 @@ test.describe('shell pixels (map hidden)', () => {
   test.beforeEach(async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-11-14T00:00:00Z')); // Fri 5 PM in BC
   });
+  // Layout only: live values (place, elevation, times) are checked by the
+  // tests above and can differ by a metre between machines.
+  const live = (page: Page) => ({ mask: ['#place-text', '#subject-place', '#cursor-time', '#cursor-note', '#subject-time'].map((s) => page.locator(s)), maxDiffPixelRatio: 0.01 });
   const hideMap = (page: Page) =>
     page.addStyleTag({ content: '#map canvas, .maplibregl-marker, .maplibregl-ctrl { visibility: hidden !important; }' });
 
@@ -156,7 +159,7 @@ test.describe('shell pixels (map hidden)', () => {
     await page.goto(HOME);
     await ready(page);
     await hideMap(page);
-    await expect(page).toHaveScreenshot('shell-collapsed.png', { maxDiffPixelRatio: 0.01 });
+    await expect(page).toHaveScreenshot('shell-collapsed.png', live(page));
   });
   test('map panel', async ({ page }) => {
     await page.goto(HOME);
@@ -164,7 +167,7 @@ test.describe('shell pixels (map hidden)', () => {
     await hideMap(page);
     await page.click('#map-layers');
     await page.waitForTimeout(500);
-    await expect(page).toHaveScreenshot('shell-map-panel.png', { maxDiffPixelRatio: 0.01 });
+    await expect(page).toHaveScreenshot('shell-map-panel.png', live(page));
   });
   test('pulled up', async ({ page }) => {
     await page.goto(HOME);
@@ -172,6 +175,6 @@ test.describe('shell pixels (map hidden)', () => {
     await hideMap(page);
     await page.click('#sheet-handle');
     await page.waitForTimeout(500);
-    await expect(page).toHaveScreenshot('shell-up.png', { maxDiffPixelRatio: 0.01 });
+    await expect(page).toHaveScreenshot('shell-up.png', live(page));
   });
 });
