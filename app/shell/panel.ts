@@ -10,6 +10,8 @@ export interface PanelOptions {
   caption: string;
   body: HTMLElement;
   onClose?: () => void;
+  /** Show the icon small, after the title (menus that grow from a title, such as the layer menu). */
+  iconAfterTitle?: boolean;
 }
 
 let current: { close: () => void; origin: HTMLElement } | null = null;
@@ -37,6 +39,14 @@ export function openPanel(opts: PanelOptions): void {
       <button class="panel-close" aria-label="Close">${icons.close}</button>
     </div>`;
   panel.querySelector('.panel-title')!.textContent = opts.title;
+  if (opts.iconAfterTitle) {
+    panel.querySelector('.panel-icon')!.remove();
+    const after = document.createElement('span');
+    after.className = 'panel-title-icon';
+    after.innerHTML = opts.icon;
+    panel.querySelector('.panel-title')!.append(after);
+    panel.querySelector('.panel-header')!.classList.add('panel-header-plain');
+  }
   panel.querySelector('.panel-caption')!.textContent = opts.caption;
   const body = document.createElement('div');
   body.className = 'panel-body';

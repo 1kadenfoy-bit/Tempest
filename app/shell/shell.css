@@ -64,7 +64,9 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   background: var(--surface); border: 1px solid var(--stroke);
   display: flex; align-items: center; gap: var(--gap-controls);
 }
-.layer-title { flex: 1 1 0; min-width: 0; height: var(--touch-min); display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.layer-title { flex: 1 1 0; min-width: 0; height: var(--touch-min); display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 2px; text-align: left; }
+.layer-name-row { display: flex; align-items: center; gap: 4px; max-width: 100%; }
+.layer-chevron { flex: 0 0 auto; display: flex; color: var(--ink); }
 .layer-name { font: var(--type-panel-title); line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .run-age { font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .run-age[data-stale='true'] { color: var(--warning); }
@@ -187,7 +189,15 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .chart-axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 .week { position: relative; height: 42px; touch-action: none; }
 .week-days { position: absolute; left: 0; right: 0; top: 0; height: 14px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); font: var(--type-micro); font-weight: 400; line-height: 14px; color: var(--ink-2); }
-.week-days span { padding-left: 4px; white-space: nowrap; overflow: hidden; }
+.week-days > span { padding-left: 4px; white-space: nowrap; overflow: hidden; display: flex; flex-direction: column; }
+.week-day-extra { color: var(--ink); font-weight: 600; }
+.week-day-extra:empty { display: none; }
+/* A layer with values under each day (temperature) adds a line. */
+.week[data-extras='true'] { height: 56px; }
+.week[data-extras='true'] .week-days { height: 28px; }
+.week[data-extras='true'] .week-track { top: 32px; }
+.week[data-extras='true'] .week-now { top: 30px; }
+.week[data-extras='true'] .week-box { top: 29px; }
 .week-days .today { color: var(--ink); font-weight: 600; }
 .week-track { position: absolute; left: 0; right: 0; top: 18px; height: 22px; border-radius: 6px; overflow: hidden; background: var(--card); }
 .week-model { position: absolute; top: 0; bottom: 0; background: var(--stroke); }
@@ -206,6 +216,17 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .legend-bar { width: 46px; height: 6px; border-radius: 3px; }
 .legend-range { margin-left: auto; }
+/* One continuous scale (temperature): unit, bar, ticks under it. */
+.legend-scale { justify-content: flex-start; gap: 10px; }
+.legend-unit { flex: 0 0 auto; align-self: flex-start; }
+.legend-track { position: relative; flex: 1 1 0; height: 24px; }
+.legend-bar-wide { position: absolute; left: 0; right: 0; top: 2px; width: auto; }
+.legend-ticks { position: absolute; left: 0; right: 0; top: 10px; height: 14px; }
+.legend-ticks span { position: absolute; transform: translateX(-50%); line-height: 14px; }
+.legend-ticks span:last-child { transform: translateX(-30%); }
+/* The window summary as one block (temperature: high and low). */
+.window-summary[data-kind='whole'] { grid-template-columns: 1fr; }
+.window-summary[data-kind='whole'] .summary-half + .summary-half { display: none; }
 .segmented {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px;
   border-radius: var(--radius-button-tile-row); border: 1px solid var(--stroke-strong);
@@ -265,6 +286,8 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 }
 .panel-titles { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .panel-title { font: var(--type-panel-title); }
+.panel-header-plain { padding-left: 16px; }
+.panel-title-icon { display: inline-flex; vertical-align: middle; margin-left: 4px; }
 .panel-caption { font: var(--type-caption); color: var(--ink-2); }
 .panel-close { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
 .panel-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
@@ -281,6 +304,18 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .toggle-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
 .toggle-tile svg { visibility: hidden; }
 .toggle-tile[aria-pressed='true'] svg { visibility: visible; }
+/* Layer menu tiles (03-LayerMenu): colour bars on top, the name below. */
+.layer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }
+.layer-tile {
+  min-height: 72px; padding: 12px; border-radius: var(--radius-button-tile-row);
+  border: 1px solid var(--stroke-strong);
+  display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 14px;
+  text-align: left;
+}
+.layer-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
+.layer-swatches { display: flex; gap: 6px; }
+.layer-swatches span { flex: 1 1 0; height: 6px; border-radius: 3px; }
+.layer-tile-name { font: 600 15px var(--font-body); }
 
 /* Map attribution, kept clear of the sheet */
 .maplibregl-ctrl-bottom-left { bottom: var(--sheet-visible); transition: bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }

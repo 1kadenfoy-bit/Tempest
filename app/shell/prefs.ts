@@ -7,10 +7,12 @@ export interface Prefs {
   contours: boolean;
   lastPin: LastPin | null;
   windowHours: number;
+  /** The condition layer shown. */
+  layer: string;
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48 };
+const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation' };
 
 export function loadPrefs(): Prefs {
   try {

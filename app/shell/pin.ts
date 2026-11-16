@@ -3,6 +3,7 @@
 // is one line; the layer's value fills its first part from M2.
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { formatElevation } from '../../core/units/format';
+import type { Readout } from '../../layers/contract';
 import { elevationAt } from '../map/elevation';
 import { maplibregl } from '../map/maplibre';
 
@@ -30,7 +31,7 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const text = el.querySelector<HTMLElement>('.readout-text')!;
   const marker = new maplibregl.Marker({ element: el, anchor: 'center' });
   let state: PinState | null = null;
-  let value = '';
+  let readoutValue: Readout = { value: '' };
   let seq = 0;
 
   const render = (notify = true) => {
@@ -38,14 +39,16 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
     const label = pinLabel(state).short;
     const elev = state.elevation === null ? '…' : formatElevation(state.elevation);
     text.innerHTML = '';
-    if (value) {
+    const r = readoutValue;
+    if (r.value) {
       const strong = document.createElement('strong');
-      strong.textContent = value;
+      strong.textContent = r.value;
       text.append(strong, ' ');
     }
     const muted = document.createElement('span');
     muted.className = 'muted';
-    muted.textContent = `${label} · ${elev}`;
+    // "feels −6 · You · 1,180 m · 0 °C at 1,150 m"
+    muted.textContent = [r.note, `${label} · ${elev}`, r.extra].filter(Boolean).join(' · ');
     text.append(muted);
     keepInside();
     if (notify) onChange(state);
@@ -79,9 +82,9 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
       .catch(() => { /* offline or no terrain: elevation stays unknown */ });
   };
 
-  /** The layer's value for the pin at the cursor, shown first in bold. */
-  const setValue = (v: string) => { value = v; render(false); };
-  return { set, setValue, get: () => state };
+  /** The layer's readout for the pin at the cursor: the value in bold, its notes muted. */
+  const setReadout = (r: Readout) => { readoutValue = r; render(false); };
+  return { set, setReadout, get: () => state };
 }
 
 /** Name of the closest labelled feature to a screen point, peaks first. */

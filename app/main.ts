@@ -1,6 +1,6 @@
 // Tempest: the shell (map, top bar, pin, thumb buttons, sheet, panels) with
-// the precipitation layer filling its slots. One time cursor drives the map,
-// the chart, the summary and the readout together.
+// one condition layer at a time filling its slots (layers/contract.ts). One
+// time cursor drives the map, the chart, the summary and the readout together.
 import './shell/shell.css';
 import type { LngLatLike } from 'maplibre-gl';
 import { MemoryStore, pointKey } from '../core/store/memory-store';
@@ -11,6 +11,17 @@ import type { PointSeries } from '../core/vocabulary';
 import { MODELS, fetchPointSeries } from '../adapters/openmeteo-maps/point-series';
 import { fetchRunMetadata, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
 import * as precip from '../layers/precipitation';
+import { precipitation } from '../layers/precipitation';
+import { temperature, temperatureRenderStyle } from '../layers/temperature';
+import type { LayerSlots, PinData } from '../layers/contract';
+import { fetchApiRun } from '../adapters/openmeteo-api/point-series';
+import { PROFILE_LEVELS, isAmount } from '../core/vocabulary';
+import { latticeAxis, type NodeGrid } from '../core/temperature/toposcale';
+import { TerrainTemperatureLayer } from '../render/grid-gl/terrain-temperature-layer';
+import { MODEL_SPACING_DEG, ProfileSource } from './data/profile-source';
+import { elevationMosaic, type Mosaic } from './map/elevation';
+import { freezingLineFeatures } from './map/freezing-line';
+import { layerMenuBody } from './shell/layer-menu';
 import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
 import { gridRequest } from '../core/geo/grid-request';
 import type { GridField } from '../core/vocabulary';
@@ -95,10 +106,13 @@ const applyTerrainPrefs = () => {
 // One time cursor for the whole app, and the scrubber that shows it.
 const cursor = new TimeCursor();
 const scrubber = setupScrubber(cursor, prefs.windowHours, (h) => { prefs.windowHours = h; savePrefs(prefs); });
-$('legend-row').append(precip.legend(document));
 setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh(); }, 30_000);
 
-// The layer's data: the latest run, and the pin's series from the same files.
+// The condition layers that work, in menu order. One is shown at a time.
+const LAYERS: LayerSlots[] = [precipitation, temperature];
+let active: LayerSlots = LAYERS.find((l) => l.id === prefs.layer) ?? precipitation;
+
+// The layer's data: the run, and the pin's series.
 const MODEL = 'cmc_gem_hrdps';
 const store = new MemoryStore<PointSeries>(32);
 let run: RunMetadata | null = null;
@@ -106,10 +120,23 @@ let series: PointSeries | null = null;
 /** True when the run comes from a saved area (no signal). */
 let usingSaved = false;
 
-scrubber.setLayer({
-  drawChart: (ctx, w, h, start, end) => precip.drawChart(ctx, w, h, series, start, end),
-  summary: (start, cursor, end) => precip.windowSummary(series, start, cursor, end),
-});
+const pinData = (): PinData => ({ series, elevation: pin?.get()?.elevation ?? null });
+const profiles = new ProfileSource(() => savedAreas);
+
+/** Point the shell's slots at the active layer. */
+function showLayer() {
+  $('layer-name').textContent = active.title;
+  $('legend-row').replaceChildren(active.legend(document));
+  const weekDay = active.weekDay;
+  scrubber.setLayer({
+    chartLabel: active.chartLabel,
+    drawChart: (ctx, w, h, start, end) => active.drawChart(ctx, w, h, pinData(), start, end),
+    summary: (start, c, end) => active.summary(pinData(), start, c, end),
+    ...(weekDay ? { weekDay: (a: Date, b: Date) => weekDay(pinData(), a, b) } : {}),
+  });
+  document.body.dataset.layer = active.id;
+}
+showLayer();
 
 function renderRunAge() {
   if (!run) return;
@@ -122,7 +149,7 @@ function renderRunAge() {
 
 function renderReadout() {
   const i = seriesIndex();
-  pin.setValue(precip.readoutValue(series, i));
+  pin.setReadout(active.readout(pinData(), i));
 }
 
 /** Index into the pin's series for the cursor's step. */
@@ -136,6 +163,8 @@ function seriesIndex(): number {
 // the cursor's step. Fields come from the store first, then the adapter.
 const BC_BOX: [number, number, number, number] = [-139.1, 48.2, -114, 60];
 const precipLayer = new TypedRateLayer('precip-grid', precip.precipRenderStyle());
+const tempLayer = new TerrainTemperatureLayer('temperature-grid', temperatureRenderStyle(), PROFILE_LEVELS.length);
+let mosaic: Mosaic | null = null;
 const fieldStore = new MemoryStore<GridField>(48);
 let fillTimer = 0;
 let mapReady = false;
@@ -153,6 +182,7 @@ async function savedField(r: RunMetadata, t: Date, need: Box | null, overlap: Bo
   for (const a of savedAreas) {
     if (a.weather.model !== r.model || new Date(a.weather.run).getTime() !== r.referenceTime.getTime()) continue;
     if (need ? !covers(a.bbox, need) : !areaOverlaps(a, overlap)) continue;
+    if (!precip.needs.every((v) => a.weather.files[v])) continue; // saved without precipitation
     const w = await loadSavedWeather(a).catch(() => null);
     if (!w) continue;
     const i = w.times.findIndex((x) => x.getTime() === t.getTime());
@@ -187,8 +217,57 @@ async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typ
   }
 }
 
+/** The temperature fill: profiles at a lattice of nodes, terrain per pixel on the GPU. */
+async function updateTemperature(r: RunMetadata, t: Date, mine: number) {
+  const b = map.getBounds();
+  const view: Box = [Math.max(BC_BOX[0], b.getWest()), Math.max(BC_BOX[1], b.getSouth()), Math.min(BC_BOX[2], b.getEast()), Math.min(BC_BOX[3], b.getNorth())];
+  if (view[0] >= view[2] || view[1] >= view[3]) { tempLayer.setProfiles(null); return; }
+  const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
+  const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t)]);
+  if (mine !== fillSeq || active.id !== 'temperature') return;
+  if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
+  if (!grid) {
+    tempLayer.setProfiles(null);
+    setFreezingLine(null);
+    scrubber.setStatus(usingSaved ? 'Temperature is not saved for this area' : 'Temperature for this view is not available');
+    return;
+  }
+  tempLayer.setProfiles(packLattice(grid));
+  setFreezingLine(grid);
+  document.body.dataset.fill = 'ready';
+  // The next hour ahead of time (instant when the point API answered).
+  const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
+  const next = cursor.allSteps[i + 1];
+  if (next) void profiles.nodeGrid(r, lattice, next).catch(() => undefined);
+}
+
+function packLattice(grid: NodeGrid) {
+  const nl = PROFILE_LEVELS.length;
+  const data = new Float32Array(grid.profiles.length * nl * 2);
+  grid.profiles.forEach((p, n) => {
+    for (let k = 0; k < nl; k++) { data[(n * nl + k) * 2] = p.gh[k]!; data[(n * nl + k) * 2 + 1] = p.temp[k]!; }
+  });
+  return { lons: grid.lons, lats: grid.lats, levels: nl, data };
+}
+
+/** The dashed 0 °C line, labelled with its height, from the same profiles and terrain as the fill. */
+function setFreezingLine(grid: NodeGrid | null) {
+  const src = map.getSource('freezing-line') as maplibregl.GeoJSONSource | undefined;
+  const data = grid && mosaic ? freezingLineFeatures(grid, mosaic) : { type: 'FeatureCollection' as const, features: [] };
+  src?.setData(data);
+}
+
 async function updateFills() {
   if (!run || !cursor.time || !mapReady) return;
+  if (active.id === 'temperature') {
+    precipLayer.setFields([]);
+    tempLayer.visible = true;
+    await updateTemperature(run, cursor.time, ++fillSeq).catch((err) => console.error(err));
+    return;
+  }
+  tempLayer.visible = false;
+  setFreezingLine(null);
   const b = map.getBounds();
   const req = gridRequest([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], map.getZoom(), BC_BOX);
   if (!req) { precipLayer.setFields([]); return; }
@@ -224,9 +303,24 @@ function savedRun(): RunMetadata | null {
   return { model: a.weather.model, completed: true, referenceTime: ref, lastModified: new Date(a.savedAt), validTimes: [ref, ...a.weather.validTimes.map((t) => new Date(t))], variables: [] };
 }
 
+/**
+ * The run to show: the map files' newest, unless the point API still serves
+ * an older one; then that older run (its map files stay online), so the map
+ * and the pin always show the same run.
+ */
+async function sharedRun(latest: RunMetadata): Promise<RunMetadata> {
+  const api = await Promise.race([
+    fetchApiRun(latest.model).catch(() => null),
+    new Promise<null>((res) => setTimeout(() => res(null), 4000)),
+  ]);
+  if (!api || api.getTime() >= latest.referenceTime.getTime()) return latest;
+  const shift = latest.referenceTime.getTime() - api.getTime();
+  return { ...latest, referenceTime: api, validTimes: latest.validTimes.map((t) => new Date(t.getTime() - shift)) };
+}
+
 async function loadRun() {
   try {
-    const next = await fetchRunMetadata(MODEL);
+    const next = await sharedRun(await fetchRunMetadata(MODEL));
     usingSaved = false;
     const changed = !run || next.referenceTime.getTime() !== run.referenceTime.getTime();
     run = next;
@@ -264,7 +358,8 @@ let seriesSeq = 0;
 async function loadSeries() {
   const p = pin.get();
   if (!run || !p) return;
-  const key = pointKey('openmeteo-maps', run.model, run.referenceTime, precip.needs, p.lat, p.lng);
+  const layer = active;
+  const key = pointKey(layer.id, run.model, run.referenceTime, layer.pinNeeds, p.lat, p.lng);
   const cached = store.get(key);
   const mine = ++seriesSeq;
   if (cached) {
@@ -274,12 +369,16 @@ async function loadSeries() {
     scrubber.setStatus('Loading the pin’s forecast…');
     renderReadout();
     try {
-      const s = (usingSaved ? await savedSeries(run, p.lat, p.lng) : null) ?? await fetchPointSeries(run, precip.needs, p.lat, p.lng);
+      const r = run;
+      const s = layer.id === 'temperature'
+        // Partial series arrive while the slow path (map files) reads hour by hour.
+        ? await profiles.pinSeries(r, p.lat, p.lng, (part) => { if (mine === seriesSeq) { series = part; renderReadout(); scrubber.refresh(); } })
+        : (usingSaved ? await savedSeries(r, p.lat, p.lng) : null) ?? await fetchPointSeries(r, precip.needs, p.lat, p.lng);
       store.put(key, s);
       if (mine !== seriesSeq) return;
       series = s;
     } catch (err) {
-      const s = await savedSeries(run, p.lat, p.lng);
+      const s = layer.id === 'precipitation' ? await savedSeries(run, p.lat, p.lng) : null;
       if (mine !== seriesSeq) return;
       if (s) {
         series = s;
@@ -295,12 +394,14 @@ async function loadSeries() {
   }
   scrubber.setStatus('');
   renderReadout();
+  scrubber.refresh();
   document.body.dataset.series = 'ready';
 }
 /** The pin's series from a saved area's grids (same run), for use without signal. */
 async function savedSeries(r: RunMetadata, lat: number, lng: number): Promise<PointSeries | null> {
   for (const a of savedAreas) {
     if (!areaContains(a, lng, lat) || new Date(a.weather.run).getTime() !== r.referenceTime.getTime()) continue;
+    if (!precip.needs.every((v) => a.weather.files[v])) continue;
     const w = await loadSavedWeather(a).catch(() => null);
     if (!w) continue;
     // The nearest model cell, as online (and as Open-Meteo's point forecast).
@@ -323,6 +424,9 @@ const renderPlace = (p: PinState) => {
   $('place-line').setAttribute('aria-label', `Centre the map on ${label}`);
   $('subject-place').textContent = text;
   document.body.dataset.pin = p.elevation === null ? 'pending' : 'ready';
+  // Temperature is read at the pin's ground height: refresh once it is known.
+  renderReadout();
+  scrubber.refresh();
   // A new place: fetch its series once the pin settles.
   const where = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
   if (where !== lastPlace) {
@@ -333,7 +437,7 @@ const renderPlace = (p: PinState) => {
 };
 let lastPlace = '';
 let seriesTimer = 0;
-const pin = createPin(map, renderPlace);
+const pin: ReturnType<typeof createPin> = createPin(map, renderPlace);
 const rememberPin = (p: { lng: number; lat: number; name: string | null }) => {
   prefs.lastPin = { lng: p.lng, lat: p.lat, label: p.name ?? '' };
   savePrefs(prefs);
@@ -383,6 +487,34 @@ map.on('click', (e) => {
 // Sheet
 sheetCtl = setupSheet(sheetEl, $('sheet-handle'), () => undefined);
 
+// Layer menu (03-LayerMenu): grows from the layer name; built layers only.
+const layerBtn = $('layer-button');
+function setActive(l: LayerSlots) {
+  if (l === active) return;
+  active = l;
+  prefs.layer = l.id;
+  savePrefs(prefs);
+  series = null;
+  document.body.dataset.fill = '';
+  document.body.dataset.series = '';
+  showLayer();
+  renderReadout();
+  void updateFills();
+  void loadSeries();
+}
+layerBtn.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('#run-age') && document.body.dataset.run === 'error') { void loadRun(); return; }
+  if (isOpenFrom(layerBtn)) { closePanel(); return; }
+  openPanel({
+    origin: layerBtn,
+    icon: icons.chevronUp,
+    iconAfterTitle: true,
+    title: 'Condition layer',
+    caption: 'One condition layer at a time',
+    body: layerMenuBody(LAYERS, active.id, (l) => { closePanel(); setActive(l); }),
+  });
+});
+
 // Map panel
 const layersBtn = $('map-layers');
 layersBtn.addEventListener('click', () => {
@@ -404,9 +536,15 @@ layersBtn.addEventListener('click', () => {
         const r = run;
         openSaveMode(map, {
           modelHours: Math.round((r.validTimes[r.validTimes.length - 1]!.getTime() - Date.now()) / 3_600_000),
+          layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: l.saveNeeds.length })),
+          initial: active.id,
           basemapBytes: (bb) => basemap.storedBytes(tilesInBox(bb, 0, 15)),
           save: async (choice, onProgress) => {
-            await saveArea({ ...choice, run: r, variables: precip.needs, basemap, style: map.getStyle(), onProgress: (p) => onProgress(progressText(p)) });
+            const chosen = LAYERS.filter((l) => choice.layers.includes(l.id));
+            // Amounts need the per-step conversion; plain values (profiles) do not.
+            const amounts = [...new Set(chosen.flatMap((l) => l.saveNeeds.filter(isAmount)))];
+            const plain = [...new Set(chosen.flatMap((l) => l.saveNeeds.filter((v) => !isAmount(v))))];
+            await saveArea({ bbox: choice.bbox, hours: choice.hours, run: r, variables: amounts, plainVariables: plain, basemap, style: map.getStyle(), onProgress: (p) => onProgress(progressText(p)) });
             for (const old of savedAreas) { basemap.removeSaved(old.id); forgetSavedWeather(old.id); }
             await registerSavedAreas();
             drawSavedOutlines();
@@ -425,6 +563,16 @@ layersBtn.addEventListener('click', () => {
     })),
   });
 });
+
+function addFreezingLineLayers(beforeId?: string) {
+  map.addSource('freezing-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({ id: 'freezing-line', type: 'line', source: 'freezing-line', paint: { 'line-color': colorToken('ink'), 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 2.5] } }, beforeId);
+  map.addLayer({
+    id: 'freezing-line-label', type: 'symbol', source: 'freezing-line',
+    layout: { 'symbol-placement': 'line', 'text-field': ['get', 'label'], 'text-size': 12, 'symbol-spacing': 400, 'text-max-angle': 45, 'text-font': ['Noto Sans Regular'] },
+    paint: { 'text-color': colorToken('ink'), 'text-halo-color': colorToken('surface'), 'text-halo-width': 1.5 },
+  });
+}
 
 /** Saved areas' boxes as dashed outlines, so it is clear where data exists offline. */
 function drawSavedOutlines() {
@@ -447,13 +595,14 @@ map.on('load', () => {
   applyTerrainPrefs();
   // Under the hillshade and contours, so the terrain reads through at any rate.
   map.addLayer(precipLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
+  map.addLayer(tempLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
+  addFreezingLineLayers(firstLabel);
   mapReady = true;
   drawSavedOutlines();
   fitPadding();
   locate(false);
   void loadRun();
 });
-$('run-age').addEventListener('click', () => { if (document.body.dataset.run === 'error') void loadRun(); });
 window.addEventListener('resize', fitPadding);
 map.on('idle', () => { document.body.dataset.idle = 'true'; });
 

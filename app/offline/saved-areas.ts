@@ -5,6 +5,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 import { source, stepFileUrl, type RunMetadata } from '../../adapters/openmeteo-maps/run-metadata';
 import { readNativeBox, type NativeBox } from '../../render/openmeteo-starter';
+import { coveringRanges, readBoxFast } from '../../render/openmeteo-starter/om-reader';
 import { gridRequest } from '../../core/geo/grid-request';
 import { SAVED_AREA_VERSION, parseSavedAreas, tilesInBox, type SavedArea } from '../../core/offline/saved-area';
 import { writePmtiles, zxyToTileId, type TileIn } from '../../core/pmtiles/writer';
@@ -63,12 +64,18 @@ export async function saveArea(opts: {
   /** Hours from now to keep, or null for every step to the model's end. */
   hours: number | null;
   run: RunMetadata;
+  /** Amounts (read with the library's per-step conversion). */
   variables: VariableName[];
+  /** Plain values, such as temperature profiles (read with the lean reader). */
+  plainVariables?: VariableName[];
   basemap: Basemap;
   style: StyleSpecification;
   onProgress: (p: SaveProgress) => void;
 }): Promise<SavedArea> {
-  const { bbox, run, variables, basemap } = opts;
+  const { bbox, run, basemap } = opts;
+  const amounts = opts.variables;
+  const plain = opts.plainVariables ?? [];
+  const variables = [...amounts, ...plain];
   void requestPersistence();
   const id = `a${Date.now().toString(36)}`;
   const now = Date.now();
@@ -86,12 +93,19 @@ export async function saveArea(opts: {
   //    so the numbers offline are exactly the numbers online.
   const steps: Record<string, Float32Array[]> = Object.fromEntries(variables.map((v) => [v, new Array<Float32Array>(times.length)]));
   const { nx, ny } = req;
-  let ranges: { start: number; end: number }[] = [];
-  await pool(times.map((t, i) => ({ t, i })), 6, async ({ t, i }) => {
-    const box = await readNativeBox(run.model, stepFileUrl(run.model, run.referenceTime, t), variables, bbox, 1);
-    ranges = box.ranges;
-    for (const v of variables) steps[v]![i] = box.values[v] ?? new Float32Array(0);
-    tick('Precipitation');
+  // Both readers cover the same model cells (the box plus the same margin).
+  const ranges = coveringRanges(run.model, bbox);
+  await pool(times.map((t, i) => ({ t, i })), plain.length ? 2 : 6, async ({ t, i }) => {
+    const url = stepFileUrl(run.model, run.referenceTime, t);
+    if (amounts.length) {
+      const box = await readNativeBox(run.model, url, amounts, bbox, 1);
+      for (const v of amounts) steps[v]![i] = box.values[v] ?? new Float32Array(0);
+    }
+    if (plain.length) {
+      const box = await readBoxFast(run.model, url, plain, ranges);
+      for (const v of plain) steps[v]![i] = box.values[v] ?? new Float32Array(0);
+    }
+    tick('Weather');
   });
   const perStep = steps[variables[0]!]![0]?.length ?? 0;
   const files: Record<string, string> = {};
@@ -101,7 +115,7 @@ export async function saveArea(opts: {
     const buf = encodeRegionFile({
       header: {
         version: REGION_FILE_VERSION, source: source.id, model: run.model, run: run.referenceTime.toISOString(), variable: v,
-        unit: 'mm per step', bbox, validTimes: times.map((t) => t.toISOString()), valuesPerStep: perStep,
+        unit: amounts.includes(v) ? 'mm per step' : v.startsWith('geopotential') ? 'm' : v === 'relative_humidity_2m' ? '%' : v === 'wind_speed_10m' ? 'km/h' : '°C', bbox, validTimes: times.map((t) => t.toISOString()), valuesPerStep: perStep,
         savedAt: new Date().toISOString(), nx, ny, stepHours: 1, ranges,
       },
       steps: steps[v]!,

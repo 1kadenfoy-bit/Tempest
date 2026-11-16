@@ -5,13 +5,17 @@
 import { TimeCursor } from '../../core/time/cursor';
 import { DEFAULT_WINDOW_HOURS, WINDOW_OPTIONS, dayStart, weekRange, windowRange } from '../../core/time/window';
 import { formatAxisTime, formatCursorTime, formatDayLabel, formatRelative, formatSpan } from '../../core/units/format';
+import type { WindowSummary } from '../../layers/contract';
 import { icons } from './icons';
 import { closePanel, isOpenFrom, openPanel } from './panel';
 
 export interface ScrubberLayer {
   drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, start: Date, end: Date): void;
-  /** Totals for the half before the needle and the half after it. */
-  summary(start: Date, cursor: Date, end: Date): { before: string[]; after: string[] };
+  /** Split at the needle (totals before and after), or one block for the whole window. */
+  summary(start: Date, cursor: Date, end: Date): WindowSummary;
+  /** Small values under a week-strip day, or null. */
+  weekDay?(dayStart: Date, dayEnd: Date): string | null;
+  chartLabel: string;
 }
 
 const H = 3_600_000;
@@ -38,21 +42,29 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     $('window-label').textContent = WINDOW_OPTIONS.find((o) => o.hours === windowHours)?.label ?? `${windowHours} h`;
 
     // Summary
-    const sum = layer?.summary(start, t, end) ?? { before: [], after: [] };
+    const sum: WindowSummary = layer?.summary(start, t, end) ?? { kind: 'split', before: [], after: [] };
     const half = formatSpan(windowHours / 2);
     // "Last/Next" when the needle is on now; "before/after" when moved away.
     const atNow = Math.abs(t.getTime() - now.getTime()) < 60 * 60_000;
     const lines = (el: HTMLElement, parts: string[]) => {
       el.replaceChildren(...parts.map((p) => { const s = document.createElement('span'); s.textContent = p; return s; }));
     };
-    lines($('summary-before'), sum.before);
-    lines($('summary-after'), sum.after);
-    // Say what the totals really cover when the window reaches past the
-    // model's hours (the first step's amount starts an hour before it).
-    const dataStart = cursor.first ? new Date(cursor.first.getTime() - H) : start;
-    const dataEnd = cursor.last ?? end;
-    $('summary-before-label').textContent = start < dataStart ? `Since ${formatCursorTime(dataStart)}` : atNow ? `Last ${half}` : `${half} before`;
-    $('summary-after-label').textContent = end > dataEnd ? `Until ${formatCursorTime(dataEnd)}` : atNow ? `Next ${half}` : `${half} after`;
+    $('window-summary').dataset.kind = sum.kind;
+    if (sum.kind === 'whole') {
+      lines($('summary-before'), sum.lines);
+      $('summary-before-label').textContent = sum.label;
+      lines($('summary-after'), []);
+      $('summary-after-label').textContent = '';
+    } else {
+      lines($('summary-before'), sum.before);
+      lines($('summary-after'), sum.after);
+      // Say what the totals really cover when the window reaches past the
+      // model's hours (the first step's amount starts an hour before it).
+      const dataStart = cursor.first ? new Date(cursor.first.getTime() - H) : start;
+      const dataEnd = cursor.last ?? end;
+      $('summary-before-label').textContent = start < dataStart ? `Since ${formatCursorTime(dataStart)}` : atNow ? `Last ${half}` : `${half} before`;
+      $('summary-after-label').textContent = end > dataEnd ? `Until ${formatCursorTime(dataEnd)}` : atNow ? `Next ${half}` : `${half} after`;
+    }
 
     // Chart
     const dpr = window.devicePixelRatio || 1;
@@ -100,13 +112,26 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
       $('week-dividers').innerHTML = '';
       for (const d of wk.days) {
         const s = document.createElement('span');
-        s.textContent = formatDayLabel(new Date(d.getTime() + 12 * H), now);
-        if (s.textContent === 'Today') s.className = 'today';
+        const name = document.createElement('span');
+        name.className = 'week-day-name';
+        name.textContent = formatDayLabel(new Date(d.getTime() + 12 * H), now);
+        if (name.textContent === 'Today') s.className = 'today';
+        const extra = document.createElement('span');
+        extra.className = 'week-day-extra';
+        s.append(name, extra);
         days.append(s);
         $('week-dividers').append(document.createElement('span'));
       }
       days.dataset.today = wk.days[2]!.toISOString();
     }
+    // A layer's small values under each day (temperature: high and low).
+    [...days.children].forEach((el, k) => {
+      const d0 = wk.days[k]!;
+      const d1 = wk.days[k + 1] ?? wk.end;
+      const text = layer?.weekDay?.(d0, d1) ?? '';
+      el.querySelector('.week-day-extra')!.textContent = text;
+    });
+    week.dataset.extras = String(Boolean(layer?.weekDay));
     const first_ = cursor.first;
     const last = cursor.last;
     const model = $('week-model');
@@ -210,7 +235,7 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   });
 
   return {
-    setLayer(l: ScrubberLayer) { layer = l; schedule(); },
+    setLayer(l: ScrubberLayer) { layer = l; chart.setAttribute('aria-label', l.chartLabel); schedule(); },
     setStatus(s: string) { status = s; schedule(); },
     refresh: schedule,
     get windowHours() { return windowHours; },

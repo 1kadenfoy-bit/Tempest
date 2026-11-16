@@ -11,6 +11,7 @@ export const icons = {
   play: svg(20, '<path d="M8 5.5v13l11-6.5-11-6.5z"/>', 0, 'currentColor'),
   pause: svg(20, '<path d="M8 5.5h3v13H8zM13 5.5h3v13h-3z"/>', 0, 'currentColor'),
   chevron: svg(16, '<path d="m6 9 6 6 6-6"/>', 2.2),
+  chevronUp: svg(16, '<path d="m6 15 6-6 6 6"/>', 2.2),
   'pin-small': svg(14, '<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 2),
 } as const;
 

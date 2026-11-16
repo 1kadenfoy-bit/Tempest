@@ -5,6 +5,7 @@ import { precipTotals } from '../../core/precip/totals';
 import { PRECIP_CUTOFF, precipType, type PrecipType } from '../../core/precip/type';
 import { formatCm, formatMm, formatRate } from '../../core/units/format';
 import type { PointSeries, VariableName } from '../../core/vocabulary';
+import type { LayerSlots } from '../contract';
 import { precipRamp, PRECIP_TYPES } from './fill';
 
 export { precipDrawField, precipRenderStyle } from './fill';
@@ -95,3 +96,22 @@ export function legend(doc: Document): HTMLElement {
   el.append(range);
   return el;
 }
+
+const gradient = (t: PrecipType) => {
+  const r = precipRamp(t);
+  return `linear-gradient(90deg, ${r.colors.map((c, i) => `${c} ${Math.round((i / (r.colors.length - 1)) * 100)}%`).join(', ')})`;
+};
+
+/** The layer's slots, as the shell asks for them (layers/contract.ts). */
+export const precipitation: LayerSlots = {
+  id,
+  title,
+  swatches: PRECIP_TYPES.map(gradient),
+  pinNeeds: needs,
+  saveNeeds: needs,
+  chartLabel: 'Hourly precipitation across the window. Drag to move through time.',
+  legend,
+  readout: (pin, i) => ({ value: readoutValue(pin.series, i) }),
+  summary: (pin, start, cursor, end) => ({ kind: 'split', ...windowSummary(pin.series, start, cursor, end) }),
+  drawChart: (ctx, w, h, pin, start, end) => drawChart(ctx, w, h, pin.series, start, end),
+};

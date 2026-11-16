@@ -49,10 +49,12 @@ export default tseslint.config(
   // Layers never import each other.
   {
     files: ['layers/**/*.ts'],
+    ignores: ['layers/contract.ts'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [
-          { regex: '^\\.\\./(?!\\.\\.)|/layers/', message: 'Layers never import each other; go through core.' },
+          // The one shared file is the template every layer fills (layers/contract.ts).
+          { regex: '^\\.\\./(?!\\.\\.|contract$)|/layers/(?!contract$)', message: 'Layers never import each other; go through core.' },
           { group: ['@openmeteo/weather-map-layer'], message: 'Only render/ may import the starter weather library.' },
         ],
       }],

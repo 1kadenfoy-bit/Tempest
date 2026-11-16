@@ -18,10 +18,10 @@
 
     <header class="topbar" aria-label="Layer and model">
       <div class="topbar-main">
-        <div class="layer-title">
-          <span class="layer-name" id="layer-name">Precipitation</span>
+        <button class="layer-title" id="layer-button" aria-haspopup="dialog" aria-expanded="false">
+          <span class="layer-name-row"><span class="layer-name" id="layer-name">Precipitation</span><span class="layer-chevron" data-icon="chevron"></span></span>
           <span class="run-age" id="run-age">Finding the latest run…</span>
-        </div>
+        </button>
         <div class="model-pill" id="model-pill" aria-label="Model">HRDPS</div>
       </div>
     </header>
@@ -53,7 +53,7 @@
             </div>
           </div>
           <div class="chart-block">
-            <div class="chart" id="chart" aria-label="Hourly precipitation across the window. Drag to move through time.">
+            <div class="chart" id="chart" aria-label="The layer’s chart across the window. Drag to move through time.">
               <canvas id="chart-canvas"></canvas>
               <div class="chart-now" id="chart-now"></div>
               <div class="chart-needle"></div>

@@ -9,7 +9,12 @@ export interface SaveChoice {
   bbox: [number, number, number, number];
   /** Hours from now to save, or null for the model's end. */
   hours: number | null;
+  /** The layers ticked, by id. */
+  layers: string[];
 }
+
+/** A layer that can be saved, and how many weather variables it keeps. */
+export interface SaveLayer { id: string; title: string; variables: number }
 
 const CHECK = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
 const DOWNLOAD = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -21,6 +26,9 @@ const MAX_BYTES = 400e6;
 
 export function openSaveMode(map: MapLibreMap, opts: {
   modelHours: number;
+  layers: SaveLayer[];
+  /** Ticked at the start: the layer on screen. */
+  initial: string;
   /** Exact base map bytes for a box, from the map files' indexes. */
   basemapBytes(bbox: [number, number, number, number]): Promise<number>;
   save(choice: SaveChoice, onProgress: (text: string) => void): Promise<void>;
@@ -41,7 +49,7 @@ export function openSaveMode(map: MapLibreMap, opts: {
       <div class="panel-body">
         <div class="group">
           <span class="group-title">LAYERS</span>
-          <label class="check-row"><input type="checkbox" checked disabled><span class="check-box">${CHECK}</span><span class="check-text"><span class="check-title">Precipitation</span><span class="check-note save-layer-size"></span></span></label>
+          <div class="save-layers"></div>
         </div>
         <div class="group">
           <span class="group-title">TIME WINDOW</span>
@@ -52,6 +60,19 @@ export function openSaveMode(map: MapLibreMap, opts: {
       </div>
     </div>`;
   document.body.append(root);
+  const ticked = new Set<string>([opts.initial]);
+  const layerRows = new Map<string, HTMLElement>();
+  for (const l of opts.layers) {
+    const row = document.createElement('label');
+    row.className = 'check-row';
+    row.innerHTML = `<input type="checkbox"><span class="check-box">${CHECK}</span><span class="check-text"><span class="check-title"></span><span class="check-note"></span></span>`;
+    row.querySelector('.check-title')!.textContent = l.title;
+    const input = row.querySelector('input')!;
+    input.checked = ticked.has(l.id);
+    input.addEventListener('change', () => { if (input.checked) ticked.add(l.id); else ticked.delete(l.id); render(); });
+    root.querySelector('.save-layers')!.append(row);
+    layerRows.set(l.id, row.querySelector<HTMLElement>('.check-note')!);
+  }
   const box = root.querySelector<HTMLElement>('.save-box')!;
   const go = root.querySelector<HTMLButtonElement>('.save-go')!;
   const $ = (sel: string) => root.querySelector<HTMLElement>(sel)!;
@@ -75,8 +96,14 @@ export function openSaveMode(map: MapLibreMap, opts: {
     const kmW = (bb[2] - bb[0]) * 111.32 * Math.cos((((bb[1] + bb[3]) / 2) * Math.PI) / 180);
     const kmH = (bb[3] - bb[1]) * 110.57;
     $('.save-area-size').textContent = `Area · ${Math.round(kmW)} × ${Math.round(kmH)} km`;
-    const est = estimateSaveBytes(bb, hours ?? opts.modelHours);
-    $('.save-layer-size').textContent = `Grids for this area · about ${mb(est.weather)}`;
+    const h = hours ?? opts.modelHours;
+    let weather = 0;
+    for (const l of opts.layers) {
+      const b = estimateSaveBytes(bb, h, l.variables).weather;
+      layerRows.get(l.id)!.textContent = `Grids for this area · about ${mb(b)}`;
+      if (ticked.has(l.id)) weather += b;
+    }
+    const est = { ...estimateSaveBytes(bb, h), weather };
     const key = bb.map((v) => v.toFixed(3)).join(',');
     const known = basemapSizes.get(key);
     if (known === undefined) {
@@ -92,8 +119,8 @@ export function openSaveMode(map: MapLibreMap, opts: {
     $('.save-map-size').textContent = `about ${mb(known + est.terrain)}`;
     const total = est.weather + known + est.terrain + est.other;
     const tooBig = total > MAX_BYTES;
-    go.disabled = tooBig;
-    go.textContent = tooBig ? `Too big (about ${mb(total)}) · make the box smaller` : `Save area · about ${mb(total)}`;
+    go.disabled = tooBig || ticked.size === 0;
+    go.textContent = ticked.size === 0 ? 'Choose a layer to save' : tooBig ? `Too big (about ${mb(total)}) · make the box smaller` : `Save area · about ${mb(total)}`;
   };
   const basemapSizes = new Map<string, number>();
   let sizeTimer = 0;
@@ -150,7 +177,7 @@ export function openSaveMode(map: MapLibreMap, opts: {
     saving = true;
     go.disabled = true;
     try {
-      await opts.save({ bbox: bbox(), hours }, (text) => { go.textContent = text; });
+      await opts.save({ bbox: bbox(), hours, layers: opts.layers.filter((l) => ticked.has(l.id)).map((l) => l.id) }, (text) => { go.textContent = text; });
       saving = false;
       close();
     } catch (err) {
