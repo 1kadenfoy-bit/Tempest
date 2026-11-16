@@ -94,3 +94,20 @@ export function formatDegrees(c: number, plus = true): string {
 export function formatTimeRange(a: Date, b: Date, timeZone = TIME_ZONE): string {
   return `${formatCursorTime(a, timeZone)} – ${formatCursorTime(b, timeZone)}`;
 }
+
+/** "4 PM" on the same BC day as `ref`, else "Fri 4 PM". */
+export function formatWhen(t: Date, ref: Date, timeZone = TIME_ZONE): string {
+  const day = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone, dateStyle: 'short' }).format(d);
+  const full = formatCursorTime(t, timeZone);
+  return day(t) === day(ref) ? full.slice(full.indexOf(' ') + 1) : full;
+}
+
+/** "2.4" (one decimal, for stat cards whose unit sits under the value). */
+export function formatOneDecimal(n: number): string {
+  return oneDecimal.format(n);
+}
+
+/** "1,180" (whole number with separators, for stat cards). */
+export function formatWhole(n: number): string {
+  return intl.format(Math.round(n));
+}

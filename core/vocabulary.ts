@@ -18,11 +18,15 @@ export const VOCABULARY = {
 } as const;
 
 /** The temperature profile: temperature and height of each pressure level. */
-export type ProfileVariable = `temperature_${ProfileLevel}hPa` | `geopotential_height_${ProfileLevel}hPa`;
+export type ProfileVariable = `temperature_${ProfileLevel}hPa` | `geopotential_height_${ProfileLevel}hPa` | `relative_humidity_${ProfileLevel}hPa`;
 export const PROFILE_VOCABULARY = {
   temperature: { unit: '°C', meaning: 'Air temperature on a pressure level' },
   geopotential_height: { unit: 'm', meaning: 'Height of a pressure level above sea level' },
+  relative_humidity: { unit: '%', meaning: 'Relative humidity on a pressure level (for the wet-bulb snow line)' },
 } as const;
+
+/** Humidity on each level: only the snow line needs it, so it is asked for separately. */
+export const PROFILE_RH_VARIABLES: ProfileVariable[] = PROFILE_LEVELS.map((l) => `relative_humidity_${l}hPa` as const);
 
 export const PROFILE_VARIABLES: ProfileVariable[] = [
   ...PROFILE_LEVELS.map((l) => `temperature_${l}hPa` as const),

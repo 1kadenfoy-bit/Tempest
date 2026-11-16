@@ -27,7 +27,10 @@ export interface ProfileLattice {
   lons: number[];
   lats: number[];
   levels: number;
-  /** Per node (row-major, lat then lon), per level: [height, temperature]. */
+  /**
+   * Per node (row-major, lat then lon), levels + 1 pairs: [height, temperature]
+   * for each level, then [10 m wind km/h, dew point °C] for feels-like.
+   */
   data: Float32Array;
 }
 
@@ -62,6 +65,7 @@ uniform vec2 u_nodes;   // nlon, nlat
 uniform float u_t;
 uniform vec2 u_range;
 uniform float u_opacity;
+uniform bool u_feels;
 out vec4 fragColor;
 
 float dem(vec2 merc) {
@@ -107,6 +111,18 @@ void main() {
   }
   float dz = hi.x - lo.x;
   float temp = lo.y + (dz != 0.0 ? (z - lo.x) / dz : 0.0) * (hi.y - lo.y);
+  if (u_feels) {
+    // ECCC wind chill or humidex, as the readout (core/temperature/feels-like.ts).
+    vec2 sw = level(NL, n, w); // 10 m wind (km/h), dew point (°C)
+    if (temp <= 0.0 && sw.x >= 5.0) {
+      float v16 = pow(sw.x, 0.16);
+      temp = 13.12 + 0.6215 * temp - 11.37 * v16 + 0.3965 * temp * v16;
+    } else if (temp >= 20.0) {
+      float e = 6.11 * exp(5417.753 * (1.0 / 273.16 - 1.0 / (273.15 + sw.y)));
+      float hx = temp + 0.5555 * (e - 10.0);
+      if (hx >= 25.0 && hx - temp >= 1.0) temp = hx;
+    }
+  }
   float x = clamp((temp - u_range.x) / (u_range.y - u_range.x), 0.0, 1.0);
   vec4 c = texture(u_strip, vec2(x, 0.5));
   float a = c.a * u_opacity;
@@ -135,6 +151,8 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
   private readonly fadeMs = 200;
   private loc: Record<string, WebGLUniformLocation | null> = {};
   visible = true;
+  /** Colour feels-like (wind chill, humidex) instead of air temperature. */
+  feels = false;
 
   constructor(readonly id: string, private style: TemperatureStyle, private levels: number) {}
 
@@ -155,7 +173,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     g.linkProgram(p);
     if (!g.getProgramParameter(p, g.LINK_STATUS)) throw new Error(`program: ${g.getProgramInfoLog(p)}`);
     this.program = p;
-    for (const u of ['u_matrix', 'u_dem', 'u_profA', 'u_profB', 'u_strip', 'u_demBox', 'u_demSize', 'u_lattice', 'u_nodes', 'u_t', 'u_range', 'u_opacity']) {
+    for (const u of ['u_matrix', 'u_dem', 'u_profA', 'u_profB', 'u_strip', 'u_demBox', 'u_demSize', 'u_lattice', 'u_nodes', 'u_t', 'u_range', 'u_opacity', 'u_feels']) {
       this.loc[u] = g.getUniformLocation(p, u);
     }
     this.buffer = g.createBuffer();
@@ -203,7 +221,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     const tex = g.createTexture()!;
     g.bindTexture(g.TEXTURE_2D, tex);
     g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
-    g.texImage2D(g.TEXTURE_2D, 0, g.RG32F, l.levels, l.lons.length * l.lats.length, 0, g.RG, g.FLOAT, l.data);
+    g.texImage2D(g.TEXTURE_2D, 0, g.RG32F, l.levels + 1, l.lons.length * l.lats.length, 0, g.RG, g.FLOAT, l.data);
     this.nearest(g);
     const same = this.profCur && this.profCur.lattice.lons.join() === l.lons.join() && this.profCur.lattice.lats.join() === l.lats.join();
     if (same) this.profPrev = this.profCur;
@@ -253,6 +271,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     g.uniform1f(this.loc.u_t!, prev ? t : 1);
     g.uniform2f(this.loc.u_range!, this.style.min, this.style.max);
     g.uniform1f(this.loc.u_opacity!, this.style.opacity);
+    g.uniform1i(this.loc.u_feels!, this.feels ? 1 : 0);
     g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, this.demTex); g.uniform1i(this.loc.u_dem!, 0);
     g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, prev ? prev.tex : cur.tex); g.uniform1i(this.loc.u_profA!, 1);
     g.activeTexture(g.TEXTURE2); g.bindTexture(g.TEXTURE_2D, cur.tex); g.uniform1i(this.loc.u_profB!, 2);

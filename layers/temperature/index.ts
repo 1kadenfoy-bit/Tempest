@@ -6,9 +6,10 @@ import { dewPoint, feelsLike } from '../../core/temperature/feels-like';
 import { freezingLevels, terrainTemperatures } from '../../core/temperature/profile';
 import { isDaylight } from '../../core/time/sun';
 import { formatDegrees, formatElevation, formatTemp, formatTimeRange } from '../../core/units/format';
-import { PROFILE_VARIABLES, type PointSeries, type VariableName } from '../../core/vocabulary';
+import { PROFILE_RH_VARIABLES, PROFILE_VARIABLES, type PointSeries, type VariableName } from '../../core/vocabulary';
 import type { LayerSlots, PinData, WindowSummary } from '../contract';
 import { TEMP_RANGE, temperatureGradient, temperatureRamp } from './fill';
+import { settings, settingsNote, temperatureDetails, temperatureInView } from './details';
 
 export { temperatureRenderStyle } from './fill';
 
@@ -228,8 +229,8 @@ export const temperature: LayerSlots = {
   id: 'temperature',
   title: 'Temperature',
   swatches: [temperatureGradient()],
-  pinNeeds: [...PROFILE_VARIABLES, ...SURFACE],
-  saveNeeds: [...PROFILE_VARIABLES, ...SURFACE],
+  pinNeeds: [...PROFILE_VARIABLES, ...PROFILE_RH_VARIABLES, ...SURFACE],
+  saveNeeds: [...PROFILE_VARIABLES, ...PROFILE_RH_VARIABLES, ...SURFACE],
   chartLabel: 'Temperature at the pin across the window, with feels-like. Drag to move through time.',
   legend,
   readout(pin, i) {
@@ -248,6 +249,11 @@ export const temperature: LayerSlots = {
   summary,
   drawChart,
   weekDay,
+  details: (ctx) => temperatureDetails(pinValues(ctx.pin), ctx),
+  inView: (view) => temperatureInView(view),
+  footer: () => ['Corrected to terrain from pressure levels'],
+  settings,
+  settingsNote,
 };
 
 /** The pin's temperature and feels-like at a step, for tests and checks. */

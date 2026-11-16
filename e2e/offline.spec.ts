@@ -27,7 +27,8 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
 
   const read = async () => ({
     run: (await page.textContent('#run-age'))?.replace(' · saved', ''),
-    readout: await page.textContent('.pin-readout'),
+    // The snow line needs the profile, which a precipitation-only save leaves out (M5).
+    readout: (await page.textContent('.pin-readout'))?.replace(/ · snow line [\d,]+ m/, ''),
     before: await page.textContent('#summary-before'),
     after: await page.textContent('#summary-after'),
   });
