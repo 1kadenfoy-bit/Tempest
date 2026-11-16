@@ -69,6 +69,7 @@ Goal: the second layer, and the shared layer contract. Reference: `18-Temp`, `19
 - Port the terrain correction from `docs/reference/windy-plugin/toposcale.ts` with its tests. Interpolate profiles, never finished temperatures.
 - Map fill, dashed 0 °C line, feels-like (ECCC wind chill and humidex), chart, legend, readout, daily highs and lows on the week strip.
 - Now that two layers exist, extract the layer contract. Precipitation and temperature must not import each other.
+- The layer menu (`03-LayerMenu`), growing from the layer name, with the built layers only. Added Nov 16: it was not in any milestone.
 
 Done when: a ridge and the valley below it read differently, and a spot check against the Windy plugin or a station is within a degree or two, with the comparison in the report.
 

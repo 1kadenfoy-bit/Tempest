@@ -1,0 +1,92 @@
+// Adapter: Open-Meteo's point forecast API. One request returns every hour of
+// a run for up to a few dozen places, which is what a pin's series and the
+// temperature layer's profile nodes need. (The map files hold one hour per
+// file, so a 48-hour profile series from them costs about 1,500 small reads.)
+//
+// Checked Nov 16, 2026: docs/05-data-sources.md lists this API for point
+// forecasts. Free for non-commercial use: 600 calls a minute, 5,000 an hour,
+// 10,000 a day; a request asking for more than 10 variables counts as one
+// call per 10, per place. `cell_selection=nearest` reads the nearest model
+// cell, as the app reads the map files, so both agree for the same run.
+import type { PointSeries, VariableName } from '../../core/vocabulary';
+
+export const source = {
+  id: 'openmeteo-api',
+  name: 'Open-Meteo forecast API',
+  baseUrl: 'https://api.open-meteo.com',
+  licence: 'CC BY 4.0',
+  attribution: 'Weather data by Open-Meteo.com (CC BY 4.0), from Environment and Climate Change Canada models',
+  link: 'https://open-meteo.com/',
+  offline: false,
+  terms: 'Free for non-commercial use; 10,000 calls a day; no uptime guarantee.',
+} as const;
+
+/** The map files' model names, as the point API calls them. */
+export const API_MODEL: Record<string, string> = { cmc_gem_hrdps: 'gem_hrdps_continental' };
+const GRID_KM: Record<string, number> = { cmc_gem_hrdps: 2.5 };
+
+/** The run the point API serves now (it can lag the map files by a run). */
+export async function fetchApiRun(model: string, fetchFn: typeof fetch = fetch): Promise<Date> {
+  const res = await fetchFn(`${source.baseUrl}/data/${model}/static/meta.json`);
+  const json = (await res.json()) as { last_run_initialisation_time?: number };
+  if (!res.ok || !json.last_run_initialisation_time) throw new Error(`point API metadata ${res.status}`);
+  return new Date(json.last_run_initialisation_time * 1000);
+}
+
+interface ApiLocation {
+  latitude: number;
+  longitude: number;
+  hourly?: { time: number[] } & Record<string, (number | null)[]>;
+  error?: boolean;
+  reason?: string;
+}
+
+export function apiUrl(model: string, points: readonly { lat: number; lon: number }[], variables: readonly string[]): string {
+  const params = new URLSearchParams({
+    latitude: points.map((p) => p.lat.toFixed(4)).join(','),
+    longitude: points.map((p) => p.lon.toFixed(4)).join(','),
+    hourly: variables.join(','),
+    models: API_MODEL[model] ?? model,
+    cell_selection: 'nearest',
+    timeformat: 'unixtime',
+    timezone: 'GMT',
+    wind_speed_unit: 'kmh',
+    past_days: '1',
+    forecast_days: '3',
+  });
+  return `${source.baseUrl}/v1/forecast?${params}`;
+}
+
+/** Parse a response (one place, or an array for several) into point series, keeping the run's hours. */
+export function parseApiSeries(json: unknown, model: string, run: Date, variables: readonly VariableName[], points: readonly { lat: number; lon: number }[], validTimes: readonly Date[]): PointSeries[] {
+  const one = json as ApiLocation;
+  if (!Array.isArray(json) && one?.error) throw new Error(one.reason ?? 'point API error');
+  const list = (Array.isArray(json) ? json : [json]) as ApiLocation[];
+  if (list.length !== points.length) throw new Error(`point API returned ${list.length} places for ${points.length}`);
+  const wanted = new Set(validTimes.map((t) => t.getTime()));
+  return list.map((loc, n) => {
+    if (loc.error || !loc.hourly) throw new Error(loc.reason ?? 'point API: no hourly data');
+    const idx: number[] = [];
+    loc.hourly.time.forEach((s, i) => { if (wanted.has(s * 1000)) idx.push(i); });
+    const values: PointSeries['values'] = {};
+    for (const v of variables) {
+      const col = loc.hourly[v];
+      values[v] = idx.map((i) => col?.[i] ?? NaN);
+    }
+    return {
+      label: { source: source.id, model, run, gridKm: GRID_KM[model] ?? NaN, licence: source.licence, attribution: source.attribution, fetchedAt: new Date(), offline: false },
+      lat: points[n]!.lat,
+      lon: points[n]!.lon,
+      times: idx.map((i) => new Date(loc.hourly!.time[i]! * 1000)),
+      stepHours: 1,
+      values,
+    };
+  });
+}
+
+export async function fetchApiSeries(model: string, run: Date, variables: readonly VariableName[], points: readonly { lat: number; lon: number }[], validTimes: readonly Date[], fetchFn: typeof fetch = fetch): Promise<PointSeries[]> {
+  const res = await fetchFn(apiUrl(model, points, variables));
+  const json = (await res.json()) as unknown;
+  if (!res.ok) throw new Error((json as { reason?: string }).reason ?? `point API ${res.status}`);
+  return parseApiSeries(json, model, run, variables, points, validTimes);
+}

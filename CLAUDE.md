@@ -70,4 +70,26 @@ docs/           specs, milestones, decisions, spikes
 
 ## Commands
 
-Fill this in during M0: install, dev, test, typecheck, lint, build, screenshot tests.
+Node 22.12 or newer.
+
+| Task | Command |
+| --- | --- |
+| Install | `npm ci` |
+| Dev server (http://localhost:5173, with isolation headers) | `npm run dev` |
+| Base map pieces the tests use (overview, North Shore piece, Sea to Sky detail) into `public/tiles`; skips files present; also runs before `build` | `npm run tiles` |
+| Base map for all of BC (about 680 MB in 28 files; the Pages publish runs this) | `npm run tiles:all` |
+| Unit tests (Vitest, no browser) | `npm test` |
+| Typecheck | `npm run typecheck` |
+| Lint (also enforces the architecture import rules) | `npm run lint` |
+| Build to `dist/` | `npm run build` |
+| Screenshot tests at 390 × 844 (Playwright; starts `vite preview` on 4173). Shell pixel baselines live in `e2e/shell.spec.ts-snapshots`; refresh with `npx playwright test --update-snapshots` after an intended change | `npm run screenshots` |
+| Everything CI runs | `npm run check` |
+| Size or cut any PMTiles box | `node tools/pmtiles-extract.mjs <url> <out> --bbox=w,s,e,n --maxzoom=N [--dry-run]` |
+
+Open the app at the artboard's safe areas with `?insets=47,34`.
+
+In the cloud session, Node needs `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt` to reach the network through the proxy (for `npm run tiles`).
+
+Base map regions and detail areas are listed in `tools/regions.json`.
+
+`tools/` holds build-time scripts (Node only). The phone test page is `spike.html` (`app/spike/`).

@@ -1,0 +1,17 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+html, body { margin: 0; background: var(--map-ground); color: var(--ink); font: var(--type-body); }
+main {
+  padding: calc(env(safe-area-inset-top) + 8px) var(--screen-edge) calc(env(safe-area-inset-bottom) + 34px);
+  display: grid; gap: 12px;
+}
+h1 { font: var(--type-panel-title); margin: 0; }
+p { margin: 0; color: var(--ink-2); font: var(--type-secondary); }
+button { min-height: var(--thumb); border-radius: var(--radius-button-tile-row); font: var(--type-body); }
+.primary { background: var(--ink); color: var(--map-ground); border: 0; }
+.secondary { background: transparent; color: var(--ink); border: 1px solid var(--stroke-strong); }
+#map { height: 320px; border-radius: var(--radius-button-tile-row); overflow: hidden; }
+#scrub { display: grid; gap: 8px; }
+#scrub input { width: 100%; min-height: var(--touch-min); }
+#readout { color: var(--ink); font: var(--type-stat); font-variant-numeric: tabular-nums; }
+pre { white-space: pre-wrap; font: var(--type-caption); background: var(--card); padding: 12px; border-radius: var(--radius-button-tile-row); margin: 0; }
+.back { color: var(--ink-2); font: var(--type-secondary); text-decoration: none; min-height: var(--touch-min); display: flex; align-items: center; }

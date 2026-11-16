@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Tempest test" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <title>Tempest phone tests</title>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="./">‹ Back to the map</a>
+      <h1>Phone tests</h1>
+      <p>Tap Run tests and wait about a minute. Then tap Copy results and paste them to Claude. Run it from the home-screen app.</p>
+      <button id="run" class="primary">Run tests</button>
+      <div id="map"></div>
+      <section id="scrub" hidden>
+        <label for="step">Region file: drag through 48 h</label>
+        <input id="step" type="range" min="0" max="47" value="0" />
+        <p id="readout"></p>
+      </section>
+      <pre id="out" aria-live="polite"></pre>
+      <button id="copy" class="secondary">Copy results</button>
+    </main>
+    <script type="module" src="/app/spike/main.ts"></script>
+  </body>
+</html>
