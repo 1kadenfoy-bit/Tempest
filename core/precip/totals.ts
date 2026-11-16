@@ -7,7 +7,11 @@ export const SNOW_CM_PER_MM = 0.7;
 
 export interface PrecipTotals { rainMm: number; mixedMm: number; snowCm: number; snowMm: number; wetHours: number }
 
-export function precipTotals(times: readonly Date[], precip: readonly number[], swe: readonly number[], start: Date, end: Date): PrecipTotals {
+/**
+ * `snowRatio(i)`: snow depth per water depth for step i (default 7:1, Open-Meteo's
+ * own conversion); the layer passes the chosen ratio, Kuchera per hour.
+ */
+export function precipTotals(times: readonly Date[], precip: readonly number[], swe: readonly number[], start: Date, end: Date, snowRatio: (i: number) => number = () => SNOW_CM_PER_MM * 10): PrecipTotals {
   const t: PrecipTotals = { rainMm: 0, mixedMm: 0, snowCm: 0, snowMm: 0, wetHours: 0 };
   times.forEach((time, i) => {
     // An amount belongs to the hour ending at its valid time.
@@ -17,7 +21,7 @@ export function precipTotals(times: readonly Date[], precip: readonly number[], 
     const kind = precipType(p, swe[i] ?? 0);
     if (kind === 'rain') t.rainMm += p;
     else if (kind === 'mixed') t.mixedMm += p;
-    else { t.snowMm += p; t.snowCm += p * SNOW_CM_PER_MM; }
+    else { t.snowMm += p; t.snowCm += (p * snowRatio(i)) / 10; }
     if (p >= PRECIP_CUTOFF) t.wetHours++;
   });
   return t;

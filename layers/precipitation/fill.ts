@@ -19,9 +19,16 @@ export const PRECIP_ALPHA = { from: 0.4, full: 0.55 };
 export const PRECIP_OPACITY = 0.7;
 
 
-/** Strips and rules for the typed-rate renderer: rain, mixed, snow by snow share. */
-export function precipRenderStyle() {
-  const strip = (t: PrecipType) => lookupStrip(precipRamp(t), 0, p.saturatesAt, 512, PRECIP_ALPHA);
+/**
+ * Strips and rules for the typed-rate renderer: rain, mixed, snow by snow
+ * share. `shown` (the Type shown setting) clears the other kinds' strips;
+ * mixed shows only with All.
+ */
+export function precipRenderStyle(shown: 'all' | 'rain' | 'snow' = 'all') {
+  const strip = (t: PrecipType) => {
+    const row = lookupStrip(precipRamp(t), 0, p.saturatesAt, 512, PRECIP_ALPHA);
+    return shown === 'all' || shown === t ? row : row.map(([r, g, b]) => [r, g, b, 0] as typeof row[number]);
+  };
   return {
     strips: [strip('rain'), strip('mixed'), strip('snow')] as [ReturnType<typeof strip>, ReturnType<typeof strip>, ReturnType<typeof strip>],
     max: p.saturatesAt,

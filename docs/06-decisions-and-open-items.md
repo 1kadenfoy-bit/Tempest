@@ -55,6 +55,12 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Temperature profile (M4) | 14 pressure levels, 1015 to 600 hPa (sea level to about 4,100 m) | Covers BC's terrain; higher levels change nothing on the ground |
 | Feels-like on the map (M4) | The map shows air temperature; the Feels-like map setting comes with layer settings | Settings are M5 |
 | Week strip values (M4) | Daily high and low only for days with 12 or more model hours | A high from part of a day would mislead |
+| Elevation bands (M5, proposal) | Alpine starts at the region's typical treeline; valley ends 800 m below it. Treelines: South Coast 1,400 m, Sea to Sky 1,650, Coast inland 1,800, Columbia Mountains 1,950, Rockies 2,200, Northern BC 1,300. Labelled approximate until Kaden agrees | Matches the v8 screens on the North Shore (600 and 1,400 m) |
+| Snow line (M5) | Where the wet-bulb temperature falls to 0.5 °C, from the model's temperature and humidity on each pressure level | HRDPS's files carry no snow line of its own, so the "Model" choice is left out |
+| Snow ratio (M5) | 7:1 (fixed; Open-Meteo's conversion), Kuchera (per hour from the column's warmest temperature), or 10:1. Default 7:1, the numbers shown so far | HRDPS has no ratio of its own; "Model's own" would have meant 7:1 |
+| Type shown (M5) | Rain only and Snow only each hide mixed as well | Mixed is both |
+| Totals by elevation (M5) | The pin's model cell's amount, typed as rain or snow at each band's height by that hour's wet-bulb temperature. The pin's own band uses the pin's height; others the band's middle. Past columns before the run show "–" until observed data (M6) | |
+| Freeze-thaw areas (M5) | Not built: the setting has no map design yet, so the switch is not shown | "A switch appears only when it works" |
 | Renderer licence | Start with the GPL-2.0 library behind one seam; replace it with the app's own renderer by M3 | Keeps the choice open if the app is shared |
 
 ## 3. Replaced by v8
@@ -74,7 +80,7 @@ Do not build these, even where older text mentions them.
 
 ## 4. Open: Kaden decides later
 
-- Elevation band rule (valley, mid, alpine) per region.
+- Elevation band rule (valley, mid, alpine) per region. Proposed in M5 (section 2); Kaden to agree or adjust.
 - Designs for alerts, search, app settings, saved areas list, compare, full forecast, light theme, and every layer after wind.
 - Whether to keep the repo public (the simple answer to the GPL question) or private.
 - Whether any paid source is worth it after a season on the free ones.

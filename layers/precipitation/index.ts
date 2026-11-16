@@ -4,7 +4,11 @@ import { rampColor } from '../../core/color/ramp';
 import { precipTotals } from '../../core/precip/totals';
 import { PRECIP_CUTOFF, precipType, type PrecipType } from '../../core/precip/type';
 import { formatCm, formatMm, formatRate } from '../../core/units/format';
-import type { PointSeries, VariableName } from '../../core/vocabulary';
+import { PROFILE_RH_VARIABLES, PROFILE_VARIABLES, type PointSeries, type VariableName } from '../../core/vocabulary';
+import { ratioFor, type SnowRatio } from '../../core/precip/by-elevation';
+import { snowLines } from '../../core/temperature/profile';
+import { formatElevation } from '../../core/units/format';
+import { precipDetails, precipFooter, precipInView, settings, settingsNote } from './details';
 import type { LayerSlots } from '../contract';
 import { precipRamp, PRECIP_TYPES } from './fill';
 
@@ -27,10 +31,11 @@ export function readoutValue(s: PointSeries | null, i: number): string {
 }
 
 /** Totals by type, one part each: ["4 mm rain", "12 cm snow", "3 mm mixed"], or ["Dry"]. */
-export function totalsParts(s: PointSeries | null, start: Date, end: Date): string[] {
+export function totalsParts(s: PointSeries | null, start: Date, end: Date, ratio: SnowRatio = '7:1', ground = 0): string[] {
   if (!s) return ['…'];
   const { p, w } = series(s);
-  const t = precipTotals(s.times, p, w, start, end);
+  // The chosen snow ratio; Kuchera per hour from that hour's profile (10:1 where it is missing).
+  const t = precipTotals(s.times, p, w, start, end, (i) => ratioFor(ratio, s, i, ground) ?? 10);
   const parts: string[] = [];
   if (t.rainMm >= 0.5) parts.push(`${formatMm(t.rainMm)} rain`);
   if (t.snowCm >= 0.5) parts.push(`${formatCm(t.snowCm)} snow`);
@@ -43,8 +48,8 @@ export function totalsParts(s: PointSeries | null, start: Date, end: Date): stri
  * what is due in the half after (Kaden's choice A, Nov 16). Parts stack one
  * per line, so mixed weather stays readable.
  */
-export function windowSummary(s: PointSeries | null, start: Date, cursor: Date, end: Date) {
-  return { before: totalsParts(s, start, cursor), after: totalsParts(s, cursor, end) };
+export function windowSummary(s: PointSeries | null, start: Date, cursor: Date, end: Date, ratio: SnowRatio = '7:1', ground = 0) {
+  return { before: totalsParts(s, start, cursor, ratio, ground), after: totalsParts(s, cursor, end, ratio, ground) };
 }
 
 /**
@@ -107,11 +112,22 @@ export const precipitation: LayerSlots = {
   id,
   title,
   swatches: PRECIP_TYPES.map(gradient),
-  pinNeeds: needs,
+  // The profile (with humidity) gives the snow line and freezing level in the details.
+  pinNeeds: [...needs, ...PROFILE_VARIABLES, ...PROFILE_RH_VARIABLES],
+  // Saving keeps the amounts only (fast); the snow line and freezing level
+  // work offline too when Temperature is saved with it (it keeps the profile).
   saveNeeds: needs,
   chartLabel: 'Hourly precipitation across the window. Drag to move through time.',
   legend,
-  readout: (pin, i) => ({ value: readoutValue(pin.series, i) }),
-  summary: (pin, start, cursor, end) => ({ kind: 'split', ...windowSummary(pin.series, start, cursor, end) }),
+  readout: (pin, i) => {
+    const sl = pin.series && i >= 0 ? snowLines(pin.series)[i] : undefined;
+    return { value: readoutValue(pin.series, i), extra: sl !== undefined && sl !== null ? `snow line ${formatElevation(Math.round(sl / 10) * 10)}` : undefined };
+  },
+  summary: (pin, start, cursor, end, set) => ({ kind: 'split', ...windowSummary(pin.series, start, cursor, end, (set?.ratio as SnowRatio | undefined) ?? '7:1', Math.max(0, pin.elevation ?? 0)) }),
   drawChart: (ctx, w, h, pin, start, end) => drawChart(ctx, w, h, pin.series, start, end),
+  details: (ctx) => precipDetails(ctx),
+  inView: (view) => precipInView(view),
+  footer: (ctx) => precipFooter(ctx),
+  settings,
+  settingsNote,
 };

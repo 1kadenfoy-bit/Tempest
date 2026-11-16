@@ -1,6 +1,6 @@
 {
  "version": 1,
- "source": "https://build.protomaps.com/20261115.pmtiles",
+ "source": "https://build.protomaps.com/20261116.pmtiles",
  "attribution": "<a href=\"https://protomaps.com\">Protomaps</a> © <a href=\"https://openstreetmap.org/copyright\">OpenStreetMap</a>",
  "bbox": [
   -139.1,
@@ -435,7 +435,7 @@
    "minzoom": 0,
    "maxzoom": 8,
    "tile": null,
-   "bytes": 16804378
+   "bytes": 16803043
   },
   {
    "file": "bc-6-7-18.pmtiles",
@@ -578,7 +578,7 @@
     9,
     20
    ],
-   "bytes": 58445212
+   "bytes": 58453973
   },
   {
    "file": "bc-6-9-21.pmtiles",
@@ -589,7 +589,7 @@
     9,
     21
    ],
-   "bytes": 62465620
+   "bytes": 62467394
   },
   {
    "file": "bc-6-9-22.pmtiles",
@@ -600,7 +600,7 @@
     9,
     22
    ],
-   "bytes": 3635797
+   "bytes": 3635758
   },
   {
    "file": "bc-6-10-18.pmtiles",
@@ -633,7 +633,7 @@
     10,
     20
    ],
-   "bytes": 49224974
+   "bytes": 49229550
   },
   {
    "file": "bc-6-10-21.pmtiles",
@@ -644,7 +644,7 @@
     10,
     21
    ],
-   "bytes": 78446553
+   "bytes": 78449493
   },
   {
    "file": "bc-6-10-22.pmtiles",
@@ -655,7 +655,7 @@
     10,
     22
    ],
-   "bytes": 18173391
+   "bytes": 18172231
   },
   {
    "file": "bc-6-11-18.pmtiles",
@@ -688,7 +688,7 @@
     11,
     20
    ],
-   "bytes": 23896955
+   "bytes": 23898845
   },
   {
    "file": "bc-6-11-21.pmtiles",
@@ -699,7 +699,7 @@
     11,
     21
    ],
-   "bytes": 60422366
+   "bytes": 60422328
   },
   {
    "file": "bc-6-11-22.pmtiles",
@@ -710,7 +710,7 @@
     11,
     22
    ],
-   "bytes": 14006447
+   "bytes": 14006459
   },
   {
    "file": "detail-north-shore.pmtiles",
@@ -724,7 +724,7 @@
     49.5
    ],
    "name": "North Shore: Horseshoe Bay to Deep Cove, up to Cypress, Grouse and Seymour",
-   "bytes": 4203645
+   "bytes": 4206732
   },
   {
    "file": "detail-sea-to-sky.pmtiles",
@@ -738,7 +738,7 @@
     50.35
    ],
    "name": "North Shore and Sea to Sky",
-   "bytes": 9721584
+   "bytes": 9721805
   },
   {
    "file": "detail-kootenay-pass.pmtiles",

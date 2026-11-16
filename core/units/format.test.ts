@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCursorTime, formatDegrees, formatElevation, formatRelative, formatTemp } from './format';
+import { formatCursorTime, formatDegrees, formatElevation, formatRelative, formatTemp, formatWhen } from './format';
 
 describe('formatting', () => {
   it('formats elevation with a thousands separator', () => {
@@ -57,5 +57,13 @@ describe('temperature', () => {
     expect(formatDegrees(2.2)).toBe('+2°');
     expect(formatDegrees(-5)).toBe('−5°');
     expect(formatDegrees(3, false)).toBe('3°');
+  });
+});
+
+describe('when', () => {
+  it('drops the weekday on the same day', () => {
+    const ref = new Date('2026-11-14T01:00:00Z'); // Fri evening in BC
+    expect(formatWhen(new Date('2026-11-14T00:00:00Z'), ref, 'America/Vancouver')).toMatch(/^\d+ PM$/);
+    expect(formatWhen(new Date('2026-11-14T18:00:00Z'), ref, 'America/Vancouver')).toMatch(/^Sat \d+ AM$/);
   });
 });
