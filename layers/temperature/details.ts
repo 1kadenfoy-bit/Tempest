@@ -56,6 +56,16 @@ function today(v: PinValues, ctx: DetailContext): Card {
     stats.push({ label: 'High', value: formatDegrees(v.temp[hi]!).replace('°', ' °C'), sub: formatWhen(v.times[hi]!, v.times[hi]!) });
   }
   stats.push({ label: 'Freezing level', value: fl === null || fl === undefined ? '–' : formatWhole(Math.round(fl / 10) * 10), unit: fl === null || fl === undefined ? 'none in the column' : 'm' });
+  // Humidity over the day (model, 2 m), with the dew point range under it.
+  const rh = idx.map((k) => s.values.relative_humidity_2m?.[k] ?? NaN).filter(Number.isFinite);
+  const dew = idx.flatMap((k) => { const t2 = s.values.temperature_2m?.[k] ?? NaN, r = s.values.relative_humidity_2m?.[k] ?? NaN; return Number.isFinite(t2) && Number.isFinite(r) ? [dewPoint(t2, r)] : []; });
+  if (rh.length) {
+    const lo = Math.round(Math.min(...rh)), hi = Math.round(Math.max(...rh));
+    stats.push({
+      label: 'Humidity', value: lo === hi ? `${hi}%` : `${lo}–${hi}%`,
+      sub: dew.length ? `dew point ${formatDegrees(Math.min(...dew), false)} to ${formatDegrees(Math.max(...dew), false)}` : undefined,
+    });
+  }
   // Day and night averages, split at sunrise and sunset at the pin.
   const day = idx.filter((k) => isDaylight(v.times[k]!, s.lat, s.lon)).map((k) => v.temp[k]!);
   const night = idx.filter((k) => !isDaylight(v.times[k]!, s.lat, s.lon)).map((k) => v.temp[k]!);
@@ -139,7 +149,10 @@ function hourly(v: PinValues, ctx: DetailContext): Card {
 
 export function temperatureDetails(v: PinValues | null, ctx: DetailContext): Card[] {
   if (!v || ctx.index < 0 || !Number.isFinite(v.temp[ctx.index])) return [];
-  const cards: Card[] = [headline(v, ctx.index, ctx.now), today(v, ctx)];
+  // The headline always describes the present (Kaden, Nov 16), not the cursor.
+  let present = -1;
+  v.times.forEach((t, k) => { if (Number.isFinite(v.temp[k]) && (present < 0 || Math.abs(t.getTime() - ctx.now.getTime()) < Math.abs(v.times[present]!.getTime() - ctx.now.getTime()))) present = k; });
+  const cards: Card[] = [headline(v, present, ctx.now), today(v, ctx)];
   const be = byElevation(v, ctx);
   if (be) cards.push(be);
   cards.push(aboveBelow(v, ctx), freezeThaw(v, ctx), hourly(v, ctx));

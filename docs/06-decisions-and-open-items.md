@@ -29,7 +29,7 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Window summary (Nov 16, after M2) | Split at the needle: the total for the half before it and for the half after ("Last 24 h" · "Next 24 h" at now; "24 h before" · "24 h after" when moved). Where the window reaches past the model's hours the label says what is covered ("Since Sun 5 PM") |
 | Info sheet, tucked (Nov 16, after M3) | When slid down, the sheet stops with its handle on screen, measured from the visible screen height (the installed iPhone app reports a taller box than it shows) |
 | Saving an area (Nov 16, after M3) | Save for offline opens the adjustable box with corner handles (v8 08-SaveArea), brought forward from M8; the box is what is saved |
-| Mixed totals (Nov 16, after M3) | When more than one kind fell (rain, snow, mixed), each total sits on its own line |
+| Totals lines (Nov 16, after M3) | When more than one kind fell, each total sits on its own line |
 | Pin readout (Nov 16, after M4) | Centred over the pin, moved only as far as needed to stay on screen. Replaces v8's left-aligned readout |
 | Panning (Nov 16, after M4) | Colour should be there while panning, not only after letting go: the fill reaches a margin past the screen and refreshes during long pans |
 | Map detail (Nov 15, after M1) | North Vancouver area at the base map's finest level (zoom 15), Horseshoe Bay to Deep Cove up to Cypress, Grouse and Seymour |
@@ -57,7 +57,12 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Week strip values (M4) | Daily high and low only for days with 12 or more model hours | A high from part of a day would mislead |
 | Elevation bands (M5, proposal) | Alpine starts at the region's typical treeline; valley ends 800 m below it. Treelines: South Coast 1,400 m, Sea to Sky 1,650, Coast inland 1,800, Columbia Mountains 1,950, Rockies 2,200, Northern BC 1,300. Labelled approximate until Kaden agrees | Matches the v8 screens on the North Shore (600 and 1,400 m) |
 | Snow line (M5) | Where the wet-bulb temperature falls to 0.5 °C, from the model's temperature and humidity on each pressure level | HRDPS's files carry no snow line of its own, so the "Model" choice is left out |
-| Snow ratio (M5) | 7:1 (fixed; Open-Meteo's conversion), Kuchera (per hour from the column's warmest temperature), or 10:1. Default 7:1, the numbers shown so far | HRDPS has no ratio of its own; "Model's own" would have meant 7:1 |
+| Snow ratio (M5; default changed Nov 16) | 7:1 (fixed; Open-Meteo's conversion), Kuchera (per hour from the column's warmest temperature), or 10:1. Default Kuchera: Kaden asked for the most reliable, and a 2026 comparison of 10 methods over 14 storms found Kuchera among the most accurate (US Northeast; not yet checked in BC) | HRDPS has no ratio of its own; "Model's own" would have meant 7:1 |
+| Rain or snow (Nov 16, after M5) | One rule everywhere: the wet-bulb temperature at the ground, from the profile, at each spot's real height. All snow at 0 °C or below, all rain from 1 °C, mixed between; the snow line (0.5 °C) runs down the middle of the mixed band. The map, the pin's readout, chart, totals and the table all use it. Without a profile (rare) the model's own split is used | Kaden saw the snow line and the orange band disagree when zoomed in: they came from two methods |
+| Mixed totals (Nov 16, after M5) | Totals read only rain and snow: a mixed hour is split by its snow share | Kaden: "4 cm snow / 2 mm mixed" should read as rain |
+| Headline and NOW (Nov 16, after M5) | Always describe the present hour, not the time slider | Kaden |
+| Totals table (Nov 16, after M5) | Spans the model covers only in part show what it holds, faded, instead of "–" | Kaden: the 48 h columns were empty |
+| Saved precipitation (Nov 16, after M5) | Keeps the profile too (temperature, height and humidity per level), since it decides rain or snow at the pin; offline numbers equal online ones | About 40 more values an hour to download |
 | Type shown (M5) | Rain only and Snow only each hide mixed as well | Mixed is both |
 | Totals by elevation (M5) | The pin's model cell's amount, typed as rain or snow at each band's height by that hour's wet-bulb temperature. The pin's own band uses the pin's height; others the band's middle. Past columns before the run show "–" until observed data (M6) | |
 | Freeze-thaw areas (M5) | Not built: the setting has no map design yet, so the switch is not shown | "A switch appears only when it works" |

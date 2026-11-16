@@ -3,8 +3,8 @@
 // freezing level from the same hour's profile (wet-bulb 0.5 °C and 0 °C).
 import tokens from '../../design/tokens.json';
 import { rampColor } from '../../core/color/ramp';
-import { ratioFor, totalAtHeight, type SnowRatio } from '../../core/precip/by-elevation';
-import { PRECIP_CUTOFF, precipType } from '../../core/precip/type';
+import { ratioFor, shareAtHeight, totalAtHeight, type SnowRatio } from '../../core/precip/by-elevation';
+import { PRECIP_CUTOFF, snowShare, typeFromShare } from '../../core/precip/type';
 import { freezingLevels, snowLines } from '../../core/temperature/profile';
 import { crossings as rawCrossings, type Crossing } from '../../core/time/crossings';
 
@@ -20,24 +20,33 @@ const accent = tokens.data.precipitation.textAccent;
 export const settings: Setting[] = [
   { key: 'type', title: 'TYPE SHOWN', kind: 'segmented', options: [{ value: 'all', label: 'All' }, { value: 'rain', label: 'Rain only' }, { value: 'snow', label: 'Snow only' }], default: 'all' },
   // HRDPS has no snow ratio of its own; Open-Meteo converts at a fixed 7:1.
-  { key: 'ratio', title: 'SNOW RATIO', kind: 'segmented', options: [{ value: '7:1', label: '7:1' }, { value: 'kuchera', label: 'Kuchera' }, { value: '10:1', label: '10:1' }], default: '7:1' },
+  { key: 'ratio', title: 'SNOW RATIO', kind: 'segmented', options: [{ value: '7:1', label: '7:1' }, { value: 'kuchera', label: 'Kuchera' }, { value: '10:1', label: '10:1' }], default: 'kuchera' },
   // HRDPS's files carry no snow line of its own, so there is no "Model" choice.
   { key: 'line', title: 'LINE ON THE MAP', kind: 'segmented', options: [{ value: 'off', label: 'Off' }, { value: 'wetbulb', label: 'Snow line' }, { value: '0c', label: '0 °C' }], default: 'wetbulb' },
 ];
 export const settingsNote = 'Nothing is drawn under 0.1 mm/h. The snow line is where the wet-bulb temperature falls to 0.5 °C.';
 
-const ratioSetting = (ctx: DetailContext) => (ctx.settings.ratio as SnowRatio | undefined) ?? '7:1';
+const ratioSetting = (ctx: DetailContext) => (ctx.settings.ratio as SnowRatio | undefined) ?? 'kuchera';
 
+/** Type at the pin for step k: wet-bulb at the pin's height (the map's rule), else the model's split. */
 function typeAt(ctx: DetailContext, k: number) {
   const s = ctx.pin.series!;
   const p = s.values.precipitation?.[k] ?? NaN;
   if (!(p >= PRECIP_CUTOFF * s.stepHours)) return 'dry';
-  return precipType(p, s.values.snowfall_water_equivalent?.[k] ?? 0);
+  const z = Math.max(0, ctx.pin.elevation ?? 0);
+  return typeFromShare(shareAtHeight(s, k, z) ?? snowShare(p, s.values.snowfall_water_equivalent?.[k] ?? 0));
 }
 
+/** The step holding the present hour (amounts end at their valid time), whatever the cursor shows. */
+export function presentIndex(s: { times: Date[] }, now: Date): number {
+  const i = s.times.findIndex((t) => t.getTime() >= now.getTime());
+  return i < 0 ? s.times.length - 1 : i;
+}
+
+/** The headline always describes the present (Kaden, Nov 16), not the cursor. */
 function headline(ctx: DetailContext): Card {
   const s = ctx.pin.series!;
-  const i = ctx.index;
+  const i = presentIndex(s, ctx.now);
   const now = typeAt(ctx, i);
   const parts: string[] = [];
   // The last change of type within 12 hours before the cursor.
@@ -59,7 +68,8 @@ function headline(ctx: DetailContext): Card {
 
 function nowStats(ctx: DetailContext, snow: (number | null)[], freezing: (number | null)[]): Card {
   const s = ctx.pin.series!;
-  const i = ctx.index;
+  // NOW means the present hour, wherever the cursor is.
+  const i = presentIndex(s, ctx.now);
   const p = s.values.precipitation?.[i] ?? NaN;
   const rate = p / s.stepHours;
   const hasProfile = freezing.some((x) => x !== null) || snow.some((x) => x !== null);
@@ -90,11 +100,11 @@ function totalsTable(ctx: DetailContext, bands: BandsInfo): Card {
   const spans = [72, 48, 24, 6];
   const cell = (z: number, a: Date, b: Date) => {
     const t = totalAtHeight(s, z, a, b, ratio);
-    if (!t.complete) return { parts: [{ text: '–', color: 'var(--ink-3)' }] };
+    // A span the model covers only in part shows what it holds, faded.
     const parts = [];
     if (t.rainMm >= 0.5) parts.push({ text: formatWhole(t.rainMm), color: accent.rain });
     if (t.snowCm >= 0.5) parts.push({ text: formatWhole(t.snowCm), color: accent.snow });
-    return { parts: parts.length ? parts : [{ text: '0', color: 'var(--ink-2)' }] };
+    return { parts: parts.length ? parts : [{ text: '0', color: 'var(--ink-2)' }], partial: !t.complete };
   };
   const rows = (['Alpine', 'Mid', 'Valley'] as const).map((band) => ({
     label: band, you: band === youBand,
@@ -110,7 +120,7 @@ function totalsTable(ctx: DetailContext, bands: BandsInfo): Card {
     rows,
     note: [
       { text: 'Rain mm', color: accent.rain }, { text: ' · ' }, { text: 'snow cm', color: accent.snow },
-      { text: ` · alpine above ${approx}${formatElevation(bands.alpineBottom)}, valley below ${approx}${formatElevation(bands.valleyTop)} · – outside the model run (past hours come with observed data)` },
+      { text: ` · alpine above ${approx}${formatElevation(bands.alpineBottom)}, valley below ${approx}${formatElevation(bands.valleyTop)} · faded: the model run covers only part of that span (earlier hours come with observed data, later ones with more models)` },
     ],
   };
 }
@@ -151,7 +161,7 @@ export function precipInView(view: ViewSample): string | null {
   const parts: string[] = [];
   if (top.value < PRECIP_CUTOFF) parts.push('dry everywhere');
   else {
-    const kind = precipType(top.value, top.second ?? 0);
+    const kind = typeFromShare(snowShare(top.value, top.second ?? 0));
     const name = view.nameAt(top.lon, top.lat);
     parts.push(`heaviest ${formatOneDecimal(top.value)} mm/h ${kind}${name ? ` near ${name}` : ''}`);
   }

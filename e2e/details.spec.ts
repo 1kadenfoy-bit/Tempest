@@ -60,18 +60,18 @@ test('precipitation details: totals by elevation, snow ratio and type shown', as
   const table = d.locator('.band-table');
   await expect(table.locator('.band-name')).toHaveText(['Alpine', /^Mid/, 'Valley']);
   await expect(table.locator('tr.you .you-chip')).toHaveText('You');
-  await expect(d.locator('.details-footer')).toContainText('Snow ratio 7:1 (fixed)');
+  await expect(d.locator('.details-footer')).toContainText('Snow ratio Kuchera');
   await page.screenshot({ path: 'test-results/screens/m5-precipitation-up.png' });
 
   await page.click('#layer-settings');
   const panel = page.getByRole('dialog', { name: 'Precipitation settings' });
-  await panel.getByRole('button', { name: 'Kuchera' }).click();
-  await expect(d.locator('.details-footer')).toContainText('Snow ratio Kuchera');
+  await panel.getByRole('button', { name: '10:1' }).click();
+  await expect(d.locator('.details-footer')).toContainText('Snow ratio 10:1 (fixed)');
   await panel.getByRole('button', { name: 'Rain only' }).click();
   await panel.getByRole('button', { name: 'Off' }).click();
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerSettings: Record<string, Record<string, unknown>> }).layerSettings.precipitation);
-  expect(saved).toEqual({ ratio: 'kuchera', type: 'rain', line: 'off' });
+  expect(saved).toEqual({ ratio: '10:1', type: 'rain', line: 'off' });
   expect(errors).toEqual([]);
 });

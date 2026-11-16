@@ -61,7 +61,7 @@ export type Card =
   | {
       kind: 'table'; title: string; meta?: string | undefined;
       groups: { label: string; columns: string[] }[];
-      rows: { label: string; you: boolean; cells: { parts: { text: string; color: string }[] }[] }[];
+      rows: { label: string; you: boolean; cells: { parts: { text: string; color: string }[]; partial?: boolean }[] }[];
       note: { text: string; color?: string | undefined }[];
     }
   | {

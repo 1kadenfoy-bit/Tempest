@@ -270,6 +270,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .band-groups th, .band-cols th { color: var(--ink-2); font: var(--type-caption); }
 .band-table .split { border-left: 2px solid var(--ink-2); }
 .band-table td { font-weight: 600; white-space: nowrap; }
+.band-table td.partial { opacity: 0.5; font-weight: 400; }
 .band-name { text-align: left !important; white-space: nowrap; }
 .band-table tr.you { background: var(--fill-control); }
 .you-chip { margin-left: 4px; padding: 0 5px; border-radius: var(--radius-chip); background: var(--ink); color: var(--surface); font: var(--type-micro); }
