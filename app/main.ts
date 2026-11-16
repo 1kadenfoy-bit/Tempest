@@ -86,7 +86,7 @@ let series: PointSeries | null = null;
 
 scrubber.setLayer({
   drawChart: (ctx, w, h, start, end) => precip.drawChart(ctx, w, h, series, start, end),
-  summary: (start, end) => precip.windowSummary(series, start, end),
+  summary: (start, cursor, end) => precip.windowSummary(series, start, cursor, end),
 });
 
 function renderRunAge() {

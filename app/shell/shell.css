@@ -167,8 +167,10 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   border: 1px solid var(--stroke-strong);
   display: flex; align-items: center; gap: 4px; font: 600 13px var(--font-body);
 }
-.window-summary { min-width: 0; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
-.summary-main { font: 600 15px var(--font-body); line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.window-summary { flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.summary-half { min-width: 0; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.summary-half + .summary-half { border-left: 1px solid var(--stroke); }
+.summary-main { font: 600 14px var(--font-body); line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .summary-sub { font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .chart-block { height: 76px; display: flex; flex-direction: column; gap: 2px; }
 .chart {

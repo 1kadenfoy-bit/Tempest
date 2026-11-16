@@ -47,7 +47,10 @@
           </div>
           <div class="window-row">
             <button class="window-button" id="window-button" aria-haspopup="dialog" aria-expanded="false"><span id="window-label">48 h</span><span data-icon="chevron"></span></button>
-            <div class="window-summary" id="window-summary"><span class="summary-main" id="summary-main"></span><span class="summary-sub" id="summary-sub"></span></div>
+            <div class="window-summary" id="window-summary">
+              <div class="summary-half"><span class="summary-main" id="summary-before"></span><span class="summary-sub" id="summary-before-label"></span></div>
+              <div class="summary-half"><span class="summary-main" id="summary-after"></span><span class="summary-sub" id="summary-after-label"></span></div>
+            </div>
           </div>
           <div class="chart-block">
             <div class="chart" id="chart" aria-label="Hourly precipitation across the window. Drag to move through time.">

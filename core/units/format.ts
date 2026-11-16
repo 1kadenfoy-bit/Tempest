@@ -67,3 +67,10 @@ export function formatDayLabel(d: Date, today: Date, timeZone = TIME_ZONE): stri
   const p = fmt.formatToParts(d);
   return `${p.find((x) => x.type === 'weekday')?.value} ${p.find((x) => x.type === 'day')?.value}`;
 }
+
+/** A span of hours: "6 h", "24 h", "3.5 d". */
+export function formatSpan(hours: number): string {
+  if (hours < 72) return `${intl.format(hours)} h`;
+  const d = hours / 24;
+  return `${Number.isInteger(d) ? d : oneDecimal.format(d)} d`;
+}

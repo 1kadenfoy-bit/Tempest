@@ -39,3 +39,13 @@ describe('amounts and labels', () => {
     expect(formatDayLabel(new Date('2026-11-13T10:00:00Z'), today)).toBe('Fri 13');
   });
 });
+
+import { formatSpan } from './format';
+describe('spans', () => {
+  it('reads hours, then days from 3 days', () => {
+    expect(formatSpan(6)).toBe('6 h');
+    expect(formatSpan(24)).toBe('24 h');
+    expect(formatSpan(84)).toBe('3.5 d');
+    expect(formatSpan(72)).toBe('3 d');
+  });
+});

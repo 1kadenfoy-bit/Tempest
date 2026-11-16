@@ -3,7 +3,7 @@
 import { rampColor } from '../../core/color/ramp';
 import { precipTotals } from '../../core/precip/totals';
 import { PRECIP_CUTOFF, precipType, type PrecipType } from '../../core/precip/type';
-import { formatCm, formatCursorTime, formatMm, formatRate } from '../../core/units/format';
+import { formatCm, formatMm, formatRate } from '../../core/units/format';
 import type { PointSeries, VariableName } from '../../core/vocabulary';
 import { precipRamp, PRECIP_TYPES } from './fill';
 
@@ -25,18 +25,24 @@ export function readoutValue(s: PointSeries | null, i: number): string {
   return `${formatRate(mm / s.stepHours)} ${precipType(mm, w[i] ?? 0)}`;
 }
 
-/** Window summary: "12 mm rain · 21 cm snow" and "+3 mm mixed · Thu 5 PM – Sat 5 PM". */
-export function windowSummary(s: PointSeries | null, start: Date, end: Date): { main: string; sub: string } {
-  const range = `${formatCursorTime(start)} – ${formatCursorTime(end)}`;
-  if (!s) return { main: '…', sub: range };
+/** Totals as one short line: "4 mm rain · 12 cm snow", "+3 mm mixed", or "Dry". */
+export function totalsLine(s: PointSeries | null, start: Date, end: Date): string {
+  if (!s) return '…';
   const { p, w } = series(s);
   const t = precipTotals(s.times, p, w, start, end);
   const parts: string[] = [];
   if (t.rainMm >= 0.5) parts.push(`${formatMm(t.rainMm)} rain`);
   if (t.snowCm >= 0.5) parts.push(`${formatCm(t.snowCm)} snow`);
-  const extra = t.mixedMm >= 0.5 ? `+${formatMm(t.mixedMm)} mixed · ` : '';
-  if (!parts.length) parts.push(t.mixedMm >= 0.5 ? `${formatMm(t.mixedMm)} mixed` : 'Dry');
-  return { main: parts.join(' · '), sub: (parts[0]?.includes('mixed') ? '' : extra) + range };
+  if (t.mixedMm >= 0.5) parts.push(`${parts.length ? '+' : ''}${formatMm(t.mixedMm)} mixed`);
+  return parts.length ? parts.join(' · ') : 'Dry';
+}
+
+/**
+ * Window summary, split at the needle: what fell in the half before it and
+ * what is due in the half after (Kaden's choice A, Nov 16).
+ */
+export function windowSummary(s: PointSeries | null, start: Date, cursor: Date, end: Date) {
+  return { before: totalsLine(s, start, cursor), after: totalsLine(s, cursor, end) };
 }
 
 /**

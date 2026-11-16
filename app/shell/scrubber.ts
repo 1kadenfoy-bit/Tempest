@@ -4,13 +4,14 @@
 // supplies only its chart drawing and its window summary.
 import { TimeCursor } from '../../core/time/cursor';
 import { DEFAULT_WINDOW_HOURS, WINDOW_OPTIONS, dayStart, weekRange, windowRange } from '../../core/time/window';
-import { formatAxisTime, formatCursorTime, formatDayLabel, formatRelative } from '../../core/units/format';
+import { formatAxisTime, formatCursorTime, formatDayLabel, formatRelative, formatSpan } from '../../core/units/format';
 import { icons } from './icons';
 import { closePanel, isOpenFrom, openPanel } from './panel';
 
 export interface ScrubberLayer {
   drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, start: Date, end: Date): void;
-  summary(start: Date, end: Date): { main: string; sub: string };
+  /** Totals for the half before the needle and the half after it. */
+  summary(start: Date, cursor: Date, end: Date): { before: string; after: string };
 }
 
 const H = 3_600_000;
@@ -37,9 +38,18 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     $('window-label').textContent = WINDOW_OPTIONS.find((o) => o.hours === windowHours)?.label ?? `${windowHours} h`;
 
     // Summary
-    const sum = layer?.summary(start, end) ?? { main: '', sub: '' };
-    $('summary-main').textContent = sum.main;
-    $('summary-sub').textContent = sum.sub;
+    const sum = layer?.summary(start, t, end) ?? { before: '', after: '' };
+    const half = formatSpan(windowHours / 2);
+    // "Last/Next" when the needle is on now; "before/after" when moved away.
+    const atNow = Math.abs(t.getTime() - now.getTime()) < 60 * 60_000;
+    $('summary-before').textContent = sum.before;
+    $('summary-after').textContent = sum.after;
+    // Say what the totals really cover when the window reaches past the
+    // model's hours (the first step's amount starts an hour before it).
+    const dataStart = cursor.first ? new Date(cursor.first.getTime() - H) : start;
+    const dataEnd = cursor.last ?? end;
+    $('summary-before-label').textContent = start < dataStart ? `Since ${formatCursorTime(dataStart)}` : atNow ? `Last ${half}` : `${half} before`;
+    $('summary-after-label').textContent = end > dataEnd ? `Until ${formatCursorTime(dataEnd)}` : atNow ? `Next ${half}` : `${half} after`;
 
     // Chart
     const dpr = window.devicePixelRatio || 1;

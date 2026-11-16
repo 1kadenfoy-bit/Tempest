@@ -26,6 +26,7 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Sheet, pulled up (Nov 15, after M1) | Nothing in the scrubber part changes as the sheet rises; the window row stays. Pulling up only exposes more below. Replaces "the window row is hidden when the sheet is pulled up" in the design spec |
 | Sheet, tucked away (Nov 15, after M1) | The sheet can be slid down until only its handle shows, to clear the map; tap or drag the handle to bring it back |
 | Page zoom (Nov 15, after M1) | Pinching zooms the map only; the interface itself never zooms, including over open panels |
+| Window summary (Nov 16, after M2) | Split at the needle: the total for the half before it and for the half after ("Last 24 h" · "Next 24 h" at now; "24 h before" · "24 h after" when moved). Where the window reaches past the model's hours the label says what is covered ("Since Sun 5 PM") |
 | Map detail (Nov 15, after M1) | North Vancouver area at the base map's finest level (zoom 15), Horseshoe Bay to Deep Cove up to Cypress, Grouse and Seymour |
 | Layer plan | As in `docs/01-product-brief.md` |
 

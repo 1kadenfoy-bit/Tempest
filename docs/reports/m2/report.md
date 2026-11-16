@@ -82,3 +82,10 @@ Differences from v8:
 - **Precipitation shading** looks blocky, with odd overlaps where types meet. Cause: three separate fills (rain, mixed, snow), each switching off sharply at its type's edge. Fix: draw precipitation with the app's own renderer (first item of M3), colouring each pixel from rate and snow share together so types blend smoothly.
 - The region-file total (16.6 mm) differs slightly from the point check (16.9 mm) because the region test blends the four nearest grid cells, while the point check, like Open-Meteo, uses the nearest one.
 - **Point check, corrected (Nov 16):** right after a new run, Open-Meteo's point service can still be on the previous run while the map files are on the new one. For a few hours they then disagree by design. The check now asks the point service which run it's serving and reads the map files of that same run. Result: 48 of 48 hours identical at all three places (18Z run).
+
+## After Kaden's second look (Nov 16)
+
+- **Window summary split at the needle** (option A): what fell in the half before and what is due in the half after, for example "5 cm snow · Last 24 h | 4 cm snow · Next 24 h". When the window reaches past the model's hours the label says what is covered ("Since Sun 5 PM") until observed data arrives in M6.
+- **Snow conversion checked:** at Whistler alpine, 17.5 mm of snow water shows as 12.2 cm of snow, matching Open-Meteo's own snowfall figure. The surprisingly large totals came from the centred window covering 24 h of the past as well.
+- **Page pinned in place;** terrain shading drawn above the precipitation.
+- **Time zones:** this test browser's time-zone data has BC on UTC−8 in November, while Node's newer data (tz 2026e) has UTC−7. The app follows the phone's own rules, so on the phone it always matches the clock.
