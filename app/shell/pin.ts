@@ -54,18 +54,18 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
     if (notify) onChange(state);
   };
 
-  // Keep the readout on screen when the pin is near an edge.
+  // Centre the readout over the pin (Kaden, Nov 16), shifted only as far as
+  // needed to stay on screen near an edge.
   const readout = el.querySelector<HTMLElement>('.pin-readout')!;
-  const BASE = -13;
   const keepInside = () => {
-    readout.style.left = `${BASE}px`;
-    const r = readout.getBoundingClientRect();
-    if (!r.width) return;
+    const w = readout.offsetWidth;
+    if (!w) return;
+    const pinX = el.getBoundingClientRect().left + el.offsetWidth / 2;
     const edge = 8;
-    let shift = 0;
-    if (r.right > innerWidth - edge) shift = innerWidth - edge - r.right;
-    if (r.left + shift < edge) shift = edge - r.left;
-    readout.style.left = `${BASE + shift}px`;
+    let left = -w / 2;
+    if (pinX + left + w > innerWidth - edge) left = innerWidth - edge - w - pinX;
+    if (pinX + left < edge) left = edge - pinX;
+    readout.style.left = `${el.offsetWidth / 2 + left}px`;
   };
   let keepFrame = 0;
   const scheduleKeep = () => { cancelAnimationFrame(keepFrame); keepFrame = requestAnimationFrame(keepInside); };

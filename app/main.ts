@@ -165,6 +165,8 @@ const BC_BOX: [number, number, number, number] = [-139.1, 48.2, -114, 60];
 const precipLayer = new TypedRateLayer('precip-grid', precip.precipRenderStyle());
 const tempLayer = new TerrainTemperatureLayer('temperature-grid', temperatureRenderStyle(), PROFILE_LEVELS.length);
 let mosaic: Mosaic | null = null;
+/** How far beyond each screen edge the temperature fill reaches, as a share of the screen. */
+const PAN_MARGIN = 0.35;
 const fieldStore = new MemoryStore<GridField>(48);
 let fillTimer = 0;
 let mapReady = false;
@@ -219,8 +221,11 @@ async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typ
 
 /** The temperature fill: profiles at a lattice of nodes, terrain per pixel on the GPU. */
 async function updateTemperature(r: RunMetadata, t: Date, mine: number) {
+  // A margin around the screen, so panning shows colour straight away.
   const b = map.getBounds();
-  const view: Box = [Math.max(BC_BOX[0], b.getWest()), Math.max(BC_BOX[1], b.getSouth()), Math.min(BC_BOX[2], b.getEast()), Math.min(BC_BOX[3], b.getNorth())];
+  const padX = (b.getEast() - b.getWest()) * PAN_MARGIN;
+  const padY = (b.getNorth() - b.getSouth()) * PAN_MARGIN;
+  const view: Box = [Math.max(BC_BOX[0], b.getWest() - padX), Math.max(BC_BOX[1], b.getSouth() - padY), Math.min(BC_BOX[2], b.getEast() + padX), Math.min(BC_BOX[3], b.getNorth() + padY)];
   if (view[0] >= view[2] || view[1] >= view[3]) { tempLayer.setProfiles(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
@@ -289,6 +294,16 @@ async function updateFills() {
 }
 const scheduleFills = (ms: number) => { clearTimeout(fillTimer); fillTimer = window.setTimeout(() => void updateFills(), ms); };
 map.on('moveend', () => scheduleFills(150));
+// During a long pan, refresh about twice a second rather than only on release.
+let lastMoveFill = 0;
+let moveFilling = false;
+map.on('move', () => {
+  const now = performance.now();
+  if (moveFilling || now - lastMoveFill < 500) return;
+  lastMoveFill = now;
+  moveFilling = true;
+  void updateFills().finally(() => { moveFilling = false; });
+});
 
 cursor.subscribe(() => {
   renderReadout();

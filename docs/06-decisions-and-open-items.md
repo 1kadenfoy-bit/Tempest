@@ -30,6 +30,8 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Info sheet, tucked (Nov 16, after M3) | When slid down, the sheet stops with its handle on screen, measured from the visible screen height (the installed iPhone app reports a taller box than it shows) |
 | Saving an area (Nov 16, after M3) | Save for offline opens the adjustable box with corner handles (v8 08-SaveArea), brought forward from M8; the box is what is saved |
 | Mixed totals (Nov 16, after M3) | When more than one kind fell (rain, snow, mixed), each total sits on its own line |
+| Pin readout (Nov 16, after M4) | Centred over the pin, moved only as far as needed to stay on screen. Replaces v8's left-aligned readout |
+| Panning (Nov 16, after M4) | Colour should be there while panning, not only after letting go: the fill reaches a margin past the screen and refreshes during long pans |
 | Map detail (Nov 15, after M1) | North Vancouver area at the base map's finest level (zoom 15), Horseshoe Bay to Deep Cove up to Cypress, Grouse and Seymour |
 | Layer plan | As in `docs/01-product-brief.md` |
 

@@ -38,7 +38,7 @@ export async function elevationAt(lng: number, lat: number): Promise<number> {
 
 /**
  * Ground height over a box, from terrain tiles at a zoom that gives about one
- * value per screen point (at most zoom 12, at most 4 × 4 tiles). Rows run
+ * value per screen point (at most zoom 12, at most 5 × 5 tiles: the screen plus a margin). Rows run
  * north to south, in Web Mercator like the tiles. Tiles that fail (no signal,
  * not saved) read as sea level.
  */
@@ -53,7 +53,7 @@ export async function elevationMosaic(bbox: [number, number, number, number], ma
     return { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
   };
   let r = tileRange(z);
-  while (z > 3 && ((r.x1 - r.x0 + 1) > 4 || (r.y1 - r.y0 + 1) > 4)) r = tileRange(--z);
+  while (z > 3 && ((r.x1 - r.x0 + 1) > 5 || (r.y1 - r.y0 + 1) > 5)) r = tileRange(--z);
   const key = `${z}/${r.x0}/${r.y0}/${r.x1}/${r.y1}`;
   if (reuse?.key === key) return reuse;
   const nx = r.x1 - r.x0 + 1;

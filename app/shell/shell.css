@@ -382,6 +382,9 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   border: 1.5px solid var(--stroke-strong);
 }
 .check-row input:checked + .check-box { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.check-box svg { visibility: hidden; }
+.check-row input:checked + .check-box svg { visibility: visible; }
+.check-row input:focus-visible + .check-box { outline: 2px solid var(--ink); outline-offset: 2px; }
 .check-text { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; }
 .check-title { font: var(--type-body); }
 .check-note { font: var(--type-caption); color: var(--ink-2); }
