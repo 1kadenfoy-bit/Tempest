@@ -559,6 +559,8 @@ async function savedSeries(r: RunMetadata, lat: number, lng: number): Promise<Po
   return null;
 }
 setInterval(() => { if (document.visibilityState === 'visible') renderRunAge(); }, 60_000);
+// A new run can land while the app stays open: look every 10 minutes while it is on screen.
+setInterval(() => { if (document.visibilityState === 'visible' && !usingSaved) void loadRun(); }, 10 * 60_000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderRunAge(); void loadRun(); } });
 
 // Pin
