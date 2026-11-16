@@ -99,4 +99,4 @@ A new browser test checks each part:
    - Is the dashed seam on the chart clear enough?
 2. **Observed precipitation:** do the grey bars over the past two days match what you remember?
 3. **GFS:** would you like it added to the menu?
-4. **Merge pull request #4**, which this work extends, then say go for M7 (wind).
+4. **Merge pull request #5** (M6), then say go for M7 (wind).
