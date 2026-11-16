@@ -5,7 +5,7 @@ import { maplibregl } from '../map/maplibre';
 import { PMTiles, type RangeResponse, type Source } from 'pmtiles';
 import { fetchRunMetadata, stepFileUrl } from '../../adapters/openmeteo-maps/run-metadata';
 import { fetchPointSeries } from '../../adapters/openmeteo-maps/point-series';
-import { comparePrecip, fetchApiSeries } from '../../adapters/openmeteo-maps/point-api';
+import { comparePrecip, fetchApiRun, fetchApiSeries } from '../../adapters/openmeteo-maps/point-api';
 import { REGION_FILE_VERSION, decodeRegionFile, encodeRegionFile } from '../../core/region-file/format';
 import { formatRunAge, nearestStepIndex } from '../../core/time/run-age';
 import { precipFills } from '../../layers/precipitation/fill';
@@ -197,7 +197,19 @@ async function pmtilesFromStorage(): Promise<void> {
 
 /** M2 acceptance: the pin's numbers against Open-Meteo's own point forecast. */
 async function pointCheck(): Promise<void> {
-  const run = await fetchRunMetadata('cmc_gem_hrdps');
+  const latest = await fetchRunMetadata('cmc_gem_hrdps');
+  // Compare the same run: the point API can still be on the previous one.
+  let apiRun: Date;
+  try {
+    apiRun = await fetchApiRun(latest.model);
+  } catch (err) {
+    log(`point check: Open-Meteo refused (${String((err as Error).message)})`);
+    return;
+  }
+  const H = 3_600_000;
+  const run = apiRun.getTime() === latest.referenceTime.getTime()
+    ? latest
+    : { ...latest, referenceTime: apiRun, validTimes: Array.from({ length: 49 }, (_, i) => new Date(apiRun.getTime() + i * H)) };
   const places = [
     { name: 'Mt Seymour', lat: 49.3895, lon: -122.948 },
     { name: 'Whistler', lat: 50.1163, lon: -122.9574 },

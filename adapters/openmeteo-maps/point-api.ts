@@ -3,6 +3,14 @@
 // Not a data source for the layer.
 export const POINT_API_MODEL: Record<string, string> = { cmc_gem_hrdps: 'gem_hrdps_continental' };
 
+/** The run Open-Meteo's point API is serving now, which can lag the map files by a run. */
+export async function fetchApiRun(model: string, fetchFn: typeof fetch = fetch): Promise<Date> {
+  const res = await fetchFn(`https://api.open-meteo.com/data/${model}/static/meta.json`);
+  const json = (await res.json()) as { last_run_initialisation_time?: number };
+  if (!res.ok || !json.last_run_initialisation_time) throw new Error(`point API metadata ${res.status}`);
+  return new Date(json.last_run_initialisation_time * 1000);
+}
+
 export interface ApiSeries { times: Date[]; precipitation: number[]; snowfallCm: number[] }
 
 export async function fetchApiSeries(model: string, lat: number, lon: number, fetchFn: typeof fetch = fetch): Promise<ApiSeries> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { comparePrecip, fetchApiSeries } from './point-api';
+import { comparePrecip, fetchApiRun, fetchApiSeries } from './point-api';
 
 describe('point API check', () => {
   it('parses the API and compares hour by hour', async () => {
@@ -12,6 +12,10 @@ describe('point API check', () => {
     expect(c.hours).toBe(2);
     expect(c.maxDiffMm).toBeCloseTo(0.05);
     expect(c.matchedWithin01).toBe(2);
+  });
+  it('reads which run the API serves', async () => {
+    const fake = (async () => new Response(JSON.stringify({ last_run_initialisation_time: 1794765600 }))) as unknown as typeof fetch;
+    expect((await fetchApiRun('cmc_gem_hrdps', fake)).toISOString()).toBe('2026-11-15T18:00:00.000Z');
   });
   it('reports the API refusing', async () => {
     const fake = (async () => new Response(JSON.stringify({ error: true, reason: 'Daily API request limit exceeded.' }), { status: 429 })) as unknown as typeof fetch;
