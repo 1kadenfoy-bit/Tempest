@@ -18,6 +18,12 @@ describe('colour ramps', () => {
     expect(rampColor(rain, 0.05)[3]).toBe(0);
     expect(rampColor(rain, 0.1)[3]).toBe(1);
   });
+  it('can fade light amounts so the map shows through', () => {
+    const a = { from: 0.4, full: 0.55 };
+    expect(rampColor(rain, 0.1, a)[3]).toBeCloseTo(0.4);
+    expect(rampColor(rain, 2, a)[3]).toBe(1);
+    expect(rampColor(rain, 0.05, a)[3]).toBe(0);
+  });
   it('gets lighter as values rise', () => {
     const lum = (c: number[]) => 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
     const strip = lookupStrip(rain, 0.1, 6, 32);

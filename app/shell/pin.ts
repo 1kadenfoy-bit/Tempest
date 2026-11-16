@@ -64,7 +64,10 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
     if (r.left + shift < edge) shift = edge - r.left;
     readout.style.left = `${BASE + shift}px`;
   };
-  map.on('move', keepInside);
+  let keepFrame = 0;
+  const scheduleKeep = () => { cancelAnimationFrame(keepFrame); keepFrame = requestAnimationFrame(keepInside); };
+  map.on('move', scheduleKeep);
+  map.on('moveend', scheduleKeep);
 
   const set = (next: Omit<PinState, 'elevation'>) => {
     state = { ...next, elevation: null };

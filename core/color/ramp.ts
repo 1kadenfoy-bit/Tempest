@@ -35,17 +35,29 @@ export function rampPosition(ramp: Ramp, value: number): number {
   return last[1];
 }
 
-export function rampColor(ramp: Ramp, value: number): RGBA {
+/**
+ * Opacity along the ramp, so light amounts let the map show through and heavy
+ * ones stand out: `from` at the bottom of the ramp to 1 at `full` (position).
+ */
+export interface AlphaRamp { from: number; full: number }
+
+export function rampAlpha(ramp: Ramp, value: number, alpha?: AlphaRamp): number {
+  if (!alpha) return 1;
+  const pos = rampPosition(ramp, value);
+  return Math.min(1, alpha.from + (1 - alpha.from) * Math.min(1, pos / alpha.full));
+}
+
+export function rampColor(ramp: Ramp, value: number, alpha?: AlphaRamp): RGBA {
   if (ramp.cutoff !== undefined && value < ramp.cutoff) return [0, 0, 0, 0];
   const pos = rampPosition(ramp, value) * (ramp.colors.length - 1);
   const i = Math.min(Math.floor(pos), ramp.colors.length - 2);
   const t = pos - i;
   const a = hexToRgb(ramp.colors[i]!);
   const b = hexToRgb(ramp.colors[i + 1]!);
-  return [0, 1, 2].map((k) => Math.round(a[k]! + (b[k]! - a[k]!) * t)).concat(1) as RGBA;
+  return [0, 1, 2].map((k) => Math.round(a[k]! + (b[k]! - a[k]!) * t)).concat(rampAlpha(ramp, value, alpha)) as RGBA;
 }
 
 /** `size` entries for values evenly spaced from min to max. */
-export function lookupStrip(ramp: Ramp, min: number, max: number, size = 256): RGBA[] {
-  return Array.from({ length: size }, (_, i) => rampColor(ramp, min + ((max - min) * i) / (size - 1)));
+export function lookupStrip(ramp: Ramp, min: number, max: number, size = 256, alpha?: AlphaRamp): RGBA[] {
+  return Array.from({ length: size }, (_, i) => rampColor(ramp, min + ((max - min) * i) / (size - 1), alpha));
 }
