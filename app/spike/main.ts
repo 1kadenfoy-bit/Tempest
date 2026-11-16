@@ -217,7 +217,14 @@ async function pointCheck(): Promise<void> {
   }
 }
 
+let running = false;
 async function runAll(): Promise<void> {
+  // Two runs at once share the phone and halve every measurement.
+  if (running) return;
+  running = true;
+  const runBtn = document.getElementById('run') as HTMLButtonElement;
+  runBtn.disabled = true;
+  runBtn.textContent = 'Running…';
   out.textContent = '';
   const steps: [string, () => Promise<unknown>][] = [
     ['device', async () => device()], ['point check', pointCheck], ['storage', storage], ['map', mapTests], ['region file', regionFile], ['map file storage', pmtilesFromStorage],
@@ -227,6 +234,9 @@ async function runAll(): Promise<void> {
   }
   log('done');
   document.body.dataset.done = 'true';
+  running = false;
+  runBtn.disabled = false;
+  runBtn.textContent = 'Run tests';
 }
 
 document.getElementById('run')!.addEventListener('click', () => { void runAll(); });

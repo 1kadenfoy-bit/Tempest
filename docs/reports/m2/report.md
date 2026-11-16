@@ -72,3 +72,12 @@ Differences from v8:
 2. **The screen-edge bands:** run the phone test page from the home-screen icon once and send me the "layout:" line, so I can confirm the fix for the bands.
 3. **Pull request #2** now holds M0, M1 and M2. GitHub only lets me push to one branch, and #2 wasn't merged yet. Merge it when you're happy, and M3 will start a fresh pull request.
 4. **Say go for M3** (offline proof: save the area, then airplane mode).
+
+## Kaden's phone run (Nov 16, home-screen app)
+
+- **The Open-Meteo match holds on the phone too:** 48 of 48 hours identical at all three places.
+- **Layout:** the app fills the screen (390 × 844, status bar 47, home indicator 34; no gap measured). The bottom band in the earlier screenshot looked like the sheet ending 47 points short. Map and sheet heights now come from the full screen height rather than the bottom edge.
+- **Frame rates (30 fps)** came from two test runs going at once (the lines interleave). The Run button now ignores a second tap while running.
+- **Storage:** the home-screen app now has persistent storage (granted earlier, still held).
+- **Precipitation shading** looks blocky, with odd overlaps where types meet. Cause: three separate fills (rain, mixed, snow), each switching off sharply at its type's edge. Fix: draw precipitation with the app's own renderer (first item of M3), colouring each pixel from rate and snow share together so types blend smoothly.
+- The region-file total (16.6 mm) differs slightly from the point check (16.9 mm) because the region test blends the four nearest grid cells, while the point check, like Open-Meteo, uses the nearest one.

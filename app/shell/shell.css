@@ -34,7 +34,9 @@ body {
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-#map { position: fixed; inset: 0; bottom: calc(-1 * var(--viewport-gap)); }
+/* Heights come from the full screen (100lvh), not the bottom edge: an
+   installed iPhone app has been seen ending fixed layers short of it. */
+#map { position: fixed; left: 0; right: 0; top: 0; height: calc(100lvh + var(--viewport-gap)); }
 
 /* Empty layer slots: the template's dashed placeholders. */
 .slot {
@@ -108,7 +110,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 /* Bottom sheet */
 .sheet {
   position: fixed; z-index: 2; left: 0; right: 0;
-  top: var(--sheet-up-top); bottom: calc(-1 * var(--viewport-gap));
+  top: var(--sheet-up-top); height: calc(100lvh - var(--sheet-up-top) + var(--viewport-gap));
   background: var(--sheet);
   border-top: 1px solid var(--stroke);
   border-radius: var(--radius-sheet-top) var(--radius-sheet-top) 0 0;
