@@ -27,6 +27,9 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Sheet, tucked away (Nov 15, after M1) | The sheet can be slid down until only its handle shows, to clear the map; tap or drag the handle to bring it back |
 | Page zoom (Nov 15, after M1) | Pinching zooms the map only; the interface itself never zooms, including over open panels |
 | Window summary (Nov 16, after M2) | Split at the needle: the total for the half before it and for the half after ("Last 24 h" · "Next 24 h" at now; "24 h before" · "24 h after" when moved). Where the window reaches past the model's hours the label says what is covered ("Since Sun 5 PM") |
+| Info sheet, tucked (Nov 16, after M3) | When slid down, the sheet stops with its handle on screen, measured from the visible screen height (the installed iPhone app reports a taller box than it shows) |
+| Saving an area (Nov 16, after M3) | Save for offline opens the adjustable box with corner handles (v8 08-SaveArea), brought forward from M8; the box is what is saved |
+| Mixed totals (Nov 16, after M3) | When more than one kind fell (rain, snow, mixed), each total sits on its own line |
 | Map detail (Nov 15, after M1) | North Vancouver area at the base map's finest level (zoom 15), Horseshoe Bay to Deep Cove up to Cypress, Grouse and Seymour |
 | Layer plan | As in `docs/01-product-brief.md` |
 
@@ -46,6 +49,10 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Layer menu | Shows the whole layer plan; unbuilt layers are hidden in the app | The template menu had placeholder tiles |
 | Top bar offset | 8 px below the safe area | "Just below the status bar" needed a number |
 | Stack | As recommended in the architecture spec | Not overruled |
+| Temperature data (M4) | The pin's series and the map's profile nodes come from Open-Meteo's point API (every hour in one request); the map files answer when the API cannot (over its limit, or no signal), slower but the same numbers. One run for the whole app: the newest both have | One map-file hour of a temperature profile costs about 30 variable reads; a 48 h pin series that way is about 1,500 reads |
+| Temperature profile (M4) | 14 pressure levels, 1015 to 600 hPa (sea level to about 4,100 m) | Covers BC's terrain; higher levels change nothing on the ground |
+| Feels-like on the map (M4) | The map shows air temperature; the Feels-like map setting comes with layer settings | Settings are M5 |
+| Week strip values (M4) | Daily high and low only for days with 12 or more model hours | A high from part of a day would mislead |
 | Renderer licence | Start with the GPL-2.0 library behind one seam; replace it with the app's own renderer by M3 | Keeps the choice open if the app is shared |
 
 ## 3. Replaced by v8
@@ -83,6 +90,8 @@ These came from research and were not all confirmed. Check each at the milestone
 - How much storage iOS grants a home-screen web app, and when it evicts it.
 - Every access detail marked "not confirmed" in `docs/05-data-sources.md`.
 - Current stable versions of every library. Do not trust version numbers written in these documents.
+- When ECCC shows wind chill and humidex (M4). The formulas are confirmed; the thresholds used (wind chill at 0 °C or below with wind of 5 km/h or more; humidex from 20 °C when it reaches 25) could not be read on canada.ca from the build machine.
+- Whether Open-Meteo keeps older runs' map files long enough. Checked Nov 16: the 00Z and 18Z runs of the previous day were still there.
 
 ## 6. Things only Kaden can do
 
