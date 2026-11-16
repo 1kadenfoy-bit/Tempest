@@ -327,6 +327,8 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   opacity: 0; transition: opacity 220ms ease;
 }
 .scrim[data-open='true'] { opacity: 1; }
+/* A closing panel's scrim and panel let taps through while they fade. */
+.scrim[data-open='false'], .panel[data-open='false'] { pointer-events: none; }
 .panel {
   position: fixed; z-index: 11;
   left: var(--screen-edge); right: var(--screen-edge);

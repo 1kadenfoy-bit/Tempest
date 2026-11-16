@@ -32,6 +32,7 @@ test('model menu: only fitting models, info card, switching changes everything t
   await page.click('#model-pill');
   await page.getByRole('dialog', { name: 'Model' }).locator('.model-row', { hasText: 'GDPS' }).click();
   await expect(page.locator('#model-pill-label')).toHaveText('GDPS');
+  await expect(page.locator('.panel')).toHaveCount(0);
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 300_000 });
   const reach = await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerModels: Record<string, string> };
