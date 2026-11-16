@@ -173,7 +173,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .summary-half + .summary-half { border-left: 1px solid var(--stroke); }
 .summary-main { font: 600 14px var(--font-body); line-height: 18px; max-width: 100%; display: flex; flex-direction: column; align-items: flex-end; }
 .summary-main span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.summary-sub { font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.summary-sub { font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: pre; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .chart-block { height: 76px; display: flex; flex-direction: column; gap: 2px; }
 .chart {
   position: relative; height: 60px; border-radius: var(--radius-chart-and-time-track);
@@ -204,6 +204,15 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .week { position: relative; height: 42px; touch-action: none; }
 .week-days { position: absolute; left: 0; right: 0; top: 0; height: 14px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); font: var(--type-micro); font-weight: 400; line-height: 14px; color: var(--ink-2); }
 .week-days > span { padding-left: 4px; white-space: nowrap; overflow: hidden; display: flex; flex-direction: column; }
+/* Long forecasts (many days): tighter labels, so every day fits. */
+.week[data-compact='true'] .week-days > span { padding-left: 2px; letter-spacing: -0.01em; }
+/* Crowded strip with daily values: high over low under each day's label. */
+.week[data-compact='true'] .week-day-extra { white-space: pre-line; }
+.week[data-extras='true'][data-compact='true'] { height: 70px; }
+.week[data-extras='true'][data-compact='true'] .week-days { height: 42px; }
+.week[data-extras='true'][data-compact='true'] .week-track { top: 46px; }
+.week[data-extras='true'][data-compact='true'] .week-now { top: 44px; }
+.week[data-extras='true'][data-compact='true'] .week-box { top: 43px; }
 .week-day-extra { color: var(--ink); font-weight: 600; }
 .week-day-extra:empty { display: none; }
 /* A layer with values under each day (temperature) adds a line. */

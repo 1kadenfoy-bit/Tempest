@@ -101,3 +101,17 @@ A new browser test checks each part:
 2. **Observed precipitation:** do the grey bars over the past two days match what you remember?
 3. **GFS:** would you like it added to the menu?
 4. **Merge pull request #5** (M6), then say go for M7 (wind).
+
+## Follow-up: the time strip spans the whole forecast
+
+You noticed the strip at the bottom only showed 7 days, while GDPS reaches 10 and ECMWF 15. **The strip now runs from two days back to the end of the chosen model's forecast**, never less than a week:
+
+| Model chosen | Days on the strip | Labels |
+| --- | --- | --- |
+| HRDPS (then RDPS, then GDPS) | about 13 | weekday letter and date ("W18") |
+| GDPS | about 12 | weekday letter and date |
+| ECMWF IFS | about 18 | the date only ("27") |
+
+- **Why adapt rather than scroll:** dragging the strip already moves the time box, so a scrolling strip would fight that gesture. An adapting strip also always shows where the forecast ends.
+- **Temperature's daily high and low** stay under each day, stacked on two lines, for up to two weeks of days. With ECMWF's 18 days there isn't room, so they step aside; the TODAY card still has them.
+- **The "observed" note** under a total now sits on its own line, so neither is cut off.

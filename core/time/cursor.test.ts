@@ -41,6 +41,12 @@ describe('window and week', () => {
     expect(w.days).toHaveLength(7);
     expect(w.start.toISOString()).toBe('2026-11-13T07:00:00.000Z');
     expect(w.end.toISOString()).toBe('2026-11-20T07:00:00.000Z');
+    // A 10-day model stretches the strip to its last day: 2 back + today + 10 ahead.
+    const long = weekRange(new Date('2026-11-15T22:30:00Z'), 'America/Vancouver', new Date('2026-11-25T18:00:00Z'));
+    expect(long.days).toHaveLength(13);
+    expect(long.end.getTime()).toBeGreaterThan(new Date('2026-11-25T18:00:00Z').getTime());
+    // Short models never shrink it below the week.
+    expect(weekRange(new Date('2026-11-15T22:30:00Z'), 'America/Vancouver', new Date('2026-11-16T12:00:00Z')).days).toHaveLength(7);
   });
 });
 

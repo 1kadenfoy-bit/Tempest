@@ -19,6 +19,13 @@ export interface ScrubberLayer {
 }
 
 const H = 3_600_000;
+
+/** "W18": the weekday's first letter and the date, in BC time (crowded strips). */
+function shortDay(d: Date, dateOnly = false): string {
+  const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Vancouver', weekday: 'narrow', day: 'numeric' }).formatToParts(d);
+  const day = p.find((x) => x.type === 'day')?.value ?? '';
+  return dateOnly ? day : `${p.find((x) => x.type === 'weekday')?.value ?? ''}${day}`;
+}
 const $ = (id: string) => document.getElementById(id)!;
 
 export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_WINDOW_HOURS, onWindowChange?: (h: number) => void) {
@@ -65,7 +72,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
       const dataStart = cursor.first ? new Date(cursor.first.getTime() - H) : start;
       const dataEnd = cursor.last ?? end;
       const beforeLabel = start < dataStart ? `Since ${formatCursorTime(dataStart)}` : atNow ? `Last ${half}` : `${half} before`;
-      $('summary-before-label').textContent = sum.beforeNote ? `${beforeLabel} · ${sum.beforeNote}` : beforeLabel;
+      // The note gets its own line, so neither is cut off.
+      $('summary-before-label').textContent = sum.beforeNote ? `${beforeLabel}\n${sum.beforeNote}` : beforeLabel;
       $('summary-after-label').textContent = end > dataEnd ? `Until ${formatCursorTime(dataEnd)}` : atNow ? `Next ${half}` : `${half} after`;
     }
 
@@ -117,19 +125,32 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     }
 
     // Week strip
-    const wk = weekRange(now);
+    const wk = weekRange(now, undefined, cursor.last);
+    // Many days (longer models): short labels, and the daily values step aside.
+    const compact = wk.days.length > 8;
+    // Up to two weeks a day still fits its high and low, stacked; past that they step aside.
+    const extrasFit = wk.days.length <= 15;
+    week.dataset.compact = String(compact);
     const wspan = wk.end.getTime() - wk.start.getTime();
     const pct = (d: Date) => Math.min(100, Math.max(0, ((d.getTime() - wk.start.getTime()) / wspan) * 100));
     const days = $('week-days');
-    if (days.childElementCount !== 7 || days.dataset.today !== wk.days[2]!.toISOString()) {
+    if (days.childElementCount !== wk.days.length || days.dataset.today !== wk.days[2]!.toISOString() || days.dataset.compact !== String(compact)) {
+      const cols = `repeat(${wk.days.length}, minmax(0, 1fr))`;
+      days.style.gridTemplateColumns = cols;
+      $('week-dividers').style.gridTemplateColumns = cols;
+      days.dataset.compact = String(compact);
       days.innerHTML = '';
       $('week-dividers').innerHTML = '';
       for (const d of wk.days) {
         const s = document.createElement('span');
         const name = document.createElement('span');
         name.className = 'week-day-name';
-        name.textContent = formatDayLabel(new Date(d.getTime() + 12 * H), now);
-        if (name.textContent === 'Today') s.className = 'today';
+        const full = formatDayLabel(new Date(d.getTime() + 12 * H), now);
+        if (full === 'Today') s.className = 'today';
+        // "W18": the weekday's first letter and the date; today keeps its name in full.
+        // Past two weeks of days only the date fits.
+        name.textContent = compact ? shortDay(new Date(d.getTime() + 12 * H), wk.days.length > 15) : full;
+        if (compact) name.title = full;
         const extra = document.createElement('span');
         extra.className = 'week-day-extra';
         s.append(name, extra);
@@ -142,10 +163,11 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     [...days.children].forEach((el, k) => {
       const d0 = wk.days[k]!;
       const d1 = wk.days[k + 1] ?? wk.end;
-      const text = layer?.weekDay?.(d0, d1) ?? '';
+      const raw = extrasFit ? layer?.weekDay?.(d0, d1) ?? '' : '';
+      const text = compact ? raw.replace(' ', '\n') : raw;
       el.querySelector('.week-day-extra')!.textContent = text;
     });
-    week.dataset.extras = String(Boolean(layer?.weekDay));
+    week.dataset.extras = String(Boolean(layer?.weekDay) && extrasFit);
     const first_ = cursor.first;
     const last = cursor.last;
     const model = $('week-model');
@@ -202,7 +224,7 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   let weekDrag = false;
   const weekTo = (clientX: number) => {
     const r = week.getBoundingClientRect();
-    const wk = weekRange(new Date());
+    const wk = weekRange(new Date(), undefined, cursor.last);
     const t = wk.start.getTime() + ((clientX - r.left) / r.width) * (wk.end.getTime() - wk.start.getTime());
     cursor.setTime(new Date(t));
   };
