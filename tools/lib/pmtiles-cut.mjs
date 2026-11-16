@@ -4,8 +4,29 @@ import { writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { FetchSource, PMTiles, SharedPromiseCache, findTile, zxyToTileId } from 'pmtiles';
 
+/**
+ * A remote source that retries: the Protomaps build server sometimes resets a
+ * connection mid-build (seen in CI, Nov 16), which used to fail the publish.
+ */
+function retrying(inner, tries = 4) {
+  return {
+    getKey: () => inner.getKey(),
+    async getBytes(offset, length, signal, etag) {
+      for (let n = 1; ; n++) {
+        try {
+          return await inner.getBytes(offset, length, signal, etag);
+        } catch (err) {
+          if (n >= tries || signal?.aborted) throw err;
+          console.error(`retrying a read (${n}/${tries - 1}): ${err.cause?.code ?? err.message}`);
+          await new Promise((r) => setTimeout(r, 1000 * 2 ** (n - 1)));
+        }
+      }
+    },
+  };
+}
+
 export async function openArchive(url) {
-  const source = new FetchSource(url);
+  const source = retrying(new FetchSource(url));
   const cache = new SharedPromiseCache(200000);
   const archive = new PMTiles(source, cache);
   const header = await archive.getHeader();
