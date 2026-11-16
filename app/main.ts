@@ -137,7 +137,9 @@ let run: RunMetadata | null = null;
 /** The model chosen for a layer, remembered: a chain model starts the chain there; HRDPS by default. */
 const modelChoice = (l: LayerSlots): string => prefs.layerModels[l.id] ?? 'hrdps';
 /** Models that carry what a layer needs (temperature needs the height profile). */
-const modelsFor = (l: LayerSlots): ModelId[] => (Object.keys(REGISTRY) as ModelId[]).filter((m) => l.id !== 'temperature' || REGISTRY[m].profile);
+/** In the menu's order (v8 04): HRDPS, RDPS; then ECMWF IFS, GDPS. */
+const MENU_ORDER: ModelId[] = ['hrdps', 'rdps', 'ecmwf', 'gdps'];
+const modelsFor = (l: LayerSlots): ModelId[] => MENU_ORDER.filter((m) => l.id !== 'temperature' || REGISTRY[m].profile);
 
 /** The run covering time t on the time line; for temperature, GDPS's profile run (its own steps). */
 function runAt(t: Date, forProfile = active.id === 'temperature'): RunMetadata | null {
@@ -578,7 +580,7 @@ let seriesSeq = 0;
 const PAST_HOURS = 48;
 
 /** One model's part of the pin's series, for the active layer. */
-async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: number, lng: number, onPartial?: (s: PointSeries) => void): Promise<PointSeries> {
+async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: number, lng: number, onPartial?: (s: PointSeries) => void, onLater?: (s: PointSeries) => void): Promise<PointSeries> {
   const spec = REGISTRY[m];
   const r = (layer.id === 'temperature' ? profileRuns[m] : undefined) ?? runs[m]!;
   const amounts = layer.pinNeeds.some(isAmount);
@@ -587,8 +589,13 @@ async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: n
     // HRDPS amounts from the map files (as the map, and as saved offline);
     // the profile, and the past hours' amounts, from the point API.
     const own = (usingSaved ? await savedSeries(r, lat, lng) : null) ?? await fetchPointSeries(r, precip.needs, lat, lng);
-    const prof = await profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past }).catch((err) => { console.warn('no profile for the pin', err); return null; });
-    return prof ? overlay(prof, own) : own;
+    const profP = profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past }).catch((err) => { console.warn('no profile for the pin', err); return null; });
+    // The amounts show at once; the profile (and past hours) join when they come,
+    // which can take minutes when the point API refuses and the files are read.
+    const quick = await Promise.race([profP, new Promise<null>((res) => setTimeout(() => res(null), 5000))]);
+    if (quick) return overlay(quick, own);
+    void profP.then((prof) => { if (prof) onLater?.(overlay(prof, own)); });
+    return own;
   }
   if (m === 'hrdps') return profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past });
   // Longer models: the point API gives every hour in one request. Without it,
@@ -670,13 +677,15 @@ async function loadSeries() {
     const parts: (PointSeries | null)[] = segs.map(() => null);
     // The first model first, so the readout comes quickly; the rest join it.
     try {
-      parts[0] = await modelSeries(layer, segs[0]!.model as ModelId, true, p.lat, p.lng, (part) => {
+      const update = (part: PointSeries) => {
         if (mine !== seriesSeq) return;
         parts[0] = part;
         series = stitch(parts);
+        if (series) store.put(key, series);
         renderReadout();
         scrubber.refresh();
-      });
+      };
+      parts[0] = await modelSeries(layer, segs[0]!.model as ModelId, true, p.lat, p.lng, update, update);
     } catch (err) {
       if (mine !== seriesSeq) return;
       scrubber.setStatus(usingSaved ? 'The pin is outside the saved area' : 'Could not load the pin’s forecast');
@@ -960,7 +969,7 @@ function modelFacts(m: ModelId) {
   // The next run should arrive one cycle after this one did.
   const due = r.lastModified.getTime() + (24 / spec.runsPerDay) * 3_600_000;
   const left = Math.round((due - Date.now()) / 3_600_000);
-  return { latest: `${hour}Z · ${age} h`, next: left >= 0 ? `≈ ${Math.max(1, left)} h` : `late by ≈ ${-left} h` };
+  return { latest: `${hour}Z · ${age} h`, next: left >= 0 ? `≈ ${Math.max(1, left)} h` : `late ≈ ${-left} h` };
 }
 function openModelInfo(spec: (typeof REGISTRY)[ModelId]) {
   openPanel({ origin: modelBtn, icon: icons.info, title: spec.label, caption: spec.fullName, body: modelInfoBody(spec, modelFacts(spec.id)) });

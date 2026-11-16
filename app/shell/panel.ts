@@ -67,9 +67,12 @@ export function openPanel(opts: PanelOptions): void {
   });
   opts.origin.setAttribute('aria-expanded', 'true');
 
+  // Only this panel: a panel that replaced it (same button, such as model
+  // info opened from the model menu) stays until its own close.
   const close = () => {
-    if (current?.origin !== opts.origin) return;
+    if (current?.close !== close) return;
     current = null;
+    document.removeEventListener('keydown', onKey);
     scrim.dataset.open = 'false';
     panel.dataset.open = 'false';
     opts.origin.setAttribute('aria-expanded', 'false');
@@ -79,7 +82,7 @@ export function openPanel(opts: PanelOptions): void {
   };
   scrim.addEventListener('click', close);
   panel.querySelector('.panel-close')!.addEventListener('click', close);
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
+  function onKey(e: KeyboardEvent) { if (e.key === 'Escape') close(); }
   document.addEventListener('keydown', onKey);
   current = { close, origin: opts.origin };
   (panel.querySelector('.panel-close') as HTMLElement).focus({ preventScroll: true });

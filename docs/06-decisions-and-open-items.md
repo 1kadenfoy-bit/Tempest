@@ -66,6 +66,11 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Type shown (M5) | Rain only and Snow only each hide mixed as well | Mixed is both |
 | Totals by elevation (M5) | The pin's model cell's amount, typed as rain or snow at each band's height by that hour's wet-bulb temperature. The pin's own band uses the pin's height; others the band's middle. Past columns before the run show "–" until observed data (M6) | |
 | Freeze-thaw areas (M5) | Not built: the setting has no map design yet, so the switch is not shown | "A switch appears only when it works" |
+| Models (M6) | HRDPS, RDPS, GDPS for both layers; ECMWF IFS for precipitation only (no height profile in its open data). GFS and HRDPS West not yet offered. Choosing a chain model starts the chain there (HRDPS, then RDPS, then GDPS, as the HRDPS card describes); GDPS and ECMWF stop at their own ends | |
+| Model menu order (M6) | HRDPS, RDPS; ECMWF IFS, GDPS (v8 04). "Compare two models" left out until designed | |
+| Observed precipitation (M6) | ECCC HRDPA 6-hour totals at the pin for the week's past, online only; final where it exists, else preliminary; spread evenly over the 6 hours in totals | GeoMet is not for bulk copying, so saved areas leave it out |
+| Temperature's past (M6) | Earlier model runs (point API past days), hatched; no gridded temperature analysis is used yet | |
+| Run refresh (M6) | Look for new runs every 10 minutes while the app is on screen | Open-Meteo's 12Z HRDPS stalled on Nov 16 |
 | Renderer licence | Start with the GPL-2.0 library behind one seam; replace it with the app's own renderer by M3 | Keeps the choice open if the app is shared |
 
 ## 3. Replaced by v8
