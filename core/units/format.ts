@@ -74,3 +74,23 @@ export function formatSpan(hours: number): string {
   const d = hours / 24;
   return `${Number.isInteger(d) ? d : oneDecimal.format(d)} d`;
 }
+
+const MINUS = '−';
+const signed = (n: number, plus: boolean) => (n < 0 ? `${MINUS}${Math.abs(n)}` : plus && n > 0 ? `+${n}` : String(n));
+
+/** "−1 °C" (readout). Rounds to the degree; never shows "−0". */
+export function formatTemp(c: number): string {
+  const n = Math.round(c) || 0;
+  return `${signed(n, false)} °C`;
+}
+
+/** "+2°", "−5°", "0°" (summaries and the week strip, sign shown). */
+export function formatDegrees(c: number, plus = true): string {
+  const n = Math.round(c) || 0;
+  return `${signed(n, plus)}°`;
+}
+
+/** "Thu 5 PM – Sat 5 PM". */
+export function formatTimeRange(a: Date, b: Date, timeZone = TIME_ZONE): string {
+  return `${formatCursorTime(a, timeZone)} – ${formatCursorTime(b, timeZone)}`;
+}

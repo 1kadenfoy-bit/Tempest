@@ -60,11 +60,12 @@ const TERRAIN_TILE_BYTES = [1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8
  * each zoom times their average measured size; precipitation by area and hours
  * (0.65 MB per square degree for 48 h); fonts and icons about 0.9 MB.
  */
-export function estimateSaveBytes(bbox: [number, number, number, number], hours: number) {
+/** `variables`: how many weather variables are kept (precipitation is 2; temperature's profile 31). */
+export function estimateSaveBytes(bbox: [number, number, number, number], hours: number, variables = 2) {
   let terrain = 0;
   TERRAIN_TILE_BYTES.forEach((b, z) => { terrain += tilesInBox(bbox, z, z).length * b; });
   const area = Math.max(0, bbox[2] - bbox[0]) * Math.max(0, bbox[3] - bbox[1]);
-  return { terrain, weather: area * 0.65e6 * (hours / 48), other: 0.9e6 };
+  return { terrain, weather: area * 0.65e6 * (hours / 48) * (variables / 2), other: 0.9e6 };
 }
 
 /** Terrain tiles (Terrarium, 512 px) covering a box, zoom 0 to maxZoom. */

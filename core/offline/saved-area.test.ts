@@ -27,6 +27,8 @@ describe('saved areas', () => {
     expect(small.terrain / 1e6).toBeGreaterThan(2.5);
     expect(small.terrain / 1e6).toBeLessThan(6);
     expect(estimateSaveBytes([-123.5, 49.25, -122.5, 50.25], 24).weather).toBeCloseTo(0.325e6);
+    // Same cells per variable: 31 variables cost 15.5 times 2.
+    expect(estimateSaveBytes([-123.5, 49.25, -122.5, 50.25], 48, 31).weather).toBeCloseTo(0.65e6 * 15.5);
   });
   it('lists terrain tiles over the zooms', () => {
     const t = tilesInBox([-123.2, 49.3, -123, 49.4], 0, 2);

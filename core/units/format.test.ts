@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCursorTime, formatElevation, formatRelative } from './format';
+import { formatCursorTime, formatDegrees, formatElevation, formatRelative, formatTemp } from './format';
 
 describe('formatting', () => {
   it('formats elevation with a thousands separator', () => {
@@ -47,5 +47,15 @@ describe('spans', () => {
     expect(formatSpan(24)).toBe('24 h');
     expect(formatSpan(84)).toBe('3.5 d');
     expect(formatSpan(72)).toBe('3 d');
+  });
+});
+
+describe('temperature', () => {
+  it('uses a real minus, no "−0", and a plus in summaries', () => {
+    expect(formatTemp(-0.6)).toBe('−1 °C');
+    expect(formatTemp(-0.4)).toBe('0 °C');
+    expect(formatDegrees(2.2)).toBe('+2°');
+    expect(formatDegrees(-5)).toBe('−5°');
+    expect(formatDegrees(3, false)).toBe('3°');
   });
 });
