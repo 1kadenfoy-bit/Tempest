@@ -61,7 +61,7 @@ test('precipitation: top bar, readout, summary and fills', async ({ page }) => {
   await expect(page.locator('#model-pill')).toHaveText('HRDPS');
   await expect(page.locator('#run-age')).toHaveText(/^\d\dZ run · \d+ [hd] old$/);
   await expect(page.locator('.pin-readout strong')).toHaveText(/^(\d+\.\d mm\/h (rain|mixed|snow)|Dry)$/);
-  await expect(page.locator('#summary-before-label')).toHaveText(/^(Last \d+ h|\d+ h before|Since \w{3} \d+(:\d\d)? [AP]M)$/);
+  await expect(page.locator('#summary-before-label')).toHaveText(/^(Last \d+ h|\d+ h before|Since \w{3} \d+(:\d\d)? [AP]M)( · observed)?$/);
   await expect(page.locator('#summary-after-label')).toHaveText(/^(Next \d+ h|\d+ h after|Until \w{3} \d+(:\d\d)? [AP]M)$/);
   await expect(page.locator('#summary-after')).toHaveText(/(mm|cm|Dry)/);
   await expect(page.locator('.legend')).toContainText('0.1 to 6+ mm/h');
