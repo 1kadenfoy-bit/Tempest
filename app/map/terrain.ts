@@ -41,7 +41,7 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string): void {
     type: 'hillshade',
     source: 'terrain-dem',
     paint: {
-      'hillshade-exaggeration': 0.35,
+      'hillshade-exaggeration': 0.4,
       'hillshade-shadow-color': colorToken('water'),
       'hillshade-highlight-color': colorToken('fill-control'),
     },

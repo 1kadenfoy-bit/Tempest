@@ -119,8 +119,9 @@ function updateFills() {
   const key = cursor.time.toISOString();
   if (key === shownStep) return;
   shownStep = key;
-  const label = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  showWeatherFills(map, precip.precipFills(stepFileUrl(run.model, run.referenceTime, cursor.time), 1), label);
+  // Under the hillshade and contours, so the terrain reads through at any rate.
+  const below = map.getLayer('hillshade') ? 'hillshade' : map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+  showWeatherFills(map, precip.precipFills(stepFileUrl(run.model, run.referenceTime, cursor.time), 1), below);
 }
 cursor.subscribe(() => {
   renderReadout();

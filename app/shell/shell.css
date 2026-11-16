@@ -22,7 +22,10 @@
 body[data-sheet='tucked'] { --sheet-visible: var(--sheet-tucked); }
 
 * { box-sizing: border-box; }
+/* The page itself never scrolls: iPhone Safari can scroll a page whose body
+   hides overflow, which slid the sheet off screen with no way back. */
 html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; }
 html { background: var(--map-ground); touch-action: manipulation; }
 body {
   background: var(--map-ground);

@@ -22,6 +22,10 @@ export function setupViewport(doc: Document): void {
   apply();
   addEventListener('resize', apply);
 
+  // If anything scrolls the page anyway, put it back.
+  addEventListener('scroll', () => { if (scrollX || scrollY) scrollTo(0, 0); }, { passive: true });
+  doc.addEventListener('focusin', () => requestAnimationFrame(() => { if (scrollX || scrollY) scrollTo(0, 0); }));
+
   // Safari's page pinch gesture.
   const block = (e: Event) => e.preventDefault();
   doc.addEventListener('gesturestart', block);
