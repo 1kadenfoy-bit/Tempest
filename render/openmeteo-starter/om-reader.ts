@@ -1,0 +1,80 @@
+// A lean reader for Open-Meteo's .om map files, on the library's own decoder
+// (@openmeteo/file-reader, GPL-2.0, kept inside this seam).
+//
+// Why not the weather-map-layer reader: it fetches 64 kB blocks and reads
+// variables one after another. A temperature profile needs about 30
+// variables, which cost ~3.8 MB and ~12 s per hour that way (measured Nov 16).
+// Small blocks and parallel reads fetch only the chunks the box touches.
+import { LruBlockCache, OmDataType, OmHttpBackendPool, type OmFileReader } from '@openmeteo/file-reader';
+import { GridFactory, domainOptions } from '@openmeteo/weather-map-layer';
+import type { NativeBox } from './index';
+
+/** 8 kB blocks: one compressed chunk of a small box is a few kB. */
+const BLOCK = 8 * 1024;
+const cache = new LruBlockCache(BLOCK, 4096);
+const pool = new OmHttpBackendPool({ backendOptions: { retries: 2, timeoutMs: 20_000 } });
+/** Browsers open about six connections per host; more only queue. */
+const PARALLEL = 6;
+
+function domainFor(model: string) {
+  const domain = domainOptions.find((d) => d.value === model);
+  if (!domain) throw new Error(`Unknown model ${model}`);
+  return domain;
+}
+
+/** The model's cell ranges covering a box, with a small margin. */
+export function coveringRanges(model: string, bbox: [number, number, number, number], pad = 0.05) {
+  const [w, s, e, n] = bbox;
+  return GridFactory.create(domainFor(model).grid).getCoveringRanges(s - pad, w - pad, n + pad, e + pad);
+}
+
+/** Run tasks with at most `limit` in flight. */
+async function limited<T>(tasks: (() => Promise<T>)[], limit = PARALLEL): Promise<T[]> {
+  const out = new Array<T>(tasks.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < tasks.length) {
+      const i = next++;
+      out[i] = await tasks[i]!();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return out;
+}
+
+async function readOne(root: OmFileReader, variable: string, ranges: { start: number; end: number }[]): Promise<Float32Array> {
+  const child = await root.getChildByName(variable);
+  if (!child) return new Float32Array(0);
+  try {
+    const dims = child.getDimensions();
+    // Map files hold [y, x], or [y, x, time] with one time.
+    const r = dims.length === 3 ? [...ranges, { start: 0, end: 1 }] : ranges;
+    const data = await child.read({ type: OmDataType.FloatArray, ranges: r });
+    return Float32Array.from(data as Float32Array);
+  } finally {
+    child.dispose();
+  }
+}
+
+/**
+ * Read several variables over the same model cells from one step's file,
+ * in parallel. Plain (instantaneous) variables only: amounts need the
+ * library's per-step conversion and go through readNativeBox.
+ */
+export async function readBoxFast(model: string, fileUrl: string, variables: string[], ranges: { start: number; end: number }[]): Promise<NativeBox> {
+  const values: Record<string, Float32Array> = {};
+  await pool.withReader(fileUrl, cache, async (root) => {
+    const got = await limited(variables.map((v) => () => readOne(root, v, ranges)));
+    variables.forEach((v, i) => { values[v] = got[i]!; });
+  });
+  return { model, ranges, values };
+}
+
+/** Several steps' files at once (one reader per file, a shared limit across them). */
+export async function readStepsFast(model: string, fileUrls: string[], variables: string[], ranges: { start: number; end: number }[], onStep?: (i: number, box: NativeBox) => void): Promise<NativeBox[]> {
+  return limited(fileUrls.map((url, i) => async () => {
+    const box = await readBoxFast(model, url, variables, ranges);
+    onStep?.(i, box);
+    return box;
+  }), 2);
+}
