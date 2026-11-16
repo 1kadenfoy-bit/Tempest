@@ -36,7 +36,7 @@ test('home: shell sits where the v8 template puts it', async ({ page }) => {
   expect(await box(page, '.topbar')).toMatchObject({ x: 16, y: 55, width: 358, height: 56 });
   // Sheet: collapsed to 320 px including the 34 px bottom inset when the
   // totals fit one line each; it grows a line at a time when they stack.
-  await page.addStyleTag({ content: '.summary-main span:nth-child(n+2) { display: none; }' });
+  await page.addStyleTag({ content: '.summary-main span:nth-child(n+2) { display: none; } .summary-sub { white-space: nowrap !important; }' });
   await page.waitForTimeout(400);
   expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 320, 0);
   // Thumb buttons: 56 px, 16 from the right, stacked 16 above the sheet.

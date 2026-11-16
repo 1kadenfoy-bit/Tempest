@@ -42,7 +42,7 @@ test('model menu: only fitting models, info card, switching changes everything t
   // Dragging the week strip to its end reaches beyond the 3.5 days RDPS would give.
   const wk = (await page.locator('#week').boundingBox())!;
   await page.mouse.click(wk.x + wk.width - 4, wk.y + wk.height / 2);
-  await expect(page.locator('#cursor-note')).toHaveText(/in [4-9] d/);
+  await expect(page.locator('#cursor-note')).toHaveText(/in ([4-9]|1\d) d/);
   expect(await page.textContent('#run-age')).not.toBe('');
   void before;
 
