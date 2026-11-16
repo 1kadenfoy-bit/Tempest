@@ -11,11 +11,17 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForTimeout(2000);
 
+  // Choose the area with the save box (08-SaveArea), then save.
   await page.click('#map-layers');
   await page.getByRole('button', { name: /Save this area/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Save for offline' })).toBeVisible();
+  await expect(page.locator('.save-go')).toHaveText(/Save area · about \d+/, { timeout: 60_000 });
+  await page.screenshot({ path: 'test-results/screens/m3-save-box.png' });
+  await page.click('.save-go');
   await expect(page.locator('body')).toHaveAttribute('data-saved', 'true', { timeout: 240_000 });
-  const note = await page.locator('[data-area] .icon-row-note').textContent();
-  console.log('saved area:', await page.locator('[data-area] .icon-row-title').textContent(), '|', note);
+  await expect(page.locator('.save-mode')).toHaveCount(0);
+  await page.click('#map-layers');
+  console.log('saved area:', await page.locator('[data-area] .icon-row-title').textContent(), '|', await page.locator('[data-area] .icon-row-note').textContent());
   await page.screenshot({ path: 'test-results/screens/m3-saved.png' });
   await page.getByRole('button', { name: 'Close' }).click();
 

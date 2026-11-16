@@ -12,8 +12,14 @@ const FOLDER = icon('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2
 const CLOSE = icon('<path d="M6 6l12 12M18 6 6 18"/>');
 
 export interface OfflinePanelHandlers {
-  save(onProgress: (p: SaveProgress) => void): Promise<SavedArea>;
+  /** Open the save box (the panel closes). */
+  choose(): void;
   remove(area: SavedArea): Promise<void>;
+}
+
+/** Progress text for the Save button. */
+export function progressText(p: SaveProgress): string {
+  return `Saving ${p.label.toLowerCase()} · ${Math.round((p.done / p.total) * 100)}%`;
 }
 
 export function offlineGroup(areas: SavedArea[], h: OfflinePanelHandlers): HTMLElement {
@@ -23,8 +29,7 @@ export function offlineGroup(areas: SavedArea[], h: OfflinePanelHandlers): HTMLE
 
   const saveRow = document.createElement('button');
   saveRow.className = 'icon-row';
-  saveRow.innerHTML = `<span class="icon-row-icon">${DOWNLOAD}</span><span class="icon-row-text"><span class="icon-row-title">Save this area</span><span class="icon-row-note">Precipitation for this run, base map and terrain</span></span>`;
-  const note = saveRow.querySelector<HTMLElement>('.icon-row-note')!;
+  saveRow.innerHTML = `<span class="icon-row-icon">${DOWNLOAD}</span><span class="icon-row-text"><span class="icon-row-title">Save this area</span><span class="icon-row-note">Choose the area and a time window</span></span>`;
   group.append(saveRow);
 
   const list = document.createElement('div');
@@ -49,23 +54,6 @@ export function offlineGroup(areas: SavedArea[], h: OfflinePanelHandlers): HTMLE
   };
   renderAreas(areas);
 
-  let busy = false;
-  saveRow.addEventListener('click', async () => {
-    if (busy) return;
-    busy = true;
-    saveRow.setAttribute('aria-busy', 'true');
-    try {
-      const area = await h.save((p) => { note.textContent = `Saving ${p.label.toLowerCase()} · ${Math.round((p.done / p.total) * 100)}%`; });
-      note.textContent = `Saved · ${mb(totalBytes(area))}`;
-      renderAreas([area]);
-      document.body.dataset.saved = 'true';
-    } catch (err) {
-      note.textContent = `Could not save: ${String((err as Error).message ?? err)}`;
-      console.error(err);
-    } finally {
-      busy = false;
-      saveRow.removeAttribute('aria-busy');
-    }
-  });
+  saveRow.addEventListener('click', () => h.choose());
   return group;
 }

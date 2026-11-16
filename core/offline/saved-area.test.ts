@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SAVED_AREA_VERSION, areaContains, parseSavedAreas, saveBoxForView, tilesInBox, totalBytes, type SavedArea } from './saved-area';
+import { SAVED_AREA_VERSION, areaContains, parseSavedAreas, estimateSaveBytes, tilesInBox, totalBytes, type SavedArea } from './saved-area';
 
 const area: SavedArea = {
   version: SAVED_AREA_VERSION, id: 'a1', bbox: [-123.3, 49.3, -122.8, 49.6], savedAt: '2026-11-16T03:00:00Z',
@@ -17,9 +17,16 @@ describe('saved areas', () => {
     expect(areaContains(area, -123, 49.4)).toBe(true);
     expect(areaContains(area, -122, 49.4)).toBe(false);
   });
-  it('limits the saved box to about a degree around the view centre', () => {
-    expect(saveBoxForView([-124, 49, -122, 50])).toEqual([-123.5, 49, -122.5, 50]);
-    expect(saveBoxForView([-123.2, 49.3, -123, 49.4])).toEqual([-123.2, 49.3, -123, 49.4]);
+  it('estimates a save from the measured densities', () => {
+    // Measured in M3: 49.5 MB for this box; 9.1 MB for a screen around Mt Seymour.
+    const e = estimateSaveBytes([-123.5, 49.25, -122.5, 50.25], 48);
+    // Terrain measured at 23.6 MB and 3.6 MB.
+    const small = estimateSaveBytes([-123.03, 49.33, -122.87, 49.45], 48);
+    expect(e.terrain / 1e6).toBeGreaterThan(18);
+    expect(e.terrain / 1e6).toBeLessThan(30);
+    expect(small.terrain / 1e6).toBeGreaterThan(2.5);
+    expect(small.terrain / 1e6).toBeLessThan(6);
+    expect(estimateSaveBytes([-123.5, 49.25, -122.5, 50.25], 24).weather).toBeCloseTo(0.325e6);
   });
   it('lists terrain tiles over the zooms', () => {
     const t = tilesInBox([-123.2, 49.3, -123, 49.4], 0, 2);

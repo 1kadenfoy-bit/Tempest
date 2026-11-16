@@ -60,6 +60,8 @@ function glyphAndSpriteUrls(style: StyleSpecification): string[] {
 
 export async function saveArea(opts: {
   bbox: [number, number, number, number];
+  /** Hours from now to keep, or null for every step to the model's end. */
+  hours: number | null;
   run: RunMetadata;
   variables: VariableName[];
   basemap: Basemap;
@@ -69,7 +71,10 @@ export async function saveArea(opts: {
   const { bbox, run, variables, basemap } = opts;
   void requestPersistence();
   const id = `a${Date.now().toString(36)}`;
-  const times = run.validTimes.slice(1);
+  const now = Date.now();
+  const H = 3_600_000;
+  const times = run.validTimes.slice(1).filter((t) =>
+    opts.hours === null || (t.getTime() > now - H && t.getTime() <= now + opts.hours * H));
   const req = gridRequest(bbox, 12, bbox, 1e-9)!; // the box itself, at the model's own spacing
   const terrainTiles = tilesInBox(bbox, 0, TERRAIN_MAXZOOM);
   const extras = glyphAndSpriteUrls(opts.style);

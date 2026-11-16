@@ -25,24 +25,25 @@ export function readoutValue(s: PointSeries | null, i: number): string {
   return `${formatRate(mm / s.stepHours)} ${precipType(mm, w[i] ?? 0)}`;
 }
 
-/** Totals as one short line: "4 mm rain · 12 cm snow", "+3 mm mixed", or "Dry". */
-export function totalsLine(s: PointSeries | null, start: Date, end: Date): string {
-  if (!s) return '…';
+/** Totals by type, one part each: ["4 mm rain", "12 cm snow", "3 mm mixed"], or ["Dry"]. */
+export function totalsParts(s: PointSeries | null, start: Date, end: Date): string[] {
+  if (!s) return ['…'];
   const { p, w } = series(s);
   const t = precipTotals(s.times, p, w, start, end);
   const parts: string[] = [];
   if (t.rainMm >= 0.5) parts.push(`${formatMm(t.rainMm)} rain`);
   if (t.snowCm >= 0.5) parts.push(`${formatCm(t.snowCm)} snow`);
-  if (t.mixedMm >= 0.5) parts.push(`${parts.length ? '+' : ''}${formatMm(t.mixedMm)} mixed`);
-  return parts.length ? parts.join(' · ') : 'Dry';
+  if (t.mixedMm >= 0.5) parts.push(`${formatMm(t.mixedMm)} mixed`);
+  return parts.length ? parts : ['Dry'];
 }
 
 /**
  * Window summary, split at the needle: what fell in the half before it and
- * what is due in the half after (Kaden's choice A, Nov 16).
+ * what is due in the half after (Kaden's choice A, Nov 16). Parts stack one
+ * per line, so mixed weather stays readable.
  */
 export function windowSummary(s: PointSeries | null, start: Date, cursor: Date, end: Date) {
-  return { before: totalsLine(s, start, cursor), after: totalsLine(s, cursor, end) };
+  return { before: totalsParts(s, start, cursor), after: totalsParts(s, cursor, end) };
 }
 
 /**

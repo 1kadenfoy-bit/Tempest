@@ -15,8 +15,9 @@ import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
 import { gridRequest } from '../core/geo/grid-request';
 import type { GridField } from '../core/vocabulary';
 import { TypedRateLayer } from '../render/grid-gl/typed-rate-layer';
-import { areaContains, areaOverlaps, saveBoxForView, type SavedArea } from '../core/offline/saved-area';
-import { offlineGroup } from './offline/offline-panel';
+import { areaContains, areaOverlaps, tilesInBox, type SavedArea } from '../core/offline/saved-area';
+import { offlineGroup, progressText } from './offline/offline-panel';
+import { openSaveMode } from './offline/save-mode';
 import { deleteArea, forgetSavedWeather, listSavedAreas, loadSavedWeather, saveArea, savedStep } from './offline/saved-areas';
 import { regridNative, sampleNative } from '../render/openmeteo-starter';
 import { readFile } from './offline/storage';
@@ -80,11 +81,9 @@ map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-lef
 // Keep "centre" meaning the part of the map above the collapsed sheet. The
 // pulled-up sheet covers the map without moving it.
 const sheetEl = $('sheet');
-const collapsedProbe = document.createElement('div');
-collapsedProbe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:var(--sheet-collapsed)';
-document.body.append(collapsedProbe);
+let sheetCtl: ReturnType<typeof setupSheet> | null = null;
 const fitPadding = () => {
-  map.setPadding({ top: 0, bottom: collapsedProbe.offsetHeight, left: 0, right: 0 });
+  map.setPadding({ top: 0, bottom: sheetCtl?.collapsedHeight() ?? 320, left: 0, right: 0 });
 };
 
 // Terrain switches
@@ -382,7 +381,7 @@ map.on('click', (e) => {
 });
 
 // Sheet
-setupSheet(sheetEl, $('sheet-handle'), () => undefined);
+sheetCtl = setupSheet(sheetEl, $('sheet-handle'), () => undefined);
 
 // Map panel
 const layersBtn = $('map-layers');
@@ -399,17 +398,22 @@ layersBtn.addEventListener('click', () => {
       savePrefs(prefs);
       applyTerrainPrefs();
     }, offlineGroup(savedAreas, {
-      save: async (onProgress) => {
-        if (!run || usingSaved) throw new Error('needs signal');
-        const b = map.getBounds();
-        const area = await saveArea({
-          bbox: saveBoxForView([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]),
-          run, variables: precip.needs, basemap, style: map.getStyle(), onProgress,
+      choose: () => {
+        closePanel();
+        if (!run || usingSaved) return;
+        const r = run;
+        openSaveMode(map, {
+          modelHours: Math.round((r.validTimes[r.validTimes.length - 1]!.getTime() - Date.now()) / 3_600_000),
+          basemapBytes: (bb) => basemap.storedBytes(tilesInBox(bb, 0, 15)),
+          save: async (choice, onProgress) => {
+            await saveArea({ ...choice, run: r, variables: precip.needs, basemap, style: map.getStyle(), onProgress: (p) => onProgress(progressText(p)) });
+            for (const old of savedAreas) { basemap.removeSaved(old.id); forgetSavedWeather(old.id); }
+            await registerSavedAreas();
+            drawSavedOutlines();
+            document.body.dataset.saved = 'true';
+          },
+          onClose: () => undefined,
         });
-        for (const old of savedAreas) { basemap.removeSaved(old.id); forgetSavedWeather(old.id); }
-        await registerSavedAreas();
-        drawSavedOutlines();
-        return area;
       },
       remove: async (area) => {
         await deleteArea(area);

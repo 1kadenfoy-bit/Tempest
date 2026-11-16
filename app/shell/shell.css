@@ -19,7 +19,6 @@
   --viewport-gap: 0px;
   --sheet-visible: var(--sheet-collapsed);
 }
-body[data-sheet='tucked'] { --sheet-visible: var(--sheet-tucked); }
 
 * { box-sizing: border-box; }
 /* The page itself never scrolls: iPhone Safari can scroll a page whose body
@@ -80,7 +79,7 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .thumbs {
   position: fixed; z-index: 2;
   right: var(--screen-edge);
-  bottom: calc(var(--sheet-visible) + 16px - var(--viewport-gap));
+  bottom: calc(var(--sheet-visible) + 16px);
   display: flex; flex-direction: column; gap: 12px;
   transition: opacity 200ms ease, bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -117,14 +116,13 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   background: var(--sheet);
   border-top: 1px solid var(--stroke);
   border-radius: var(--radius-sheet-top) var(--radius-sheet-top) 0 0;
+  /* Position set by app/shell/sheet.ts from the visible screen height. */
   transform: translateY(calc(100% - var(--sheet-collapsed)));
   transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
   display: flex; flex-direction: column;
   touch-action: none;
   will-change: transform;
 }
-.sheet[data-state='up'] { transform: translateY(0); }
-.sheet[data-state='tucked'] { transform: translateY(calc(100% - var(--sheet-tucked))); }
 .sheet[data-dragging='true'] { transition: none; }
 .sheet-handle {
   flex: 0 0 auto; width: 100%; height: 21px; padding-top: 8px;
@@ -161,7 +159,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   border: 1px solid var(--stroke-strong);
   display: flex; align-items: center; justify-content: center;
 }
-.window-row { height: 40px; display: flex; align-items: center; justify-content: space-between; gap: var(--gap-controls); }
+.window-row { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: var(--gap-controls); }
 .window-button {
   flex: 0 0 auto; height: 40px; padding: 0 10px 0 14px; border-radius: 20px;
   border: 1px solid var(--stroke-strong);
@@ -170,7 +168,8 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .window-summary { flex: 1 1 0; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .summary-half { min-width: 0; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
 .summary-half + .summary-half { border-left: 1px solid var(--stroke); }
-.summary-main { font: 600 14px var(--font-body); line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.summary-main { font: 600 14px var(--font-body); line-height: 18px; max-width: 100%; display: flex; flex-direction: column; align-items: flex-end; }
+.summary-main span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .summary-sub { font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .chart-block { height: 76px; display: flex; flex-direction: column; gap: 2px; }
 .chart {
@@ -284,7 +283,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .toggle-tile[aria-pressed='true'] svg { visibility: visible; }
 
 /* Map attribution, kept clear of the sheet */
-.maplibregl-ctrl-bottom-left { bottom: calc(var(--sheet-visible) - var(--viewport-gap)); transition: bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.maplibregl-ctrl-bottom-left { bottom: var(--sheet-visible); transition: bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 .maplibregl-ctrl-attrib { font-size: 11px; }
 .maplibregl-ctrl-attrib.maplibregl-compact { background: var(--surface); color: var(--ink-2); }
 .maplibregl-ctrl-attrib a { color: var(--ink-2); }
@@ -308,3 +307,52 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .icon-row-note { font: var(--type-caption); color: var(--ink-2); }
 .icon-row-action { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
 .icon-row[aria-busy='true'] .icon-row-icon svg { animation: pulse 1s ease-in-out infinite; }
+
+/* Save for offline (08-SaveArea) */
+body[data-save-mode='true'] .topbar,
+body[data-save-mode='true'] .thumbs,
+body[data-save-mode='true'] .sheet,
+body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
+.save-mode { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+.save-strip {
+  position: absolute; left: var(--screen-edge); right: var(--screen-edge); top: var(--topbar-top); height: var(--topbar-h);
+  padding: 0 6px 0 16px; border-radius: var(--radius-top-bar);
+  background: var(--surface); border: 1px solid var(--stroke);
+  display: flex; align-items: center; gap: var(--gap-controls); font: var(--type-body); pointer-events: auto;
+}
+.save-strip span { flex: 1 1 0; }
+.save-box {
+  position: absolute; border: 2px dashed var(--ink); border-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.save-handle {
+  position: absolute; width: 14px; height: 14px; border-radius: var(--radius-chip);
+  background: var(--ink); box-shadow: 0 0 0 2px var(--surface); pointer-events: auto; touch-action: none;
+}
+/* A 44 px touch area around each small handle. */
+.save-handle::before { content: ''; position: absolute; inset: -15px; }
+.save-handle[data-c='nw'] { left: -8px; top: -8px; }
+.save-handle[data-c='ne'] { right: -8px; top: -8px; }
+.save-handle[data-c='sw'] { left: -8px; bottom: -8px; }
+.save-handle[data-c='se'] { right: -8px; bottom: -8px; }
+.save-panel {
+  position: absolute; left: var(--screen-edge); right: var(--screen-edge); bottom: calc(var(--bottom-inset) + 16px - var(--viewport-gap));
+  border-radius: var(--radius-grow-panel); background: var(--panel); border: 1px solid var(--stroke);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; pointer-events: auto;
+}
+.check-row { min-height: var(--touch-min); display: flex; align-items: center; gap: 12px; }
+.check-row input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.check-box {
+  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--stroke-strong);
+}
+.check-row input:checked + .check-box { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.check-text { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; }
+.check-title { font: var(--type-body); }
+.check-note { font: var(--type-caption); color: var(--ink-2); }
+.save-map-line { display: flex; justify-content: space-between; font: var(--type-secondary); color: var(--ink-2); }
+.primary-button {
+  height: 48px; border-radius: var(--radius-button-tile-row); background: var(--ink); color: var(--surface);
+  font: 600 15px var(--font-body); padding: 0 12px;
+}
+.primary-button:disabled { opacity: 0.6; }

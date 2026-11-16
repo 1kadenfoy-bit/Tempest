@@ -11,7 +11,7 @@ import { closePanel, isOpenFrom, openPanel } from './panel';
 export interface ScrubberLayer {
   drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, start: Date, end: Date): void;
   /** Totals for the half before the needle and the half after it. */
-  summary(start: Date, cursor: Date, end: Date): { before: string; after: string };
+  summary(start: Date, cursor: Date, end: Date): { before: string[]; after: string[] };
 }
 
 const H = 3_600_000;
@@ -38,12 +38,15 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     $('window-label').textContent = WINDOW_OPTIONS.find((o) => o.hours === windowHours)?.label ?? `${windowHours} h`;
 
     // Summary
-    const sum = layer?.summary(start, t, end) ?? { before: '', after: '' };
+    const sum = layer?.summary(start, t, end) ?? { before: [], after: [] };
     const half = formatSpan(windowHours / 2);
     // "Last/Next" when the needle is on now; "before/after" when moved away.
     const atNow = Math.abs(t.getTime() - now.getTime()) < 60 * 60_000;
-    $('summary-before').textContent = sum.before;
-    $('summary-after').textContent = sum.after;
+    const lines = (el: HTMLElement, parts: string[]) => {
+      el.replaceChildren(...parts.map((p) => { const s = document.createElement('span'); s.textContent = p; return s; }));
+    };
+    lines($('summary-before'), sum.before);
+    lines($('summary-after'), sum.after);
     // Say what the totals really cover when the window reaches past the
     // model's hours (the first step's amount starts an hour before it).
     const dataStart = cursor.first ? new Date(cursor.first.getTime() - H) : start;

@@ -51,18 +51,20 @@ export function areaOverlaps(a: SavedArea, b: [number, number, number, number]):
   return a.bbox[0] < b[2] && b[0] < a.bbox[2] && a.bbox[1] < b[3] && b[1] < a.bbox[3];
 }
 
+/** Average terrain tile sizes, zoom 0 to 12, fitted to the two M3 saves (23.6 MB and 3.6 MB). */
+const TERRAIN_TILE_BYTES = [1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 8e4, 6e4];
+
 /**
- * The box to save for a view: the view itself, or a box of at most `maxDeg`
- * degrees on each side around its centre (a minimal save in M3; the drag box
- * comes in M8).
+ * Rough size of a save before downloading, apart from the base map (whose
+ * exact size comes from its files' indexes): terrain tiles the box touches at
+ * each zoom times their average measured size; precipitation by area and hours
+ * (0.65 MB per square degree for 48 h); fonts and icons about 0.9 MB.
  */
-export function saveBoxForView(view: [number, number, number, number], maxDeg = 1): [number, number, number, number] {
-  const cx = (view[0] + view[2]) / 2;
-  const cy = (view[1] + view[3]) / 2;
-  const halfW = Math.min((view[2] - view[0]) / 2, maxDeg / 2);
-  const halfH = Math.min((view[3] - view[1]) / 2, maxDeg / 2);
-  const r = (v: number) => Math.round(v * 1e4) / 1e4;
-  return [r(cx - halfW), r(cy - halfH), r(cx + halfW), r(cy + halfH)];
+export function estimateSaveBytes(bbox: [number, number, number, number], hours: number) {
+  let terrain = 0;
+  TERRAIN_TILE_BYTES.forEach((b, z) => { terrain += tilesInBox(bbox, z, z).length * b; });
+  const area = Math.max(0, bbox[2] - bbox[0]) * Math.max(0, bbox[3] - bbox[1]);
+  return { terrain, weather: area * 0.65e6 * (hours / 48), other: 0.9e6 };
 }
 
 /** Terrain tiles (Terrarium, 512 px) covering a box, zoom 0 to maxZoom. */

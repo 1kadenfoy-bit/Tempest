@@ -3,7 +3,7 @@
 // everywhere (13), tiles come from a detail file where one exists, or are
 // enlarged from their zoom-13 ancestor.
 import type { VectorSourceSpecification } from 'maplibre-gl';
-import { PMTiles, type RangeResponse, type Source } from 'pmtiles';
+import { PMTiles, findTile, zxyToTileId, type RangeResponse, type Source } from 'pmtiles';
 import { ancestorOf, baseMaxZoom, filesForTile, type BasemapFile, type BasemapManifest } from '../../core/basemap/manifest';
 import { maplibregl } from './maplibre';
 import { overzoomTile } from './overzoom';
@@ -21,6 +21,11 @@ export interface Basemap {
   /** Read a saved area's base map file before anything else, inside its box. */
   addSaved(id: string, file: File, bbox: [number, number, number, number], minzoom: number, maxzoom: number): void;
   removeSaved(id: string): void;
+  /**
+   * Bytes the stored tiles for these tile addresses would take, read from the
+   * files' indexes (no tiles downloaded). Shared contents counted once.
+   */
+  storedBytes(tiles: [number, number, number][]): Promise<number>;
 }
 
 /** Reads byte ranges from a file on the device without loading it whole. */
@@ -80,8 +85,44 @@ export async function loadBasemap(baseUrl: string): Promise<Basemap> {
     return { data: new ArrayBuffer(0) };
   });
 
+  /** A tile's place in a file, from its index alone. */
+  async function locate(file: string, z: number, x: number, y: number): Promise<{ offset: number; length: number } | null> {
+    const a = archive(file);
+    const header = await a.getHeader();
+    const tileId = zxyToTileId(z, x, y);
+    let offset = header.rootDirectoryOffset;
+    let length = header.rootDirectoryLength;
+    for (let depth = 0; depth < 4; depth++) {
+      const entries = await a.cache.getDirectory(a.source, offset, length, header);
+      const e = findTile(entries, tileId);
+      if (!e) return null;
+      if (e.runLength > 0) return { offset: header.tileDataOffset + e.offset, length: e.length };
+      offset = header.leafDirectoryOffset + e.offset;
+      length = e.length;
+    }
+    return null;
+  }
+
   return {
     storedTile: (z, x, y) => stored_tile(z, x, y),
+    async storedBytes(tiles) {
+      const seen = new Set<string>();
+      let total = 0;
+      let i = 0;
+      await Promise.all(Array.from({ length: 12 }, async () => {
+        while (i < tiles.length) {
+          const [z, x, y] = tiles[i++]!;
+          for (const f of filesForTile(manifest, z, x, y)) {
+            const hit = await locate(f.file, z, x, y).catch(() => null);
+            if (!hit) continue;
+            const key = `${f.file}@${hit.offset}`;
+            if (!seen.has(key)) { seen.add(key); total += hit.length; }
+            break;
+          }
+        }
+      }));
+      return total;
+    },
     addSaved(id, file, bbox, minzoom, maxzoom) {
       const name = `saved:${id}`;
       archives.set(name, new PMTiles(new FileSliceSource(file, name)));

@@ -34,7 +34,10 @@ test('home: shell sits where the v8 template puts it', async ({ page }) => {
 
   // Top bar: 16 from the sides, 8 below the 47 px status bar, 56 tall.
   expect(await box(page, '.topbar')).toMatchObject({ x: 16, y: 55, width: 358, height: 56 });
-  // Sheet: collapsed to 320 px including the 34 px bottom inset.
+  // Sheet: collapsed to 320 px including the 34 px bottom inset when the
+  // totals fit one line each; it grows a line at a time when they stack.
+  await page.addStyleTag({ content: '.summary-main span:nth-child(n+2) { display: none; }' });
+  await page.waitForTimeout(400);
   expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 320, 0);
   // Thumb buttons: 56 px, 16 from the right, stacked 16 above the sheet.
   const layers = await box(page, '#map-layers');
@@ -175,11 +178,11 @@ test('sheet tucks away to its handle and comes back', async ({ page }) => {
   await page.mouse.up();
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'tucked');
   await page.waitForTimeout(400);
-  // Only the handle shows: 28 px plus the 34 px bottom inset.
-  expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 62, 0);
+  // Only the handle shows (21 px and 8 px of room) above the 34 px bottom inset.
+  expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 63, 0);
   // Thumb buttons follow the sheet down.
   const layers = await box(page, '#map-layers');
-  expect(layers.y + layers.height).toBeCloseTo(844 - 62 - 16, 0);
+  expect(layers.y + layers.height).toBeCloseTo(844 - 63 - 16, 0);
   await page.screenshot({ path: 'test-results/screens/m1-sheet-tucked.png' });
   await page.click('#sheet-handle');
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'collapsed');
@@ -264,8 +267,12 @@ test.describe('shell pixels (map hidden)', () => {
     mask: ['#place-text', '#subject-place', '#cursor-time', '#cursor-note', '#subject-time', '#run-age', '.window-summary', '.chart-block', '.week'].map((s) => page.locator(s)),
     maxDiffPixelRatio: 0.01,
   });
-  const hideMap = (page: Page) =>
-    page.addStyleTag({ content: '#map canvas, .maplibregl-marker, .maplibregl-ctrl { visibility: hidden !important; }' });
+  // Hide the map, and show one total per half (the weather decides how many
+  // lines there are), so only layout is compared.
+  const hideMap = async (page: Page) => {
+    await page.addStyleTag({ content: '#map canvas, .maplibregl-marker, .maplibregl-ctrl { visibility: hidden !important; } .summary-main span:nth-child(n+2) { display: none; }' });
+    await page.waitForTimeout(400);
+  };
 
   test('collapsed', async ({ page }) => {
     await page.goto(HOME);
