@@ -235,7 +235,7 @@ async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typ
 }
 
 /** The temperature fill: profiles at a lattice of nodes, terrain per pixel on the GPU. */
-async function updateTemperature(r: RunMetadata, t: Date, mine: number) {
+async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
   // A margin around the screen, so panning shows colour straight away.
   const b = map.getBounds();
   const padX = (b.getEast() - b.getWest()) * PAN_MARGIN;
@@ -248,8 +248,10 @@ async function updateTemperature(r: RunMetadata, t: Date, mine: number) {
   const feels = set.map === 'feels';
   // Feels-like on the map needs each node's 10 m wind, 2 m air and humidity (dew point).
   const extra = feels ? SURFACE_VARIABLES : [];
-  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, extra)]);
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, extra, { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'temperature') return;
+  // Mid-drag with nothing in memory: keep the picture; the release fetches.
+  if (!grid && cachedOnly) return;
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
   if (!grid) {
     tempLayer.setProfiles(null);
@@ -282,14 +284,15 @@ function marginView(): Box | null {
  * and the line chosen in settings. Needs humidity at the nodes; without it the
  * colours keep the model's own split.
  */
-async function updatePrecipLine(r: RunMetadata, t: Date, mine: number) {
+async function updatePrecipLine(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
   const kind = settingsFor(precipitation).line as string;
   const view = marginView();
   if (!view) { setLine(null, null); precipLayer.setShare(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
-  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, PROFILE_RH_VARIABLES)]);
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, PROFILE_RH_VARIABLES, { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'precipitation') return;
+  if (!grid && cachedOnly) return;
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
   const res = setLine(grid, kind === 'off' ? null : kind === 'wetbulb' ? 'wetbulb' : '0c');
   precipLayer.setShare(res?.share ?? null);
@@ -345,12 +348,17 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
   return res;
 }
 
-async function updateFills() {
+/**
+ * `moving`: called during a drag. Profile nodes then come from memory only, so
+ * a long pan does not fire request after request at the point API (it has a
+ * per-minute limit); the release fetches what is new.
+ */
+async function updateFills(moving = false) {
   if (!run || !cursor.time || !mapReady) return;
   if (active.id === 'temperature') {
     precipLayer.setFields([]);
     tempLayer.visible = true;
-    await updateTemperature(run, cursor.time, ++fillSeq).catch((err) => console.error(err));
+    await updateTemperature(run, cursor.time, ++fillSeq, moving).catch((err) => console.error(err));
     return;
   }
   tempLayer.visible = false;
@@ -380,7 +388,7 @@ async function updateFills() {
     }
     view_ = { ...view_, cells };
     scheduleDetails();
-    void updatePrecipLine(r, t, mine).catch((err) => console.error(err));
+    void updatePrecipLine(r, t, mine, moving).catch((err) => console.error(err));
     // Fetch the next step ahead of time, so playing and scrubbing stay smooth.
     const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
     const next = cursor.allSteps[i + 1];
@@ -399,7 +407,7 @@ map.on('move', () => {
   if (moveFilling || now - lastMoveFill < 500) return;
   lastMoveFill = now;
   moveFilling = true;
-  void updateFills().finally(() => { moveFilling = false; });
+  void updateFills(true).finally(() => { moveFilling = false; });
 });
 
 cursor.subscribe(() => {

@@ -78,12 +78,16 @@ export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s
   const barW = (s.stepHours * 3_600_000 / span) * w;
   const gap = barW > 4 ? 1 : 0;
   const top = 4;
+  let bars = 0;
+  let covered = false;
   s.times.forEach((time, i) => {
     const mm = p[i];
-    if (mm === undefined || !(mm >= PRECIP_CUTOFF)) return;
     const right = x(time.getTime());
     const left = right - barW;
     if (right < 0 || left > w) return;
+    if (mm !== undefined && Number.isFinite(mm)) covered = true;
+    if (mm === undefined || !(mm >= PRECIP_CUTOFF)) return;
+    bars++;
     const rate = mm / s.stepHours;
     const bh = Math.max(2, Math.min(1, rate / 6) * (h - top));
     const kind: PrecipType = typeFromShare(pinShare(s, i, ground));
@@ -91,6 +95,15 @@ export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s
     ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(left + gap / 2, h - bh, Math.max(1, barW - gap), bh);
   });
+  // Say it plainly, so an empty chart never looks like one still loading.
+  if (!bars) {
+    ctx.fillStyle = getComputedStyle(ctx.canvas).getPropertyValue('--ink-2').trim();
+    ctx.font = '400 12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Left of the needle, which sits mid-chart.
+    ctx.fillText(covered ? 'Dry through this window' : 'Outside the model’s hours', w / 4, h / 2);
+  }
 }
 
 /** Legend: the three colour families on one mm/h scale. */

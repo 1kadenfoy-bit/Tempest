@@ -125,3 +125,12 @@ Close Tempest fully and reopen it. Pull the sheet up on either layer.
 - **Humidity in temperature:** the TODAY card now shows the day's humidity range with the dew point under it. The hourly detail already had humidity by hour.
 - **Snow ratio:** I chose **Kuchera** as the default, since you asked for the most reliable. A 2026 comparison of 10 methods over 14 storms found Kuchera among the most accurate, and a fixed 10:1 is often off ([Filipiak et al. 2026](https://brian-filipiak-scholar.media.uconn.edu/wp-content/uploads/sites/3631/2026/08/Filipiak_WWE_2026.pdf), [Pivotal Weather](https://home.pivotalweather.com/guides/snowfall)). Those storms were in the US Northeast, so it isn't proven for BC yet. The app's own comparisons over a season can check it.
 - **Saving precipitation now keeps the profile too,** because it decides rain or snow at your height and offline must show the same numbers. That adds about 40 values per hour, so a save takes longer. The offline test checks that the numbers match exactly.
+
+## Second follow-up (Nov 16): switching layers, and the dry chart
+
+1. **Temperature after switching layers was slow or didn't load.** Three causes, all fixed:
+   - **The two layers asked the forecast service for different sets of values** at the same map points, so a switch downloaded them all again. Now every point is asked once for everything both layers need.
+   - **A second ask for the same data started a second download** instead of waiting for the first. While the service refused, that stacked up slow map-file reads on every switch. Now it waits for the first.
+   - **Panning fired new requests about twice a second,** which can hit the free service's limit of 600 calls a minute. When it refused, the app gave up on it for 10 minutes and used the slow path. Now a drag uses only what's in memory and fetches when you let go. After a refusal the app waits 2 minutes before asking again.
+   - **Measured here, with the service refusing this machine:** the first switch to Temperature took 3.8 s from the map files; later switches took under 1 s with no new requests.
+2. **A dry window looked like it was still loading.** When the pin's series has loaded and nothing falls in the window, the chart now says "Dry through this window" (or "Outside the model's hours"). "Loading the pin's forecast…" shows only while it really is loading.
