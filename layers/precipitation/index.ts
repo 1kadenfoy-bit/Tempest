@@ -167,7 +167,12 @@ export const precipitation: LayerSlots = {
     return { value: readoutValue(pin.series, i, Math.max(0, pin.elevation ?? 0)), extra: sl !== undefined && sl !== null ? `snow line ${formatElevation(Math.round(sl / 10) * 10)}` : undefined };
   },
   // Totals use what was observed where it covers the hours.
-  summary: (pin, start, cursor, end, set) => ({ kind: 'split', ...windowSummary(withObserved(pin.series, pin.observed), start, cursor, end, (set?.ratio as SnowRatio | undefined) ?? DEFAULT_RATIO, Math.max(0, pin.elevation ?? 0)) }),
+  summary: (pin, start, cursor, end, set) => ({
+    kind: 'split',
+    ...windowSummary(withObserved(pin.series, pin.observed), start, cursor, end, (set?.ratio as SnowRatio | undefined) ?? DEFAULT_RATIO, Math.max(0, pin.elevation ?? 0)),
+    // Say when what fell is measured (analysis), not forecast.
+    beforeNote: pin.observed?.some((o) => o.end > start && o.end.getTime() - o.hours * 3_600_000 < cursor.getTime()) ? 'observed' : undefined,
+  }),
   drawChart: (ctx, w, h, pin, start, end) => drawChart(ctx, w, h, pin.series, start, end, Math.max(0, pin.elevation ?? 0), pin.observed),
   details: (ctx) => precipDetails(ctx),
   inView: (view) => precipInView(view),

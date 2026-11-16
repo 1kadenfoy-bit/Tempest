@@ -66,7 +66,7 @@ A new browser test checks each part:
 - **Observed precipitation:**
   - Each 6-hour total is spread evenly over its hours. It replaces the model's amounts in the totals and the table's past columns.
   - The final analysis is used where it exists, otherwise the preliminary one. In tests the two differed by about 0.05 mm.
-  - It's online only: ECCC asks that GeoMet not be bulk-copied, so saved areas don't keep it.
+  - It's online only: ECCC asks that GeoMet not be bulk-copied, so saved areas don't keep it. When a total includes observed amounts, its label says so ("Last 24 h · observed"), since offline the same total comes from the forecast.
 - **A panel opened from another panel's button** (model info from the model menu) now closes on its own. Before, Escape closed the wrong one and left the card on screen.
 
 ## Facts checked
@@ -88,7 +88,7 @@ A new browser test checks each part:
 
 ## Checks
 
-- **Unit tests: 113 pass.** New: the time line (chain, seams, a model chosen on its own, fallback, models outside the chain) and the HRDPA adapter.
+- **Unit tests: 108 pass.** New: the time line (chain, seams, a model chosen on its own, fallback, models outside the chain) and the HRDPA adapter.
 - **Browser tests: 24 pass at 390 × 844.** New: the model menu, info card and switching test, and the fallback test.
   - The shell's pixel baselines were refreshed for the model button's new chevron.
 

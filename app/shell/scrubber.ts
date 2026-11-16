@@ -64,7 +64,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
       // model's hours (the first step's amount starts an hour before it).
       const dataStart = cursor.first ? new Date(cursor.first.getTime() - H) : start;
       const dataEnd = cursor.last ?? end;
-      $('summary-before-label').textContent = start < dataStart ? `Since ${formatCursorTime(dataStart)}` : atNow ? `Last ${half}` : `${half} before`;
+      const beforeLabel = start < dataStart ? `Since ${formatCursorTime(dataStart)}` : atNow ? `Last ${half}` : `${half} before`;
+      $('summary-before-label').textContent = sum.beforeNote ? `${beforeLabel} · ${sum.beforeNote}` : beforeLabel;
       $('summary-after-label').textContent = end > dataEnd ? `Until ${formatCursorTime(dataEnd)}` : atNow ? `Next ${half}` : `${half} after`;
     }
 

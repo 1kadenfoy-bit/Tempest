@@ -6,6 +6,9 @@ test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions:
 
 test('a saved area works in airplane mode with the same numbers', async ({ page, context }) => {
   test.setTimeout(600_000);
+  // Observed precipitation is online only (ECCC asks that it not be bulk-copied),
+  // so this compares forecast with forecast.
+  await context.route('**/geo.weather.gc.ca/**', (r) => r.abort());
   await page.goto('/?insets=47,34');
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 90_000 });
   await page.evaluate(() => navigator.serviceWorker.ready);
