@@ -67,6 +67,7 @@ A new browser test checks each part:
   - Each 6-hour total is spread evenly over its hours. It replaces the model's amounts in the totals and the table's past columns.
   - The final analysis is used where it exists, otherwise the preliminary one. In tests the two differed by about 0.05 mm.
   - It's online only: ECCC asks that GeoMet not be bulk-copied, so saved areas don't keep it. When a total includes observed amounts, its label says so ("Last 24 h · observed"), since offline the same total comes from the forecast.
+- **What a saved area keeps:** the saved run's hours only. Online, the week's past also shows the two days before the run (earlier runs, and observed precipitation). Offline those hours are missing, so a "Last 24 h" total can be smaller offline. The offline test compares hours inside the saved run, where the numbers are identical.
 - **A panel opened from another panel's button** (model info from the model menu) now closes on its own. Before, Escape closed the wrong one and left the card on screen.
 
 ## Facts checked
