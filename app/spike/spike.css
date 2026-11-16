@@ -14,3 +14,4 @@ button { min-height: var(--thumb); border-radius: var(--radius-button-tile-row);
 #scrub input { width: 100%; min-height: var(--touch-min); }
 #readout { color: var(--ink); font: var(--type-stat); font-variant-numeric: tabular-nums; }
 pre { white-space: pre-wrap; font: var(--type-caption); background: var(--card); padding: 12px; border-radius: var(--radius-button-tile-row); margin: 0; }
+.back { color: var(--ink-2); font: var(--type-secondary); text-decoration: none; min-height: var(--touch-min); display: flex; align-items: center; }

@@ -100,6 +100,17 @@ test('window control sets the chart span and the week box together', async ({ pa
   await expect(page.locator('#window-label')).toHaveText('24 h');
 });
 
+test('the map panel links to the phone tests and back', async ({ page }) => {
+  await page.goto(HOME);
+  await ready(page);
+  await page.click('#map-layers');
+  await page.getByRole('link', { name: /Phone tests/ }).click();
+  await expect(page).toHaveURL(/spike\.html$/);
+  await expect(page.getByRole('button', { name: 'Run tests' })).toBeVisible();
+  await page.getByRole('link', { name: /Back to the map/ }).click();
+  await expect(page.locator('#layer-name')).toHaveText('Precipitation');
+});
+
 test('map panel grows from its button, switches terrain, and remembers', async ({ page }) => {
   await page.goto(HOME);
   await ready(page);

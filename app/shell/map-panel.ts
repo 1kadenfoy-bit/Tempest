@@ -28,5 +28,13 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     toggle('Hillshade', state.hillshade, (on) => { state.hillshade = on; onChange({ ...state }); }),
     toggle('Contours', state.contours, (on) => { state.contours = on; onChange({ ...state }); }),
   );
-  return body;
+  // Temporary, for building: the phone test page Claude asks for results
+  // from. Plain row from the existing components; remove when no longer needed.
+  const tests = document.createElement('div');
+  tests.className = 'group';
+  tests.innerHTML = '<span class="group-title">FOR TESTING</span><a class="link-row" href="spike.html">Phone tests<span class="link-row-note">Results to send to Claude</span></a>';
+  const wrap = document.createElement('div');
+  wrap.className = 'panel-groups';
+  wrap.append(body, tests);
+  return wrap;
 }
