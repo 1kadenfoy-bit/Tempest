@@ -15,6 +15,11 @@ import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
 import { gridRequest } from '../core/geo/grid-request';
 import type { GridField } from '../core/vocabulary';
 import { TypedRateLayer } from '../render/grid-gl/typed-rate-layer';
+import { areaContains, areaOverlaps, saveBoxForView, type SavedArea } from '../core/offline/saved-area';
+import { offlineGroup } from './offline/offline-panel';
+import { deleteArea, forgetSavedWeather, listSavedAreas, loadSavedWeather, saveArea, savedStep } from './offline/saved-areas';
+import { regridNative, sampleNative } from '../render/openmeteo-starter';
+import { readFile } from './offline/storage';
 import { loadBasemap } from './map/basemap-router';
 import { maplibregl } from './map/maplibre';
 import { topoStyle } from './map/style';
@@ -28,7 +33,7 @@ import { loadPrefs, savePrefs } from './shell/prefs';
 import { setupScrubber } from './shell/scrubber';
 import { setupSheet } from './shell/sheet';
 import { setupViewport } from './shell/viewport';
-import { applyTokens } from './theme/tokens';
+import { applyTokens, colorToken } from './theme/tokens';
 
 applyTokens(document);
 applyInsetOverride(document, location.search);
@@ -42,6 +47,19 @@ const prefs = loadPrefs();
 const NORTH_SHORE: [number, number] = [-123.02, 49.38];
 
 const basemap = await loadBasemap(document.baseURI);
+
+// Saved areas: their base map files are read first, inside their boxes.
+let savedAreas: SavedArea[] = [];
+async function registerSavedAreas() {
+  try {
+    savedAreas = await listSavedAreas();
+    for (const a of savedAreas) {
+      const file = await readFile(a.basemap.file);
+      if (file) basemap.addSaved(a.id, file, a.bbox, a.basemap.minzoom, a.basemap.maxzoom);
+    }
+  } catch { savedAreas = []; }
+}
+await registerSavedAreas();
 const map = new maplibregl.Map({
   container: 'map',
   style: topoStyle(basemap.source),
@@ -86,6 +104,8 @@ const MODEL = 'cmc_gem_hrdps';
 const store = new MemoryStore<PointSeries>(32);
 let run: RunMetadata | null = null;
 let series: PointSeries | null = null;
+/** True when the run comes from a saved area (no signal). */
+let usingSaved = false;
 
 scrubber.setLayer({
   drawChart: (ctx, w, h, start, end) => precip.drawChart(ctx, w, h, series, start, end),
@@ -95,7 +115,7 @@ scrubber.setLayer({
 function renderRunAge() {
   if (!run) return;
   const el = $('run-age');
-  el.textContent = formatRunAge(run.referenceTime, new Date());
+  el.textContent = formatRunAge(run.referenceTime, new Date()) + (usingSaved ? ' · saved' : '');
   // Stale is shown, never hidden: a run over 12 h old turns the warning colour.
   el.dataset.stale = String(runAgeHours(run.referenceTime, new Date()) >= 12);
   $('model-pill').textContent = MODELS[run.model]?.label ?? run.model;
@@ -126,13 +146,46 @@ function fieldKey(r: RunMetadata, t: Date, gridKey: string) {
   return `${r.model}|${r.referenceTime.toISOString()}|${t.toISOString()}|${gridKey}`;
 }
 
-async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typeof gridRequest>>): Promise<GridField> {
+type Box = [number, number, number, number];
+const covers = (a: Box, b: Box) => a[0] <= b[0] && a[1] <= b[1] && a[2] >= b[2] && a[3] >= b[3];
+
+/** A saved area's field for this run and step, if it has one (and covers `need`, when given). */
+async function savedField(r: RunMetadata, t: Date, need: Box | null, overlap: Box): Promise<{ field: GridField; key: string } | null> {
+  for (const a of savedAreas) {
+    if (a.weather.model !== r.model || new Date(a.weather.run).getTime() !== r.referenceTime.getTime()) continue;
+    if (need ? !covers(a.bbox, need) : !areaOverlaps(a, overlap)) continue;
+    const w = await loadSavedWeather(a).catch(() => null);
+    if (!w) continue;
+    const i = w.times.findIndex((x) => x.getTime() === t.getTime());
+    if (i < 0) continue;
+    // Resampled from the saved model cells exactly as live fields are.
+    const box = savedStep(w, i);
+    const values = Object.fromEntries(precip.needs.map((v) => [v, regridNative(box, v, a.bbox, a.weather.nx, a.weather.ny)]));
+    const field: GridField = {
+      label: { source: a.weather.source, model: a.weather.model, run: new Date(a.weather.run), gridKm: MODELS[a.weather.model]?.gridKm ?? NaN, licence: '', attribution: '', fetchedAt: new Date(a.savedAt), offline: true },
+      validTime: t, stepHours: a.weather.stepHours, bbox: a.bbox, nx: a.weather.nx, ny: a.weather.ny, values,
+    };
+    return { field, key: `saved:${a.id}` };
+  }
+  return null;
+}
+
+/** The one read path: memory, then a saved area that covers the view, then the network, then any saved area in view. */
+async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typeof gridRequest>>): Promise<{ field: GridField; key: string }> {
   const key = fieldKey(r, t, req.key);
   const hit = fieldStore.get(key);
-  if (hit) return hit;
-  const f = await fetchGridField(r, t, precip.needs, req);
-  fieldStore.put(key, f);
-  return f;
+  if (hit) return { field: hit, key: req.key };
+  const saved = await savedField(r, t, req.bbox, req.bbox);
+  if (saved) return saved;
+  try {
+    const f = await fetchGridField(r, t, precip.needs, req);
+    fieldStore.put(key, f);
+    return { field: f, key: req.key };
+  } catch (err) {
+    const partial = await savedField(r, t, null, req.bbox);
+    if (partial) return partial;
+    throw err;
+  }
 }
 
 async function updateFills() {
@@ -146,7 +199,7 @@ async function updateFills() {
   try {
     const f = await getField(r, t, req);
     if (mine !== fillSeq) return;
-    precipLayer.setFields([precip.precipDrawField(f, req.key)]);
+    precipLayer.setFields([precip.precipDrawField(f.field, f.key)]);
     document.body.dataset.fill = 'ready';
     // Fetch the next step ahead of time, so playing and scrubbing stay smooth.
     const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
@@ -164,9 +217,18 @@ cursor.subscribe(() => {
   scheduleFills(60);
 });
 
+/** The run a saved area holds, for use without signal. */
+function savedRun(): RunMetadata | null {
+  const a = [...savedAreas].sort((x, y) => y.weather.run.localeCompare(x.weather.run))[0];
+  if (!a) return null;
+  const ref = new Date(a.weather.run);
+  return { model: a.weather.model, completed: true, referenceTime: ref, lastModified: new Date(a.savedAt), validTimes: [ref, ...a.weather.validTimes.map((t) => new Date(t))], variables: [] };
+}
+
 async function loadRun() {
   try {
     const next = await fetchRunMetadata(MODEL);
+    usingSaved = false;
     const changed = !run || next.referenceTime.getTime() !== run.referenceTime.getTime();
     run = next;
     renderRunAge();
@@ -178,6 +240,20 @@ async function loadRun() {
     }
     document.body.dataset.run = 'ready';
   } catch (err) {
+    const saved = savedRun();
+    if (saved) {
+      const changed = !run || saved.referenceTime.getTime() !== run.referenceTime.getTime();
+      run = saved;
+      usingSaved = true;
+      renderRunAge();
+      if (changed) {
+        cursor.setSteps(run.validTimes.slice(1), cursor.time ?? new Date());
+        void updateFills();
+        void loadSeries();
+      }
+      document.body.dataset.run = 'saved';
+      return;
+    }
     $('run-age').textContent = 'Weather unavailable · tap to retry';
     scrubber.setStatus('Could not reach the weather data');
     document.body.dataset.run = 'error';
@@ -199,13 +275,21 @@ async function loadSeries() {
     scrubber.setStatus('Loading the pin’s forecast…');
     renderReadout();
     try {
-      const s = await fetchPointSeries(run, precip.needs, p.lat, p.lng);
+      const s = (usingSaved ? await savedSeries(run, p.lat, p.lng) : null) ?? await fetchPointSeries(run, precip.needs, p.lat, p.lng);
       store.put(key, s);
       if (mine !== seriesSeq) return;
       series = s;
     } catch (err) {
+      const s = await savedSeries(run, p.lat, p.lng);
       if (mine !== seriesSeq) return;
-      scrubber.setStatus('Could not load the pin’s forecast');
+      if (s) {
+        series = s;
+        scrubber.setStatus('');
+        renderReadout();
+        document.body.dataset.series = 'ready';
+        return;
+      }
+      scrubber.setStatus(usingSaved ? 'The pin is outside the saved area' : 'Could not load the pin’s forecast');
       console.error(err);
       return;
     }
@@ -213,6 +297,21 @@ async function loadSeries() {
   scrubber.setStatus('');
   renderReadout();
   document.body.dataset.series = 'ready';
+}
+/** The pin's series from a saved area's grids (same run), for use without signal. */
+async function savedSeries(r: RunMetadata, lat: number, lng: number): Promise<PointSeries | null> {
+  for (const a of savedAreas) {
+    if (!areaContains(a, lng, lat) || new Date(a.weather.run).getTime() !== r.referenceTime.getTime()) continue;
+    const w = await loadSavedWeather(a).catch(() => null);
+    if (!w) continue;
+    // The nearest model cell, as online (and as Open-Meteo's point forecast).
+    const values = Object.fromEntries(precip.needs.map((v) => [v, w.times.map((_, i) => sampleNative(savedStep(w, i), v, lat, lng))]));
+    return {
+      label: { source: a.weather.source, model: a.weather.model, run: new Date(a.weather.run), gridKm: MODELS[a.weather.model]?.gridKm ?? NaN, licence: '', attribution: '', fetchedAt: new Date(a.savedAt), offline: true },
+      lat, lon: lng, times: w.times, stepHours: a.weather.stepHours, values,
+    };
+  }
+  return null;
 }
 setInterval(() => { if (document.visibilityState === 'visible') renderRunAge(); }, 60_000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderRunAge(); void loadRun(); } });
@@ -299,9 +398,44 @@ layersBtn.addEventListener('click', () => {
       prefs.contours = s.contours;
       savePrefs(prefs);
       applyTerrainPrefs();
-    }),
+    }, offlineGroup(savedAreas, {
+      save: async (onProgress) => {
+        if (!run || usingSaved) throw new Error('needs signal');
+        const b = map.getBounds();
+        const area = await saveArea({
+          bbox: saveBoxForView([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]),
+          run, variables: precip.needs, basemap, style: map.getStyle(), onProgress,
+        });
+        for (const old of savedAreas) { basemap.removeSaved(old.id); forgetSavedWeather(old.id); }
+        await registerSavedAreas();
+        drawSavedOutlines();
+        return area;
+      },
+      remove: async (area) => {
+        await deleteArea(area);
+        basemap.removeSaved(area.id);
+        forgetSavedWeather(area.id);
+        await registerSavedAreas();
+        drawSavedOutlines();
+      },
+    })),
   });
 });
+
+/** Saved areas' boxes as dashed outlines, so it is clear where data exists offline. */
+function drawSavedOutlines() {
+  const data = {
+    type: 'FeatureCollection' as const,
+    features: savedAreas.map((a) => {
+      const [w, s_, e, n] = a.bbox;
+      return { type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates: [[w, s_], [e, s_], [e, n], [w, n], [w, s_]] } };
+    }),
+  };
+  const src = map.getSource('saved-areas') as maplibregl.GeoJSONSource | undefined;
+  if (src) { src.setData(data); return; }
+  map.addSource('saved-areas', { type: 'geojson', data });
+  map.addLayer({ id: 'saved-areas', type: 'line', source: 'saved-areas', paint: { 'line-color': colorToken('ink-2'), 'line-width': 1.5, 'line-dasharray': [3, 2] } });
+}
 
 map.on('load', () => {
   const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
@@ -310,6 +444,7 @@ map.on('load', () => {
   // Under the hillshade and contours, so the terrain reads through at any rate.
   map.addLayer(precipLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   mapReady = true;
+  drawSavedOutlines();
   fitPadding();
   locate(false);
   void loadRun();
@@ -321,4 +456,18 @@ map.on('idle', () => { document.body.dataset.idle = 'true'; });
 // Installed app: keep the app's own files on the device.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* runs without it */ });
+  // Files loaded before the worker took charge (a first visit) are not in its
+  // cache yet: keep them now, so the app opens without signal next time.
+  void navigator.serviceWorker.ready.then(async () => {
+    try {
+      const cache = await caches.open('tempest-app-v2');
+      const urls = new Set<string>([new URL('./', document.baseURI).href]);
+      for (const e of performance.getEntriesByType('resource')) {
+        const u = new URL(e.name);
+        if (u.origin === location.origin && !u.pathname.endsWith('.pmtiles') && !u.pathname.includes('/tiles/')) urls.add(u.href);
+      }
+      urls.add(new URL('tiles/basemap.json', document.baseURI).href);
+      for (const url of urls) if (!(await cache.match(url))) await cache.add(url).catch(() => undefined);
+    } catch { /* storage unavailable */ }
+  });
 }

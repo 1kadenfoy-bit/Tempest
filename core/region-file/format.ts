@@ -16,6 +16,12 @@ export interface RegionHeader {
   validTimes: string[];
   valuesPerStep: number;
   savedAt: string;
+  /** Grid size, for regular latitude/longitude grids (rows south to north). */
+  nx?: number;
+  ny?: number;
+  stepHours?: number;
+  /** Model-native files: the model and the cell ranges the values cover. */
+  ranges?: { start: number; end: number }[];
 }
 
 export interface RegionFile {

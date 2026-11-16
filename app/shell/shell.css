@@ -297,3 +297,14 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   color: var(--ink); text-decoration: none; font: 500 13px var(--font-body);
 }
 .link-row-note { font: var(--type-caption); color: var(--ink-2); }
+
+.icon-row {
+  width: 100%; min-height: 52px; padding: 4px 0;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+}
+.icon-row-icon { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; }
+.icon-row-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.icon-row-title { font: var(--type-body); }
+.icon-row-note { font: var(--type-caption); color: var(--ink-2); }
+.icon-row-action { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.icon-row[aria-busy='true'] .icon-row-icon svg { animation: pulse 1s ease-in-out infinite; }

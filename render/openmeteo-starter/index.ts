@@ -70,6 +70,60 @@ export async function readPointSeries(
   return out;
 }
 
+/** A box of the model's own grid cells, as read from one step's file. */
+export interface NativeBox {
+  model: string;
+  ranges: { start: number; end: number }[];
+  /** Values per variable, in the file's own cell order. */
+  values: Record<string, Float32Array>;
+}
+
+function domainFor(model: string) {
+  const domain = domainOptions.find((d) => d.value === model);
+  if (!domain) throw new Error(`Unknown model ${model}`);
+  return domain;
+}
+
+/** Read the model cells covering a box (plus a margin) from one step's file. */
+export async function readNativeBox(model: string, fileUrl: string, variables: string[], bbox: [number, number, number, number], stepHours = 1): Promise<NativeBox> {
+  const domain = domainFor(model);
+  const [w, s, e, n] = bbox;
+  const pad = 0.05;
+  const ranges = GridFactory.create(domain.grid).getCoveringRanges(s - pad, w - pad, n + pad, e + pad);
+  const reader = getProtocolInstance(settings).omFileReader;
+  const values: Record<string, Float32Array> = {};
+  for (const v of variables) {
+    const data = await reader.readVariable(fileUrl, v, ranges, undefined, { deltaTimeHours: stepHours, domain });
+    values[v] = Float32Array.from(data.values ?? []);
+  }
+  return { model, ranges, values };
+}
+
+/** Resample model cells onto a regular latitude/longitude grid (rows south to north). */
+export function regridNative(box: NativeBox, variable: string, bbox: [number, number, number, number], nx: number, ny: number): Float32Array {
+  const grid = GridFactory.create(domainFor(box.model).grid, box.ranges);
+  const src = box.values[variable];
+  const [w, s, e, n] = bbox;
+  const dst = new Float32Array(nx * ny);
+  if (!src || !src.length) return dst;
+  for (let j = 0; j < ny; j++) {
+    const lat = s + ((j + 0.5) / ny) * (n - s);
+    for (let i = 0; i < nx; i++) {
+      const lon = w + ((i + 0.5) / nx) * (e - w);
+      const val = grid.getLinearInterpolatedValue(src, lat, lon);
+      dst[j * nx + i] = Number.isFinite(val) ? val : 0;
+    }
+  }
+  return dst;
+}
+
+/** The nearest model cell's value at a point (as Open-Meteo's point forecast reads it). */
+export function sampleNative(box: NativeBox, variable: string, lat: number, lon: number): number {
+  const src = box.values[variable];
+  if (!src || !src.length) return NaN;
+  return GridFactory.create(domainFor(box.model).grid, box.ranges).getInterpolatedValue(src, lat, lon, 'nearest');
+}
+
 /**
  * Read variables from one step's file for a box, and resample them onto a
  * regular latitude/longitude grid (rows south to north). The model grid
@@ -84,29 +138,6 @@ export async function readRegularGrid(
   ny: number,
   stepHours = 1,
 ): Promise<Record<string, Float32Array>> {
-  const domain = domainOptions.find((d) => d.value === model);
-  if (!domain) throw new Error(`Unknown model ${model}`);
-  const [w, s, e, n] = bbox;
-  const pad = 0.05;
-  const ranges = GridFactory.create(domain.grid).getCoveringRanges(s - pad, w - pad, n + pad, e + pad);
-  const grid = GridFactory.create(domain.grid, ranges);
-  const reader = getProtocolInstance(settings).omFileReader;
-  const out: Record<string, Float32Array> = {};
-  for (const v of variables) {
-    const data = await reader.readVariable(fileUrl, v, ranges, undefined, { deltaTimeHours: stepHours, domain });
-    const src = data.values;
-    const dst = new Float32Array(nx * ny);
-    if (src) {
-      for (let j = 0; j < ny; j++) {
-        const lat = s + ((j + 0.5) / ny) * (n - s);
-        for (let i = 0; i < nx; i++) {
-          const lon = w + ((i + 0.5) / nx) * (e - w);
-          const val = grid.getLinearInterpolatedValue(src, lat, lon);
-          dst[j * nx + i] = Number.isFinite(val) ? val : 0;
-        }
-      }
-    }
-    out[v] = dst;
-  }
-  return out;
+  const box = await readNativeBox(model, fileUrl, variables, bbox, stepHours);
+  return Object.fromEntries(variables.map((v) => [v, regridNative(box, v, bbox, nx, ny)]));
 }

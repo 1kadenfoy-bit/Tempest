@@ -3,8 +3,8 @@
 // everywhere (13), tiles come from a detail file where one exists, or are
 // enlarged from their zoom-13 ancestor.
 import type { VectorSourceSpecification } from 'maplibre-gl';
-import { PMTiles } from 'pmtiles';
-import { ancestorOf, baseMaxZoom, filesForTile, type BasemapManifest } from '../../core/basemap/manifest';
+import { PMTiles, type RangeResponse, type Source } from 'pmtiles';
+import { ancestorOf, baseMaxZoom, filesForTile, type BasemapFile, type BasemapManifest } from '../../core/basemap/manifest';
 import { maplibregl } from './maplibre';
 import { overzoomTile } from './overzoom';
 import { RangeOrWholeSource } from './range-source';
@@ -16,6 +16,20 @@ const SOURCE_MAXZOOM = 15;
 export interface Basemap {
   manifest: BasemapManifest;
   source: VectorSourceSpecification;
+  /** A stored tile (decompressed), from a saved area first, else the hosted files; no enlarging. */
+  storedTile(z: number, x: number, y: number): Promise<ArrayBuffer | undefined>;
+  /** Read a saved area's base map file before anything else, inside its box. */
+  addSaved(id: string, file: File, bbox: [number, number, number, number], minzoom: number, maxzoom: number): void;
+  removeSaved(id: string): void;
+}
+
+/** Reads byte ranges from a file on the device without loading it whole. */
+class FileSliceSource implements Source {
+  constructor(private file: File, private key: string) {}
+  getKey() { return this.key; }
+  async getBytes(offset: number, length: number): Promise<RangeResponse> {
+    return { data: await this.file.slice(offset, offset + length).arrayBuffer() };
+  }
 }
 
 export async function loadBasemap(baseUrl: string): Promise<Basemap> {
@@ -31,9 +45,12 @@ export async function loadBasemap(baseUrl: string): Promise<Basemap> {
     return a;
   };
   const stored = baseMaxZoom(manifest);
+  // Saved areas' files, read first (the one read path for live and saved).
+  const saved: BasemapFile[] = [];
 
-  async function stored_tile(z: number, x: number, y: number, signal: AbortSignal): Promise<ArrayBuffer | undefined> {
-    for (const f of filesForTile(manifest, z, x, y)) {
+  async function stored_tile(z: number, x: number, y: number, signal?: AbortSignal): Promise<ArrayBuffer | undefined> {
+    const savedHere = filesForTile({ ...manifest, files: saved }, z, x, y);
+    for (const f of [...savedHere, ...filesForTile(manifest, z, x, y)]) {
       try {
         const t = await archive(f.file).getZxy(z, x, y, signal);
         if (t?.data) return t.data;
@@ -64,6 +81,18 @@ export async function loadBasemap(baseUrl: string): Promise<Basemap> {
   });
 
   return {
+    storedTile: (z, x, y) => stored_tile(z, x, y),
+    addSaved(id, file, bbox, minzoom, maxzoom) {
+      const name = `saved:${id}`;
+      archives.set(name, new PMTiles(new FileSliceSource(file, name)));
+      saved.splice(0, saved.length, ...saved.filter((f) => f.file !== name), { file: name, minzoom, maxzoom, tile: null, bbox, bytes: file.size });
+    },
+    removeSaved(id) {
+      const name = `saved:${id}`;
+      archives.delete(name);
+      const keep = saved.filter((f) => f.file !== name);
+      saved.splice(0, saved.length, ...keep);
+    },
     manifest,
     source: {
       type: 'vector',

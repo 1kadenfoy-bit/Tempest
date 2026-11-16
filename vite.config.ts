@@ -18,6 +18,8 @@ export default defineConfig({
   preview: { headers: isolation, host: true, port: 4173, strictPort: true },
   build: {
     target: 'es2022',
+    // A list of every built file, which the service worker keeps on install.
+    manifest: 'asset-manifest.json',
     rollupOptions: {
       input: {
         main: resolve(import.meta.dirname, 'index.html'),

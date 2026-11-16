@@ -19,7 +19,7 @@ function toggle(label: string, on: boolean, onChange: (on: boolean) => void): HT
   return b;
 }
 
-export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) => void): HTMLElement {
+export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) => void, extra?: HTMLElement): HTMLElement {
   const body = document.createElement('div');
   body.className = 'group';
   body.innerHTML = '<span class="group-title">TERRAIN</span><div class="toggle-grid"></div>';
@@ -35,6 +35,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   tests.innerHTML = '<span class="group-title">FOR TESTING</span><a class="link-row" href="spike.html">Phone tests<span class="link-row-note">Results to send to Claude</span></a>';
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
-  wrap.append(body, tests);
+  wrap.append(body);
+  if (extra) wrap.append(extra);
+  wrap.append(tests);
   return wrap;
 }
