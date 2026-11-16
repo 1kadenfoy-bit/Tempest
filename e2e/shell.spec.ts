@@ -62,8 +62,9 @@ test('precipitation: top bar, readout, summary and fills', async ({ page }) => {
   await expect(page.locator('#summary-after-label')).toHaveText(/^(Next \d+ h|\d+ h after|Until \w{3} \d+(:\d\d)? [AP]M)$/);
   await expect(page.locator('#summary-after')).toHaveText(/(mm|cm|Dry)/);
   await expect(page.locator('.legend')).toContainText('0.1 to 6+ mm/h');
-  const fills = await page.evaluate(() => (window as unknown as { tempestMap: { getStyle(): { layers: { id: string }[] } } }).tempestMap.getStyle().layers.map((l) => l.id).filter((id) => id.startsWith('wx-')));
-  expect(fills).toEqual(['wx-precip-rain', 'wx-precip-mixed', 'wx-precip-snow']);
+  // The app's own renderer draws the fill (M3).
+  await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: 30_000 });
+  expect(await page.evaluate(() => Boolean((window as unknown as { tempestMap: { getLayer(id: string): unknown } }).tempestMap.getLayer('precip-grid')))).toBe(true);
   await page.screenshot({ path: 'test-results/screens/m2-home.png' });
 });
 

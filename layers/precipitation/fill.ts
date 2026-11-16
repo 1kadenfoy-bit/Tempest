@@ -1,9 +1,10 @@
-// Precipitation map fill: liquid rate in mm/h, one fill per type (rain, mixed,
-// snow), each coloured on the device from its token ramp. Nothing under the
-// 0.1 mm/h cutoff; saturates at 6 mm/h.
+// Precipitation map fill: liquid rate in mm/h coloured on the device by the
+// app's renderer, blending the rain, mixed and snow ramps by snow share.
+// Nothing under the 0.1 mm/h cutoff; saturates at 6 mm/h.
 import tokens from '../../design/tokens.json';
 import { lookupStrip, type Ramp } from '../../core/color/ramp';
-import type { PrecipType } from '../../core/precip/type';
+import { SNOW_SHARE_MIXED, SNOW_SHARE_SNOW, type PrecipType } from '../../core/precip/type';
+import type { GridField } from '../../core/vocabulary';
 
 const p = tokens.data.precipitation;
 export const PRECIP_TYPES: PrecipType[] = ['rain', 'mixed', 'snow'];
@@ -17,24 +18,29 @@ export const PRECIP_ALPHA = { from: 0.4, full: 0.55 };
 /** Overall strength of the fill, so terrain shading reads through at any rate. */
 export const PRECIP_OPACITY = 0.7;
 
-export function precipitationStrip(type: PrecipType = 'rain') {
-  return { min: 0, max: p.saturatesAt, unit: 'mm/h', colors: lookupStrip(precipRamp(type), 0, p.saturatesAt, 512, PRECIP_ALPHA) };
+
+/** Strips and rules for the typed-rate renderer: rain, mixed, snow by snow share. */
+export function precipRenderStyle() {
+  const strip = (t: PrecipType) => lookupStrip(precipRamp(t), 0, p.saturatesAt, 512, PRECIP_ALPHA);
+  return {
+    strips: [strip('rain'), strip('mixed'), strip('snow')] as [ReturnType<typeof strip>, ReturnType<typeof strip>, ReturnType<typeof strip>],
+    max: p.saturatesAt,
+    mixedFrom: SNOW_SHARE_MIXED,
+    secondFrom: SNOW_SHARE_SNOW,
+    opacity: PRECIP_OPACITY,
+  };
 }
 
-/** Variable names the renderer computes for each type (render/openmeteo-starter/precip-type-rules.ts). */
-export const TYPED_VARIABLE: Record<PrecipType, string> = {
-  rain: 'tempest_precip_rain',
-  mixed: 'tempest_precip_mixed',
-  snow: 'tempest_precip_snow',
-};
-
-export function precipFills(fileUrl: string, stepHours: number) {
-  return PRECIP_TYPES.map((t) => ({
-    id: `precip-${t}`,
-    fileUrl,
-    variable: TYPED_VARIABLE[t],
-    stepHours,
-    strip: precipitationStrip(t),
-    opacity: PRECIP_OPACITY,
-  }));
+/** Two numbers per cell for the GPU: precipitation rate and its snow part (mm/h). */
+export function precipDrawField(f: GridField, gridKey: string) {
+  const precip = f.values.precipitation;
+  const swe = f.values.snowfall_water_equivalent;
+  const data = new Float32Array(f.nx * f.ny * 2);
+  if (precip) {
+    for (let i = 0; i < f.nx * f.ny; i++) {
+      data[i * 2] = Math.max(0, precip[i]!) / f.stepHours;
+      data[i * 2 + 1] = Math.max(0, swe?.[i] ?? 0) / f.stepHours;
+    }
+  }
+  return { gridKey, bbox: f.bbox, nx: f.nx, ny: f.ny, data };
 }

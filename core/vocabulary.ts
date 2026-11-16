@@ -32,3 +32,17 @@ export interface PointSeries {
   stepHours: number;
   values: Partial<Record<VariableName, number[]>>;
 }
+
+/**
+ * Grid field shape: values on a regular latitude/longitude grid for one valid
+ * time. Rows run south to north, columns west to east; cell centres.
+ */
+export interface GridField {
+  label: ValueLabel;
+  validTime: Date;
+  stepHours: number;
+  bbox: [west: number, south: number, east: number, north: number];
+  nx: number;
+  ny: number;
+  values: Partial<Record<VariableName, Float32Array>>;
+}

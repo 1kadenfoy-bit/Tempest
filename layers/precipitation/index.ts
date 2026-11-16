@@ -7,7 +7,7 @@ import { formatCm, formatMm, formatRate } from '../../core/units/format';
 import type { PointSeries, VariableName } from '../../core/vocabulary';
 import { precipRamp, PRECIP_TYPES } from './fill';
 
-export { precipFills } from './fill';
+export { precipDrawField, precipRenderStyle } from './fill';
 
 export const id = 'precipitation';
 export const title = 'Precipitation';

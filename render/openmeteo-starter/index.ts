@@ -1,19 +1,16 @@
-// Rendering seam. The only module that imports the GPL-2.0 starter library
-// (@openmeteo/weather-map-layer). Everything else asks for "weather fills" by
-// file, variable and colour strip, and for values at a point; replacing this
-// folder replaces the renderer.
-import type { Map as MapLibreMap } from 'maplibre-gl';
-import * as maplibregl from 'maplibre-gl';
+// Starter-library seam. The only module that imports the GPL-2.0 library
+// (@openmeteo/weather-map-layer). Since M3 it only reads Open-Meteo's .om map
+// files (values at a point, or a box resampled to latitude/longitude); the
+// drawing is the app's own (render/grid-gl). The library's file decoder
+// (@openmeteo/file-reader) is GPL-2.0 too.
 import {
   GridFactory,
   defaultDerivationRules,
   defaultOmProtocolSettings,
   domainOptions,
   getProtocolInstance,
-  omProtocol,
   type OmProtocolSettings,
 } from '@openmeteo/weather-map-layer';
-import { precipTypeRules } from './precip-type-rules';
 
 export const renderer = {
   name: 'Open-Meteo weather-map-layer',
@@ -22,77 +19,17 @@ export const renderer = {
   link: 'https://github.com/open-meteo/weather-map-layer',
 } as const;
 
-/** Evenly spaced RGBA entries (alpha 0..1) from min to max, built in core from the tokens. */
-export interface LookupStrip {
-  min: number;
-  max: number;
-  unit: string;
-  colors: [number, number, number, number][];
-}
-
-export interface WeatherFill {
-  id: string;
-  /** Address of the .om file for one valid time. */
-  fileUrl: string;
-  variable: string;
-  /** Hours covered by one step, for amounts turned into rates. */
-  stepHours: number;
-  strip: LookupStrip;
-  opacity?: number;
-}
-
-// Colour scales are set per variable before a fill is shown; the library reads
-// them when it renders each tile on the device. Derivation rules must be in
-// place before the first request.
+// Reader settings. Since M3 the app draws with its own renderer
+// (render/grid-gl); the starter library only reads the model files.
 const settings: OmProtocolSettings = {
   ...defaultOmProtocolSettings,
   colorScales: { ...defaultOmProtocolSettings.colorScales },
   fileReaderConfig: {
     ...defaultOmProtocolSettings.fileReaderConfig,
-    derivationRules: [...precipTypeRules, ...defaultDerivationRules],
+    derivationRules: [...defaultDerivationRules],
   },
-  // Three typed fills, plus the next step while scrubbing.
-  maxStatesWithData: 8,
+  maxStatesWithData: 4,
 };
-
-let registered = false;
-export function registerRenderer(): void {
-  if (registered) return;
-  maplibregl.addProtocol('om', (params, abort) => omProtocol(params, abort, settings));
-  registered = true;
-}
-
-const fillUrl = (f: WeatherFill) => {
-  const params = new URLSearchParams({ variable: f.variable, delta_time_hours: String(f.stepHours) });
-  return `om://${f.fileUrl}?${params}`;
-};
-
-/**
- * Show these fills, below `beforeLayerId`. Existing fills with the same id
- * switch to their new file in place; others are removed.
- */
-export function showWeatherFills(map: MapLibreMap, fills: WeatherFill[], beforeLayerId?: string): void {
-  registerRenderer();
-  const keep = new Set(fills.map((f) => `wx-${f.id}`));
-  for (const layer of map.getStyle().layers) {
-    if (layer.id.startsWith('wx-') && !keep.has(layer.id)) {
-      map.removeLayer(layer.id);
-      map.removeSource(layer.id);
-    }
-  }
-  for (const f of fills) {
-    const id = `wx-${f.id}`;
-    settings.colorScales[f.variable] = { type: 'rgba', ...f.strip };
-    const url = fillUrl(f);
-    const source = map.getSource(id) as maplibregl.RasterTileSource | undefined;
-    if (source) {
-      if ((source as unknown as { url?: string }).url !== url) source.setUrl(url);
-      continue;
-    }
-    map.addSource(id, { type: 'raster', url, tileSize: 512 });
-    map.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': f.opacity ?? 0.85, 'raster-fade-duration': 0 } }, beforeLayerId);
-  }
-}
 
 /** Whether the page can share decoded data with workers (the fast path). */
 export function fastPathAvailable(): boolean {
@@ -130,5 +67,46 @@ export async function readPointSeries(
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
+  return out;
+}
+
+/**
+ * Read variables from one step's file for a box, and resample them onto a
+ * regular latitude/longitude grid (rows south to north). The model grid
+ * (rotated for HRDPS) never leaves this seam.
+ */
+export async function readRegularGrid(
+  model: string,
+  fileUrl: string,
+  variables: string[],
+  bbox: [number, number, number, number],
+  nx: number,
+  ny: number,
+  stepHours = 1,
+): Promise<Record<string, Float32Array>> {
+  const domain = domainOptions.find((d) => d.value === model);
+  if (!domain) throw new Error(`Unknown model ${model}`);
+  const [w, s, e, n] = bbox;
+  const pad = 0.05;
+  const ranges = GridFactory.create(domain.grid).getCoveringRanges(s - pad, w - pad, n + pad, e + pad);
+  const grid = GridFactory.create(domain.grid, ranges);
+  const reader = getProtocolInstance(settings).omFileReader;
+  const out: Record<string, Float32Array> = {};
+  for (const v of variables) {
+    const data = await reader.readVariable(fileUrl, v, ranges, undefined, { deltaTimeHours: stepHours, domain });
+    const src = data.values;
+    const dst = new Float32Array(nx * ny);
+    if (src) {
+      for (let j = 0; j < ny; j++) {
+        const lat = s + ((j + 0.5) / ny) * (n - s);
+        for (let i = 0; i < nx; i++) {
+          const lon = w + ((i + 0.5) / nx) * (e - w);
+          const val = grid.getLinearInterpolatedValue(src, lat, lon);
+          dst[j * nx + i] = Number.isFinite(val) ? val : 0;
+        }
+      }
+    }
+    out[v] = dst;
+  }
   return out;
 }

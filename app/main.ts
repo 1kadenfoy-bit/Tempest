@@ -9,9 +9,12 @@ import { formatRunAge, runAgeHours } from '../core/time/run-age';
 import { formatElevation } from '../core/units/format';
 import type { PointSeries } from '../core/vocabulary';
 import { MODELS, fetchPointSeries } from '../adapters/openmeteo-maps/point-series';
-import { fetchRunMetadata, stepFileUrl, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
+import { fetchRunMetadata, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
 import * as precip from '../layers/precipitation';
-import { showWeatherFills } from '../render/openmeteo-starter';
+import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
+import { gridRequest } from '../core/geo/grid-request';
+import type { GridField } from '../core/vocabulary';
+import { TypedRateLayer } from '../render/grid-gl/typed-rate-layer';
 import { loadBasemap } from './map/basemap-router';
 import { maplibregl } from './map/maplibre';
 import { topoStyle } from './map/style';
@@ -110,23 +113,55 @@ function seriesIndex(): number {
   return series.times.findIndex((s) => s.getTime() === t.getTime());
 }
 
-// Map fills follow the cursor, at most a few times a second while scrubbing.
+// The map fill: the app's own renderer, fed grid fields for the view and
+// the cursor's step. Fields come from the store first, then the adapter.
+const BC_BOX: [number, number, number, number] = [-139.1, 48.2, -114, 60];
+const precipLayer = new TypedRateLayer('precip-grid', precip.precipRenderStyle());
+const fieldStore = new MemoryStore<GridField>(48);
 let fillTimer = 0;
 let mapReady = false;
-let shownStep = '';
-function updateFills() {
-  if (!run || !cursor.time || !mapReady) return;
-  const key = cursor.time.toISOString();
-  if (key === shownStep) return;
-  shownStep = key;
-  // Under the hillshade and contours, so the terrain reads through at any rate.
-  const below = map.getLayer('hillshade') ? 'hillshade' : map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  showWeatherFills(map, precip.precipFills(stepFileUrl(run.model, run.referenceTime, cursor.time), 1), below);
+let fillSeq = 0;
+
+function fieldKey(r: RunMetadata, t: Date, gridKey: string) {
+  return `${r.model}|${r.referenceTime.toISOString()}|${t.toISOString()}|${gridKey}`;
 }
+
+async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typeof gridRequest>>): Promise<GridField> {
+  const key = fieldKey(r, t, req.key);
+  const hit = fieldStore.get(key);
+  if (hit) return hit;
+  const f = await fetchGridField(r, t, precip.needs, req);
+  fieldStore.put(key, f);
+  return f;
+}
+
+async function updateFills() {
+  if (!run || !cursor.time || !mapReady) return;
+  const b = map.getBounds();
+  const req = gridRequest([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], map.getZoom(), BC_BOX);
+  if (!req) { precipLayer.setFields([]); return; }
+  const r = run;
+  const t = cursor.time;
+  const mine = ++fillSeq;
+  try {
+    const f = await getField(r, t, req);
+    if (mine !== fillSeq) return;
+    precipLayer.setFields([precip.precipDrawField(f, req.key)]);
+    document.body.dataset.fill = 'ready';
+    // Fetch the next step ahead of time, so playing and scrubbing stay smooth.
+    const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
+    const next = cursor.allSteps[i + 1];
+    if (next) void getField(r, next, req).catch(() => undefined);
+  } catch (err) {
+    console.error(err);
+  }
+}
+const scheduleFills = (ms: number) => { clearTimeout(fillTimer); fillTimer = window.setTimeout(() => void updateFills(), ms); };
+map.on('moveend', () => scheduleFills(150));
+
 cursor.subscribe(() => {
   renderReadout();
-  clearTimeout(fillTimer);
-  fillTimer = window.setTimeout(updateFills, 120);
+  scheduleFills(60);
 });
 
 async function loadRun() {
@@ -138,8 +173,7 @@ async function loadRun() {
     if (changed) {
       // Amounts start at the run's second file (the first has none yet).
       cursor.setSteps(run.validTimes.slice(1), cursor.time ?? new Date());
-      shownStep = '';
-      updateFills();
+      void updateFills();
       void loadSeries();
     }
     document.body.dataset.run = 'ready';
@@ -273,6 +307,8 @@ map.on('load', () => {
   const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
   addTerrain(map, firstLabel);
   applyTerrainPrefs();
+  // Under the hillshade and contours, so the terrain reads through at any rate.
+  map.addLayer(precipLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   mapReady = true;
   fitPadding();
   locate(false);
