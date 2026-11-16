@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
 
 test('a saved area works in airplane mode with the same numbers', async ({ page, context }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   await page.goto('/?insets=47,34');
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 90_000 });
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -18,7 +18,7 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
   await expect(page.locator('.save-go')).toHaveText(/Save area · about \d+/, { timeout: 60_000 });
   await page.screenshot({ path: 'test-results/screens/m3-save-box.png' });
   await page.click('.save-go');
-  await expect(page.locator('body')).toHaveAttribute('data-saved', 'true', { timeout: 240_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-saved', 'true', { timeout: 480_000 });
   await expect(page.locator('.save-mode')).toHaveCount(0);
   await page.click('#map-layers');
   console.log('saved area:', await page.locator('[data-area] .icon-row-title').textContent(), '|', await page.locator('[data-area] .icon-row-note').textContent());
@@ -27,8 +27,7 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
 
   const read = async () => ({
     run: (await page.textContent('#run-age'))?.replace(' · saved', ''),
-    // The snow line needs the profile, which a precipitation-only save leaves out (M5).
-    readout: (await page.textContent('.pin-readout'))?.replace(/ · snow line [\d,]+ m/, ''),
+    readout: await page.textContent('.pin-readout'),
     before: await page.textContent('#summary-before'),
     after: await page.textContent('#summary-after'),
   });

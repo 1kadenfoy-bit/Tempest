@@ -18,3 +18,17 @@ export function precipType(precipMm: number, sweMm: number): PrecipType {
   const s = snowShare(precipMm, sweMm);
   return s >= SNOW_SHARE_SNOW ? 'snow' : s > SNOW_SHARE_MIXED ? 'mixed' : 'rain';
 }
+
+/**
+ * Snow share from the wet-bulb temperature at the ground (°C): all snow at
+ * 0 °C or below, all rain from 1 °C, mixed between. The snow line (wet-bulb
+ * 0.5 °C) sits in the middle of the mixed band, so the map's line and its
+ * colours agree (Kaden, Nov 16).
+ */
+export function shareFromWetBulb(tw: number): number {
+  return Math.min(1, Math.max(0, 1 - tw));
+}
+
+export function typeFromShare(share: number): PrecipType {
+  return share >= SNOW_SHARE_SNOW ? 'snow' : share > SNOW_SHARE_MIXED ? 'mixed' : 'rain';
+}

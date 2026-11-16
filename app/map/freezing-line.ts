@@ -8,6 +8,7 @@
 import { cellOf, freezingLevel, interpolateProfile, isothermSegments, joinSegments, newProfile, sampleProfile, smoothLine, type NodeGrid } from '../../core/temperature/toposcale';
 import { SNOW_WET_BULB, snowLine, wetBulb } from '../../core/temperature/wet-bulb';
 import { formatElevation } from '../../core/units/format';
+import { shareFromWetBulb } from '../../core/precip/type';
 import { PROFILE_LEVELS } from '../../core/vocabulary';
 import type { Mosaic } from './elevation';
 
@@ -19,9 +20,14 @@ export interface LineResult {
   features: { type: 'FeatureCollection'; features: { type: 'Feature'; properties: { label: string }; geometry: { type: 'LineString'; coordinates: [number, number][] } }[] };
   /** Temperature at the terrain on the coarse grid, with each cell's place. */
   cells: { lon: number; lat: number; value: number }[];
+  /**
+   * Snow share at the terrain (wet-bulb rule, core/precip/type.ts), on the same
+   * grid, rows north to south over the mosaic's box; null without humidity.
+   */
+  share: { merc: [number, number, number, number]; width: number; height: number; data: Float32Array } | null;
 }
 
-export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }, m: Mosaic, kind: LineKind, maxSize = 320): LineResult {
+export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }, m: Mosaic, kind: LineKind, maxSize = 400): LineResult {
   const step = Math.max(1, Math.ceil(Math.max(m.width, m.height) / maxSize));
   const w = Math.floor(m.width / step);
   const h = Math.floor(m.height / step);
@@ -30,13 +36,16 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
   const rowLats = Array.from({ length: h }, (_, r) => latOf(y0 + ((r + 0.5) / h) * (y1 - y0)));
   const nl = grid.profiles[0]!.gh.length;
   const rhOf = (n: number) => Float32Array.from(PROFILE_LEVELS, (l) => grid.values?.[n]?.[`relative_humidity_${l}hPa`] ?? NaN);
-  const rh = kind === 'wetbulb' ? grid.profiles.map((_, n) => rhOf(n)) : [];
+  const hasRh = grid.profiles.every((_, n) => rhOf(n).every(Number.isFinite));
+  const rh = hasRh ? grid.profiles.map((_, n) => rhOf(n)) : [];
+  if (kind === 'wetbulb' && !hasRh) kind = '0c';
   const nx = grid.lons.length;
   const prof = newProfile(nl);
   const rhP = new Float32Array(nl);
   // Value whose 0 marks the line: temperature (0 °C), or wet-bulb minus 0.5 °C.
   const field = new Float32Array(w * h);
   const temps = new Float32Array(w * h);
+  const share = hasRh ? new Float32Array(w * h) : null;
   for (let r = 0; r < h; r++) {
     const [iLat, wLat] = cellOf(grid.lats, rowLats[r]!);
     for (let c = 0; c < w; c++) {
@@ -47,13 +56,16 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
       interpolateProfile(grid, iLat, wLat, iLon, wLon, prof);
       const t = sampleProfile(prof.gh, prof.temp, z);
       temps[r * w + c] = t;
-      if (kind === 'wetbulb') {
+      let tw = NaN;
+      if (hasRh) {
         const n00 = iLat * nx + iLon;
         const ws = [(1 - wLat) * (1 - wLon), (1 - wLat) * wLon, wLat * (1 - wLon), wLat * wLon];
         const ns = [n00, n00 + 1, n00 + nx, n00 + nx + 1];
         for (let k = 0; k < nl; k++) rhP[k] = ns.reduce((a, n, j) => a + ws[j]! * rh[n]![k]!, 0);
-        field[r * w + c] = wetBulb(t, sampleProfile(prof.gh, rhP, z)) - SNOW_WET_BULB;
-      } else field[r * w + c] = t;
+        tw = wetBulb(t, sampleProfile(prof.gh, rhP, z));
+        share![r * w + c] = shareFromWetBulb(tw);
+      }
+      field[r * w + c] = kind === 'wetbulb' ? tw - SNOW_WET_BULB : t;
     }
   }
   const inside = (lon: number, lat: number) => lon >= grid.lons[0]! && lon <= grid.lons[nx - 1]! && lat >= grid.lats[0]! && lat <= grid.lats[grid.lats.length - 1]!;
@@ -83,5 +95,5 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
   }
   const cells: LineResult['cells'] = [];
   for (let r = 0; r < h; r += 2) for (let c = 0; c < w; c += 2) cells.push({ lon: colLons[c]!, lat: rowLats[r]!, value: temps[r * w + c]! });
-  return { features: { type: 'FeatureCollection', features }, cells };
+  return { features: { type: 'FeatureCollection', features }, cells, share: share ? { merc: m.merc, width: w, height: h, data: share } : null };
 }

@@ -1,11 +1,12 @@
 // Totals by elevation band (v8 15-PrecipUp, TOTALS BY ELEVATION). The amount
 // is the pin's model cell; whether it fell as rain or snow at a band's height
 // comes from the wet-bulb temperature there (snow at 0.5 °C or below), from
-// the same hour's profile. Snow depth uses the chosen snow ratio.
+// the same hour's profile (the same rule as the map's colours). Snow depth uses
+// the chosen snow ratio.
 import type { PointSeries } from '../vocabulary';
 import { moistProfileAt } from '../temperature/profile';
-import { kucheraRatio, SNOW_WET_BULB, wetBulbAt } from '../temperature/wet-bulb';
-import { PRECIP_CUTOFF } from './type';
+import { kucheraRatio, wetBulbAt } from '../temperature/wet-bulb';
+import { PRECIP_CUTOFF, shareFromWetBulb, typeFromShare } from './type';
 
 export type SnowRatio = '7:1' | 'kuchera' | '10:1';
 
@@ -15,6 +16,12 @@ export function ratioFor(setting: SnowRatio, s: PointSeries, i: number, ground: 
   if (setting === '10:1') return 10;
   const p = moistProfileAt(s.values, i);
   return p ? kucheraRatio(p, ground) : null;
+}
+
+/** Part that falls as snow at height z for step i, from the wet-bulb there; null without a profile. */
+export function shareAtHeight(s: PointSeries, i: number, z: number): number | null {
+  const p = moistProfileAt(s.values, i);
+  return p ? shareFromWetBulb(wetBulbAt(p, z)) : null;
 }
 
 export interface BandTotal { rainMm: number; snowCm: number; complete: boolean }
@@ -33,10 +40,12 @@ export function totalAtHeight(s: PointSeries, z: number, start: Date, end: Date,
     if (t <= start || t > end) return;
     const mm = s.values.precipitation?.[i] ?? NaN;
     if (!(mm >= PRECIP_CUTOFF * s.stepHours)) return;
-    const p = moistProfileAt(s.values, i);
-    if (!p) { out.complete = false; return; }
-    if (wetBulbAt(p, z) <= SNOW_WET_BULB) out.snowCm += (mm * (ratioFor(ratio, s, i, z) ?? 10)) / 10;
-    else out.rainMm += mm;
+    const share = shareAtHeight(s, i, z);
+    if (share === null) { out.complete = false; return; }
+    const kind = typeFromShare(share);
+    const snow = kind === 'snow' ? mm : kind === 'rain' ? 0 : mm * share;
+    out.rainMm += mm - snow;
+    out.snowCm += (snow * (ratioFor(ratio, s, i, z) ?? 10)) / 10;
   });
   return out;
 }

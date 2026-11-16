@@ -22,6 +22,9 @@ export interface DrawField {
   data: Float32Array;
 }
 
+/** A share field on the terrain: Web Mercator box (west x, north y, east x, south y), rows north to south. */
+export interface ShareField { merc: [number, number, number, number]; width: number; height: number; data: Float32Array }
+
 export interface TypedRateStyle {
   /** Three rows of the same length: first kind, mixed, second kind. Alpha 0..1. */
   strips: [RGBA[], RGBA[], RGBA[]];
@@ -55,7 +58,28 @@ uniform vec2 u_size;
 uniform float u_max;
 uniform float u_opacity;
 uniform vec2 u_share;
+uniform highp sampler2D u_shareTex;
+uniform bool u_hasShare;
+uniform vec4 u_shareBox;
+uniform vec2 u_shareSize;
 out vec4 fragColor;
+
+// The second kind's share from a field on the terrain (wet-bulb at the ground),
+// when one covers this pixel; -1 when not.
+float shareField(vec2 merc) {
+  if (!u_hasShare) return -1.0;
+  vec2 uv = (merc - u_shareBox.xy) / (u_shareBox.zw - u_shareBox.xy);
+  if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return -1.0;
+  vec2 p = uv * u_shareSize - 0.5;
+  vec2 f = fract(p);
+  ivec2 i0 = ivec2(floor(p));
+  ivec2 mx = ivec2(u_shareSize) - 1;
+  float a = texelFetch(u_shareTex, clamp(i0, ivec2(0), mx), 0).r;
+  float b = texelFetch(u_shareTex, clamp(i0 + ivec2(1, 0), ivec2(0), mx), 0).r;
+  float c = texelFetch(u_shareTex, clamp(i0 + ivec2(0, 1), ivec2(0), mx), 0).r;
+  float d = texelFetch(u_shareTex, clamp(i0 + ivec2(1, 1), ivec2(0), mx), 0).r;
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
 
 vec2 bilinear(highp sampler2D tex, vec2 uv) {
   vec2 p = uv - 0.5;
@@ -78,7 +102,8 @@ void main() {
   if (u_hasPrev) v = mix(bilinear(u_prev, uv), v, u_t);
   float rate = v.x;
   if (rate <= 0.0) discard;
-  float share = clamp(v.y / rate, 0.0, 1.0);
+  float sf = shareField(v_merc);
+  float share = sf >= 0.0 ? sf : clamp(v.y / rate, 0.0, 1.0);
   float x = clamp(rate / u_max, 0.0, 1.0);
   vec4 first = texture(u_strip, vec2(x, 1.0 / 6.0));
   vec4 mixed = texture(u_strip, vec2(x, 0.5));
@@ -133,7 +158,7 @@ export class TypedRateLayer implements CustomLayerInterface {
     g.linkProgram(p);
     if (!g.getProgramParameter(p, g.LINK_STATUS)) throw new Error(`program: ${g.getProgramInfoLog(p)}`);
     this.program = p;
-    for (const u of ['u_matrix', 'u_cur', 'u_prev', 'u_strip', 'u_t', 'u_hasPrev', 'u_bbox', 'u_size', 'u_max', 'u_opacity', 'u_share']) {
+    for (const u of ['u_matrix', 'u_cur', 'u_prev', 'u_strip', 'u_t', 'u_hasPrev', 'u_bbox', 'u_size', 'u_max', 'u_opacity', 'u_share', 'u_shareTex', 'u_hasShare', 'u_shareBox', 'u_shareSize']) {
       this.loc[u] = g.getUniformLocation(p, u);
     }
     this.buffer = g.createBuffer();
@@ -145,10 +170,37 @@ export class TypedRateLayer implements CustomLayerInterface {
     if (!g) return;
     for (const f of [...this.current, ...this.previous]) g.deleteTexture(f.tex);
     if (this.strip) g.deleteTexture(this.strip);
+    if (this.shareTex) g.deleteTexture(this.shareTex);
+    this.shareTex = null;
     if (this.buffer) g.deleteBuffer(this.buffer);
     if (this.program) g.deleteProgram(this.program);
     this.current = [];
     this.previous = [];
+  }
+
+  private shareTex: WebGLTexture | null = null;
+  private shareField: ShareField | null = null;
+
+  /**
+   * A field of the second kind's share on the terrain (for precipitation: snow
+   * from the wet-bulb at the ground), which replaces the per-cell share where
+   * it covers, so the colours follow the same rule as the snow line. Null
+   * returns to the model's own split.
+   */
+  setShare(f: ShareField | null): void {
+    this.shareField = f;
+    const g = this.gl;
+    if (!g) return;
+    if (!f) { this.map?.triggerRepaint(); return; }
+    if (!this.shareTex) this.shareTex = g.createTexture();
+    g.bindTexture(g.TEXTURE_2D, this.shareTex);
+    g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
+    g.texImage2D(g.TEXTURE_2D, 0, g.R32F, f.width, f.height, 0, g.RED, g.FLOAT, f.data);
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.NEAREST);
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.NEAREST);
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+    this.map?.triggerRepaint();
   }
 
   setStyle(style: TypedRateStyle): void {
@@ -215,6 +267,15 @@ export class TypedRateLayer implements CustomLayerInterface {
     g.activeTexture(g.TEXTURE2);
     g.bindTexture(g.TEXTURE_2D, this.strip);
     g.uniform1i(this.loc.u_strip!, 2);
+    const sf = this.shareField;
+    g.uniform1i(this.loc.u_hasShare!, sf && this.shareTex ? 1 : 0);
+    g.activeTexture(g.TEXTURE3);
+    g.bindTexture(g.TEXTURE_2D, this.shareTex ?? this.strip);
+    g.uniform1i(this.loc.u_shareTex!, 3);
+    if (sf) {
+      g.uniform4f(this.loc.u_shareBox!, ...sf.merc);
+      g.uniform2f(this.loc.u_shareSize!, sf.width, sf.height);
+    }
     g.enable(g.BLEND);
     g.blendFunc(g.ONE, g.ONE_MINUS_SRC_ALPHA);
     g.disable(g.DEPTH_TEST);

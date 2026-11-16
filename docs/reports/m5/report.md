@@ -94,7 +94,6 @@ Close Tempest fully and reopen it. Pull the sheet up on either layer.
 - **Rain only / Snow only also hide mixed**, since mixed is both.
 - **Kuchera** uses the warmest temperature in the column above the ground, up to 600 hPa. Kuchera's own method goes to 500 hPa, which rarely holds the warmest layer.
 - **Crossing times** ("Below freezing since about 4 PM") are rounded to the hour, since the model gives hourly steps.
-- **Saving for offline:** a precipitation save keeps its amounts only, so it stays quick. Tick Temperature as well to keep the snow line and freezing level offline. The profile is about 30 values per hour, which is slow to download.
 - **Requests stay small.** The map's points ask for humidity only when the snow line is on the map, and for the surface wind only when the Feels-like map is chosen.
 
 ## Checks
@@ -110,3 +109,28 @@ Close Tempest fully and reopen it. Pull the sheet up on either layer.
 2. **The elevation bands:** agree, or give me the numbers you'd use.
 3. **Snow ratio default:** 7:1 matches what you've seen so far. Kuchera usually gives deeper, drier snow in cold storms. Which should be the default?
 4. **Say go for M6** (models).
+
+## Follow-up after your phone test (Nov 16)
+
+1. **The snow line and the orange band now agree.**
+   - They came from two different methods. The colours used the model's own rain/snow split, averaged over 2.5 km squares. The line used the wet-bulb temperature at the real ground height.
+   - Now the map colours every spot by the wet-bulb rule at its real height, and the line runs down the middle of the orange band at any zoom.
+   - The pin's readout, chart, totals and table use the same rule, so they match the map.
+2. **Totals read only rain and snow.** A mixed hour is split by how much of it was snow, so "4 cm snow / 2 mm mixed" now reads as snow plus a little rain.
+3. **The headline and the NOW card always describe the present,** whatever time the slider shows. The rest follows the slider.
+4. **The totals table fills in.** A span the model only partly covers shows what it holds, faded, instead of "–". The note under the table says so. Earlier hours come with observed data (M6), later ones with more models (M6).
+
+**From your answers:**
+
+- **Humidity in temperature:** the TODAY card now shows the day's humidity range with the dew point under it. The hourly detail already had humidity by hour.
+- **Snow ratio:** I chose **Kuchera** as the default, since you asked for the most reliable. A 2026 comparison of 10 methods over 14 storms found Kuchera among the most accurate, and a fixed 10:1 is often off ([Filipiak et al. 2026](https://brian-filipiak-scholar.media.uconn.edu/wp-content/uploads/sites/3631/2026/08/Filipiak_WWE_2026.pdf), [Pivotal Weather](https://home.pivotalweather.com/guides/snowfall)). Those storms were in the US Northeast, so it isn't proven for BC yet. The app's own comparisons over a season can check it.
+- **Saving precipitation now keeps the profile too,** because it decides rain or snow at your height and offline must show the same numbers. That adds about 40 values per hour, so a save takes longer. The offline test checks that the numbers match exactly.
+
+## Second follow-up (Nov 16): switching layers, and the dry chart
+
+1. **Temperature after switching layers was slow or didn't load.** Three causes, all fixed:
+   - **The two layers asked the forecast service for different sets of values** at the same map points, so a switch downloaded them all again. Now every point is asked once for everything both layers need.
+   - **A second ask for the same data started a second download** instead of waiting for the first. While the service refused, that stacked up slow map-file reads on every switch. Now it waits for the first.
+   - **Panning fired new requests about twice a second,** which can hit the free service's limit of 600 calls a minute. When it refused, the app gave up on it for 10 minutes and used the slow path. Now a drag uses only what's in memory and fetches when you let go. After a refusal the app waits 2 minutes before asking again.
+   - **Measured here, with the service refusing this machine:** the first switch to Temperature took 3.8 s from the map files; later switches took under 1 s with no new requests.
+2. **A dry window looked like it was still loading.** When the pin's series has loaded and nothing falls in the window, the chart now says "Dry through this window" (or "Outside the model's hours"). "Loading the pin's forecast…" shows only while it really is loading.

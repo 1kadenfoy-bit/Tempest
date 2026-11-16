@@ -50,9 +50,12 @@ describe('precipitation totals', () => {
     const precip = [1, 2, 3, 4];
     const swe = [0, 1, 3, 4];
     const all = precipTotals(times, precip, swe, new Date('2026-11-15T12:00:00Z'), new Date('2026-11-15T16:00:00Z'));
-    expect(all).toMatchObject({ rainMm: 1, mixedMm: 2, snowMm: 7, wetHours: 4 });
-    expect(all.snowCm).toBeCloseTo(4.9);
+    // The mixed hour (2 mm, half snow) splits into 1 mm rain and 1 mm snow.
+    expect(all).toMatchObject({ rainMm: 2, mixedMm: 2, snowMm: 8, wetHours: 4 });
+    expect(all.snowCm).toBeCloseTo(5.6);
     // The hour ending at the window start is outside it.
-    expect(precipTotals(times, precip, swe, steps[0]!, steps[1]!).rainMm).toBe(0);
+    const one = precipTotals(times, precip, swe, steps[0]!, steps[1]!);
+    expect(one.wetHours).toBe(1);
+    expect(one.rainMm + one.snowMm).toBe(2);
   });
 });

@@ -242,7 +242,7 @@ export function renderCard(c: Card, bands: BandsInfo, start: Date, end: Date): H
         if (r.you) name.append(el('span', 'you-chip', 'You'));
         tr.append(name);
         r.cells.forEach((cell, j) => {
-          const td = el('td', j === firstOfSecond ? 'split' : '');
+          const td = el('td', [j === firstOfSecond ? 'split' : '', cell.partial ? 'partial' : ''].join(' ').trim());
           cell.parts.forEach((p, k) => {
             if (k) td.append('·');
             const s = el('span', '', p.text);

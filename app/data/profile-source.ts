@@ -19,7 +19,7 @@ export const SURFACE_VARIABLES: VariableName[] = ['temperature_2m', 'relative_hu
 /** Everything the pin's cards use: the profile with humidity (snow line), and the surface values. */
 export const PIN_VARIABLES: VariableName[] = [...PROFILE_VARIABLES, ...PROFILE_RH_VARIABLES, ...SURFACE_VARIABLES];
 
-const nodeKey = (r: RunMetadata, lat: number, lon: number, set: string) => `${r.model}|${r.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}|${set}`;
+const nodeKey = (r: RunMetadata, lat: number, lon: number) => `${r.model}|${r.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
 
 /** Node profiles at one step, with any extra variables asked for (per node). */
 export interface NodeData extends NodeGrid { values: Record<string, number>[] }
@@ -42,8 +42,24 @@ export class ProfileSource {
   private nodes = new MemoryStore<PointSeries>(400);
   /** One hour's profiles over a box, from the map files (the slow path). */
   private boxes = new MemoryStore<NativeBox>(24);
-  /** Nodes the point API could not give (over its limit or offline): stop asking for a while. */
+  /** The point API refused or failed (over its limit, or offline): stop asking for a while. */
   private apiDownUntil = 0;
+  /** Requests in flight, so a second ask for the same data waits for the first (layer switches). */
+  private inflight = new Map<string, Promise<unknown>>();
+
+  private once<T>(key: string, make: () => Promise<T>): Promise<T> {
+    const hit = this.inflight.get(key) as Promise<T> | undefined;
+    if (hit) return hit;
+    const p = make().finally(() => this.inflight.delete(key));
+    this.inflight.set(key, p);
+    return p;
+  }
+
+  /** After a refusal, wait before asking again: long enough to fall under the per-minute limit. */
+  private apiFailed(err: unknown) {
+    this.apiDownUntil = Date.now() + 2 * 60_000;
+    console.warn('point API unavailable, reading the map files', err);
+  }
 
   constructor(private savedAreas: () => SavedArea[]) {}
 
@@ -53,18 +69,20 @@ export class ProfileSource {
    * values for the feels-like map); asked for only when a setting needs them,
    * to keep the point API's daily allowance.
    */
-  async nodeGrid(run: RunMetadata, lattice: Lattice, t: Date, extra: readonly VariableName[] = []): Promise<NodeData | null> {
+  async nodeGrid(run: RunMetadata, lattice: Lattice, t: Date, extra: readonly VariableName[] = [], opts: { cachedOnly?: boolean } = {}): Promise<NodeData | null> {
     const points = lattice.lats.flatMap((lat) => lattice.lons.map((lon) => ({ lat, lon })));
-    const set = extra.join(',');
-    const vars = [...PROFILE_VARIABLES, ...extra];
+    // Every node is asked for the profile with humidity, so both layers share
+    // one download per node; the feels-like map adds the surface values.
+    const vars = [...new Set<VariableName>([...PROFILE_VARIABLES, ...PROFILE_RH_VARIABLES, ...extra])];
+    const has = (s: PointSeries | undefined) => !!s && vars.every((v) => s.values[v] !== undefined);
     const done = (profiles: Profile[], values: Record<string, number>[]): NodeData | null =>
       profiles.every(complete) && values.every((v) => extra.every((x) => Number.isFinite(v[x]))) ? { ...lattice, profiles, values } : null;
     const fromSeries = () => {
       const profiles: Profile[] = [];
       const values: Record<string, number>[] = [];
       for (const p of points) {
-        const s = this.nodes.get(nodeKey(run, p.lat, p.lon, set));
-        const i = s ? s.times.findIndex((x) => x.getTime() === t.getTime()) : -1;
+        const s = this.nodes.get(nodeKey(run, p.lat, p.lon));
+        const i = has(s) ? s!.times.findIndex((x) => x.getTime() === t.getTime()) : -1;
         if (!s || i < 0) return null;
         profiles.push(profileAt(s.values, i));
         values.push(Object.fromEntries(extra.map((x) => [x, s.values[x]?.[i] ?? NaN])));
@@ -74,22 +92,26 @@ export class ProfileSource {
     const fromBox = (box: NativeBox) => done(points.map((p) => profileFromBox(box, p.lat, p.lon)), points.map((p) => Object.fromEntries(extra.map((x) => [x, sampleNative(box, x, p.lat, p.lon)]))));
     // 1. Memory
     const mem = fromSeries();
-    if (mem) return mem;
+    if (mem || opts.cachedOnly) return mem;
     // 2. A saved area holding this run's profiles for every node
     const saved = await this.savedBoxFor(run, t, (a) => points.every((p) => areaContains(a, p.lon, p.lat)), extra);
     const fromSaved = saved && fromBox(saved);
     if (fromSaved) return fromSaved;
     // 3. The point API: every hour for the missing nodes in one request
     if (Date.now() > this.apiDownUntil) {
-      const missing = points.filter((p) => !this.nodes.has(nodeKey(run, p.lat, p.lon, set)));
+      const missing = points.filter((p) => !has(this.nodes.get(nodeKey(run, p.lat, p.lon))));
       try {
-        const got = await fetchApiSeries(run.model, run.referenceTime, vars, missing, run.validTimes);
-        got.forEach((s, n) => this.nodes.put(nodeKey(run, missing[n]!.lat, missing[n]!.lon, set), s));
+        const key = `nodes|${run.referenceTime.toISOString()}|${vars.length}|${missing.map((p) => `${p.lat},${p.lon}`).join(';')}`;
+        const got = await this.once(key, () => fetchApiSeries(run.model, run.referenceTime, vars, missing, run.validTimes));
+        got.forEach((s, n) => {
+          const k = nodeKey(run, missing[n]!.lat, missing[n]!.lon);
+          const old = this.nodes.get(k);
+          this.nodes.put(k, old ? { ...s, values: { ...old.values, ...s.values } } : s);
+        });
         const api = fromSeries();
         if (api) return api;
       } catch (err) {
-        this.apiDownUntil = Date.now() + 10 * 60_000;
-        console.warn('point API unavailable, reading the map files', err);
+        this.apiFailed(err);
       }
     }
     // 4. The map files, this hour only
@@ -109,7 +131,8 @@ export class ProfileSource {
     const key = `${run.model}|${run.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
     const hit = this.pins.get(key);
     if (hit) return hit;
-    const s = await this.readPin(run, lat, lon, onPartial);
+    // A second ask while the first is still reading (a layer switch) waits for it.
+    const s = await this.once(`pin|${key}`, () => this.readPin(run, lat, lon, onPartial));
     this.pins.put(key, s);
     return s;
   }
@@ -123,8 +146,7 @@ export class ProfileSource {
         const [s] = await fetchApiSeries(run.model, run.referenceTime, PIN_VARIABLES, [{ lat, lon }], run.validTimes);
         return s!;
       } catch (err) {
-        this.apiDownUntil = Date.now() + 10 * 60_000;
-        console.warn('point API unavailable, reading the map files', err);
+        this.apiFailed(err);
       }
     }
     return this.fileSeries(run, lat, lon, onPartial);

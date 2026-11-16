@@ -235,7 +235,7 @@ async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typ
 }
 
 /** The temperature fill: profiles at a lattice of nodes, terrain per pixel on the GPU. */
-async function updateTemperature(r: RunMetadata, t: Date, mine: number) {
+async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
   // A margin around the screen, so panning shows colour straight away.
   const b = map.getBounds();
   const padX = (b.getEast() - b.getWest()) * PAN_MARGIN;
@@ -248,8 +248,10 @@ async function updateTemperature(r: RunMetadata, t: Date, mine: number) {
   const feels = set.map === 'feels';
   // Feels-like on the map needs each node's 10 m wind, 2 m air and humidity (dew point).
   const extra = feels ? SURFACE_VARIABLES : [];
-  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, extra)]);
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, extra, { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'temperature') return;
+  // Mid-drag with nothing in memory: keep the picture; the release fetches.
+  if (!grid && cachedOnly) return;
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
   if (!grid) {
     tempLayer.setProfiles(null);
@@ -276,18 +278,37 @@ function marginView(): Box | null {
   return view[0] < view[2] && view[1] < view[3] ? view : null;
 }
 
-/** Precipitation's line on the map (Snow line or 0 °C), from profiles at the nodes. */
-async function updatePrecipLine(r: RunMetadata, t: Date, mine: number) {
+/**
+ * Precipitation on the terrain: rain or snow at each spot from the wet-bulb at
+ * its real height (the same rule as the snow line, so line and colours agree),
+ * and the line chosen in settings. Needs humidity at the nodes; without it the
+ * colours keep the model's own split.
+ */
+async function updatePrecipLine(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
   const kind = settingsFor(precipitation).line as string;
   const view = marginView();
-  if (kind === 'off' || !view) { setLine(null, '0c'); return; }
+  if (!view) { setLine(null, null); precipLayer.setShare(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
-  const extra = kind === 'wetbulb' ? PROFILE_RH_VARIABLES : [];
-  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, extra)]);
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, PROFILE_RH_VARIABLES, { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'precipitation') return;
+  if (!grid && cachedOnly) return;
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
-  setLine(grid, kind === 'wetbulb' ? 'wetbulb' : '0c');
+  const res = setLine(grid, kind === 'off' ? null : kind === 'wetbulb' ? 'wetbulb' : '0c');
+  precipLayer.setShare(res?.share ?? null);
+  // In view: type each on-screen cell by the same field.
+  if (res?.share) {
+    const sh = res.share;
+    const pick = (lon: number, lat: number) => {
+      const x = (lon + 180) / 360;
+      const y = (1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2;
+      const c = Math.floor(((x - sh.merc[0]) / (sh.merc[2] - sh.merc[0])) * sh.width);
+      const rr = Math.floor(((y - sh.merc[1]) / (sh.merc[3] - sh.merc[1])) * sh.height);
+      return c >= 0 && rr >= 0 && c < sh.width && rr < sh.height ? sh.data[rr * sh.width + c]! : null;
+    };
+    view_.cells = view_.cells.map((cell) => { const f = pick(cell.lon, cell.lat); return f === null ? cell : { ...cell, second: cell.value * f }; });
+    scheduleDetails();
+  }
 }
 
 function packLattice(grid: NodeData) {
@@ -306,32 +327,38 @@ function packLattice(grid: NodeData) {
 }
 
 /** What the map holds now, for the In view line. */
-let view: { cells: ViewSample['cells']; freezing?: [number, number] | undefined } = { cells: [] };
+let view_: { cells: ViewSample['cells']; freezing?: [number, number] | undefined } = { cells: [] };
 
 /** A dashed line from the node profiles over the terrain (0 °C, or the snow line), labelled with its height. */
 function setLine(grid: NodeData | null, kind: LineKind | null) {
   const src = map.getSource('freezing-line') as maplibregl.GeoJSONSource | undefined;
   const empty = { type: 'FeatureCollection' as const, features: [] };
-  if (!grid || !mosaic) { src?.setData(empty); return; }
+  if (!grid || !mosaic) { src?.setData(empty); return null; }
   const res = levelLine(grid, mosaic, kind ?? '0c');
   src?.setData(kind ? res.features : empty);
   // In view: only what is on screen, not the panning margin.
   const b = map.getBounds();
   const onScreen = (c: { lon: number; lat: number }) => c.lon >= b.getWest() && c.lon <= b.getEast() && c.lat >= b.getSouth() && c.lat <= b.getNorth();
   const fl = grid.profiles.map((p) => freezingLevel(p)).filter((x): x is number => x !== null);
-  view = {
-    cells: active.id === 'temperature' ? res.cells.filter(onScreen) : view.cells,
+  view_ = {
+    cells: active.id === 'temperature' ? res.cells.filter(onScreen) : view_.cells,
     freezing: fl.length ? [Math.min(...fl), Math.max(...fl)] : undefined,
   };
   scheduleDetails();
+  return res;
 }
 
-async function updateFills() {
+/**
+ * `moving`: called during a drag. Profile nodes then come from memory only, so
+ * a long pan does not fire request after request at the point API (it has a
+ * per-minute limit); the release fetches what is new.
+ */
+async function updateFills(moving = false) {
   if (!run || !cursor.time || !mapReady) return;
   if (active.id === 'temperature') {
     precipLayer.setFields([]);
     tempLayer.visible = true;
-    await updateTemperature(run, cursor.time, ++fillSeq).catch((err) => console.error(err));
+    await updateTemperature(run, cursor.time, ++fillSeq, moving).catch((err) => console.error(err));
     return;
   }
   tempLayer.visible = false;
@@ -359,9 +386,9 @@ async function updateFills() {
         cells.push({ lon, lat, value: (rate?.[j * field.nx + k] ?? 0) / field.stepHours, second: (swe?.[j * field.nx + k] ?? 0) / field.stepHours });
       }
     }
-    view = { ...view, cells };
+    view_ = { ...view_, cells };
     scheduleDetails();
-    void updatePrecipLine(r, t, mine).catch((err) => console.error(err));
+    void updatePrecipLine(r, t, mine, moving).catch((err) => console.error(err));
     // Fetch the next step ahead of time, so playing and scrubbing stay smooth.
     const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
     const next = cursor.allSteps[i + 1];
@@ -380,7 +407,7 @@ map.on('move', () => {
   if (moveFilling || now - lastMoveFill < 500) return;
   lastMoveFill = now;
   moveFilling = true;
-  void updateFills().finally(() => { moveFilling = false; });
+  void updateFills(true).finally(() => { moveFilling = false; });
 });
 
 cursor.subscribe(() => {
@@ -631,7 +658,7 @@ function renderDetails() {
     }
     nodes.push(el);
   }
-  const line = active.inView({ ...view, nameAt: (lon, lat) => nameNear(map, map.project([lon, lat]), 60) }, ctx);
+  const line = active.inView({ ...view_, nameAt: (lon, lat) => nameNear(map, map.project([lon, lat]), 60) }, ctx);
   if (line) { const iv = document.createElement('div'); iv.className = 'in-view'; iv.textContent = line; nodes.push(iv); }
   // Footer: model, run and its age, elevation used, method; Layer settings on the right.
   const foot = document.createElement('div');
