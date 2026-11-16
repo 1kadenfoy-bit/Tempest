@@ -25,6 +25,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   let windowHours = initialWindowHours;
   let layer: ScrubberLayer | null = null;
   let status = '';
+  /** Where one model hands over to the next, marked on the chart and the week strip. */
+  let seams: { time: Date; label: string }[] = [];
 
   const canvas = $('chart-canvas') as HTMLCanvasElement;
   const chart = $('chart');
@@ -84,6 +86,17 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     nowLine.style.display = nx > 0 && nx < 1 ? 'block' : 'none';
     nowLine.style.left = `${nx * 100}%`;
     $('chart-status').textContent = status;
+    // The past is hatched (observed or earlier runs); seams are dashed lines with the next model's name.
+    const past = $('chart-past');
+    const px = Math.min(1, Math.max(0, nx));
+    past.style.width = `${px * 100}%`;
+    const marks = $('chart-seams');
+    marks.replaceChildren(...seams.filter((x) => x.time > start && x.time < end).map((x) => {
+      const m = document.createElement('span');
+      m.style.left = `${((x.time.getTime() - start.getTime()) / span) * 100}%`;
+      m.textContent = x.label;
+      return m;
+    }));
 
     // Axis: midnights and noons inside the window (every 6 h for short windows).
     const axis = $('chart-axis');
@@ -143,6 +156,13 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
       beyond.style.display = pct(last) < 88 ? 'block' : 'none';
     }
     $('week-now').style.left = `${pct(now)}%`;
+    $('week-past').style.width = `${pct(now)}%`;
+    $('week-seams').replaceChildren(...seams.map((x) => {
+      const m = document.createElement('span');
+      m.style.left = `${pct(x.time)}%`;
+      m.title = `${x.label} from ${formatCursorTime(x.time)}`;
+      return m;
+    }));
     const box = $('week-box');
     box.style.left = `${pct(start)}%`;
     box.style.width = `${pct(end) - pct(start)}%`;
@@ -237,6 +257,7 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   return {
     setLayer(l: ScrubberLayer) { layer = l; chart.setAttribute('aria-label', l.chartLabel); schedule(); },
     setStatus(s: string) { status = s; schedule(); },
+    setTimeline(t: { seams: { time: Date; label: string }[] }) { seams = t.seams; schedule(); },
     refresh: schedule,
     get windowHours() { return windowHours; },
   };

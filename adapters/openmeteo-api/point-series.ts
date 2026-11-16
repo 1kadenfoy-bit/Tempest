@@ -22,8 +22,16 @@ export const source = {
 } as const;
 
 /** The map files' model names, as the point API calls them. */
-export const API_MODEL: Record<string, string> = { cmc_gem_hrdps: 'gem_hrdps_continental' };
-const GRID_KM: Record<string, number> = { cmc_gem_hrdps: 2.5 };
+export const API_MODEL: Record<string, string> = {
+  cmc_gem_hrdps: 'gem_hrdps_continental',
+  cmc_gem_rdps_10km: 'gem_regional',
+  cmc_gem_gdps_15km: 'gem_global',
+  cmc_gem_gdps_15km_upper_level: 'gem_global',
+  ecmwf_ifs: 'ecmwf_ifs',
+};
+/** Days ahead to ask for: each model's own reach (asking for more than 2 weeks counts extra against the limit). */
+const FORECAST_DAYS: Record<string, number> = { cmc_gem_hrdps: 3, cmc_gem_rdps_10km: 5, cmc_gem_gdps_15km: 11, cmc_gem_gdps_15km_upper_level: 11, ecmwf_ifs: 14 };
+const GRID_KM: Record<string, number> = { cmc_gem_hrdps: 2.5, cmc_gem_rdps_10km: 10, cmc_gem_gdps_15km: 15, cmc_gem_gdps_15km_upper_level: 15, ecmwf_ifs: 9 };
 
 /** The run the point API serves now (it can lag the map files by a run). */
 export async function fetchApiRun(model: string, fetchFn: typeof fetch = fetch): Promise<Date> {
@@ -51,8 +59,9 @@ export function apiUrl(model: string, points: readonly { lat: number; lon: numbe
     timeformat: 'unixtime',
     timezone: 'GMT',
     wind_speed_unit: 'kmh',
-    past_days: '1',
-    forecast_days: '3',
+    // Two days back (the week strip's past) and as far ahead as the longest model.
+    past_days: '2',
+    forecast_days: String(FORECAST_DAYS[model] ?? 3),
   });
   return `${source.baseUrl}/v1/forecast?${params}`;
 }

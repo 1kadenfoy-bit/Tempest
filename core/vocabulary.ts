@@ -57,6 +57,11 @@ export interface PointSeries {
   /** Hours each step covers. */
   stepHours: number;
   values: Partial<Record<VariableName, number[]>>;
+  /**
+   * Which model and run each stretch comes from, when the series joins models
+   * (M6). `earlier`: hours before the current run, from earlier runs.
+   */
+  segments?: { model: string; run: Date; from: Date; to: Date; kind: 'forecast' | 'earlier' }[];
 }
 
 /**
