@@ -7,3 +7,6 @@ blob-report/
 public/tiles/*.pmtiles
 *.log
 .DS_Store
+
+# Helper agents' working copies
+.claude/worktrees/

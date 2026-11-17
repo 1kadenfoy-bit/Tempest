@@ -4,6 +4,7 @@
 // button is left out until the compare view is designed.
 import type { ModelSpec } from '../../adapters/openmeteo-maps/models';
 import { icons } from './icons';
+import { formatDistance } from '../../core/units/format';
 
 export interface ModelRow {
   spec: ModelSpec;
@@ -35,7 +36,7 @@ export function modelMenuBody(rows: ModelRow[], onPick: (s: ModelSpec) => void, 
       row.disabled = r.age === null;
       row.innerHTML = `<span class="model-names"><span class="model-name"></span><span class="model-grid"></span></span><span class="model-age"></span><span class="model-check">${icons.check}</span>`;
       row.querySelector('.model-name')!.textContent = r.spec.label;
-      row.querySelector('.model-grid')!.textContent = `${r.spec.gridKm} km · to ${reach(r.spec.reachHours)}`;
+      row.querySelector('.model-grid')!.textContent = `${formatDistance(r.spec.gridKm)} · to ${reach(r.spec.reachHours)}`;
       row.querySelector('.model-age')!.textContent = r.age ?? 'unavailable';
       row.addEventListener('click', () => onPick(r.spec));
       const info = document.createElement('button');
@@ -66,7 +67,7 @@ export function modelInfoBody(spec: ModelSpec, facts: ModelFacts): HTMLElement {
   const tiles = document.createElement('div');
   tiles.className = 'fact-grid';
   for (const [label, value] of [
-    ['Grid', `${spec.gridKm} km`], ['Reaches', reach(spec.reachHours)], ['Runs', `${spec.runsPerDay} a day`],
+    ['Grid', formatDistance(spec.gridKm)], ['Reaches', reach(spec.reachHours)], ['Runs', `${spec.runsPerDay} a day`],
     ['Latest', facts.latest], ['Next run', facts.next], ['Covers', spec.covers],
   ]) {
     const tile = document.createElement('div');

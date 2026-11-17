@@ -5,6 +5,9 @@ export interface LastPin { lng: number; lat: number; label: string }
 export interface Prefs {
   hillshade: boolean;
   contours: boolean;
+  /** 3D terrain and 3D buildings (map panel), off by default. */
+  terrain3d: boolean;
+  buildings3d: boolean;
   lastPin: LastPin | null;
   windowHours: number;
   /** The condition layer shown. */
@@ -13,10 +16,16 @@ export interface Prefs {
   layerModels: Record<string, string>;
   /** Each layer's settings, by layer id. */
   layerSettings: Record<string, Record<string, string | boolean>>;
+  /** Read only saved areas, never the network (weak signal hangs requests and drains the battery). */
+  savedOnly: boolean;
+  /** App settings: the unit system for every number shown. */
+  units: 'metric' | 'imperial';
+  /** App settings: dark, light, or match the phone. */
+  theme: 'dark' | 'light' | 'system';
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {} };
+const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, buildings3d: false, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false, units: 'metric', theme: 'dark' };
 
 export function loadPrefs(): Prefs {
   try {

@@ -58,18 +58,22 @@ export function waitFor(weight: number, entries: [number, number][], now: number
 }
 
 /** Wait for room under the limits, then count the request. Too long a wait (over 90 s) counts as refused. */
-async function spend(weight: number) {
+async function spend(weight: number, maxWaitMs = 90_000) {
   const now = Date.now();
   log = log.filter(([t]) => t > now - 3_600_000);
   const wait = waitFor(weight, log, now);
-  if (wait > 90_000) throw new ApiLimitError('Hourly API request limit nearly reached (counted on this phone)', new Date(now + wait));
+  if (wait > maxWaitMs) throw new ApiLimitError('Hourly API request limit nearly reached (counted on this phone)', new Date(now + wait));
   if (wait > 0) await new Promise((res) => setTimeout(res, wait));
   log.push([Date.now(), weight]);
   try { localStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch { /* storage unavailable */ }
 }
 
 /** A fetch for one model run that answers from the phone when it can. */
-export function cachedFetch(run: Date): typeof fetch {
+/**
+ * `maxWaitMs`: how long a request may wait for room under the limits before
+ * it counts as refused (a save waits longer than the map does).
+ */
+export function cachedFetch(run: Date, maxWaitMs = 90_000): typeof fetch {
   const runKey = run.toISOString();
   return async (input, init) => {
     const url = String(input instanceof Request ? input.url : input);
@@ -78,8 +82,10 @@ export function cachedFetch(run: Date): typeof fetch {
     try { cache = await caches.open(CACHE); } catch { /* no Cache Storage (private window): just fetch */ }
     const hit = await cache?.match(key).catch(() => undefined);
     if (hit) return hit;
-    await spend(apiWeight(url));
-    const res = await fetch(input, init);
+    await spend(apiWeight(url), maxWaitMs);
+    // The time limit starts when the request goes, not while it waits for room
+    // under the limits (a wait could otherwise use it all up).
+    const res = await fetch(input, init?.signal ? { ...init, signal: AbortSignal.timeout(15_000) } : init);
     if (res.ok && cache) {
       void cache.put(key, res.clone()).then(() => prune(cache!, url, runKey)).catch(() => undefined);
     }

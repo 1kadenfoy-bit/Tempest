@@ -1,15 +1,78 @@
-// The one place values become text. Metric by default; a units setting comes
-// with app settings (M9). Everything inside the app is SI, UTC and plain
-// latitude/longitude; this file turns it into what the screen shows.
+// The one place values become text. Everything inside the app is metric
+// (°C, mm, cm, km/h, m), UTC and plain latitude/longitude; this file turns it
+// into what the screen shows, in the unit system chosen in app settings:
+// metric by default, or imperial (°F, in, mph, ft, mi). Only text changes:
+// data, colours and thresholds stay metric underneath.
 
-export type UnitSystem = 'metric';
+export type UnitSystem = 'metric' | 'imperial';
+export const UNIT_SYSTEMS: readonly UnitSystem[] = ['metric', 'imperial'];
+
+let current: UnitSystem = 'metric';
+
+/** The unit system every formatter uses when none is passed. Set once from app settings, and on change. */
+export function setUnitSystem(u: UnitSystem): void {
+  current = u === 'imperial' ? 'imperial' : 'metric';
+}
+export function unitSystem(): UnitSystem {
+  return current;
+}
+
+// ---- Conversions (exact factors) -------------------------------------------
+export const cToF = (c: number): number => (c * 9) / 5 + 32;
+export const kmhToMph = (kmh: number): number => kmh / 1.609344;
+export const mToFt = (m: number): number => m / 0.3048;
+export const mmToIn = (mm: number): number => mm / 25.4;
+export const cmToIn = (cm: number): number => cm / 2.54;
+export const kmToMi = (km: number): number => km / 1.609344;
+
+/** A temperature in the shown unit (°C or °F), unrounded: for chart axes and scales. */
+export function tempValue(c: number, u: UnitSystem = current): number {
+  return u === 'imperial' ? cToF(c) : c;
+}
+/** A wind speed in the shown unit (km/h or mph), unrounded. */
+export function speedValue(kmh: number, u: UnitSystem = current): number {
+  return u === 'imperial' ? kmhToMph(kmh) : kmh;
+}
+/** A height in the shown unit (m or ft), unrounded. */
+export function elevationValue(m: number, u: UnitSystem = current): number {
+  return u === 'imperial' ? mToFt(m) : m;
+}
+
+export type UnitKind = 'temp' | 'rate' | 'rain' | 'snow' | 'speed' | 'elevation' | 'distance';
+const LABELS: Record<UnitSystem, Record<UnitKind, string>> = {
+  metric: { temp: '°C', rate: 'mm/h', rain: 'mm', snow: 'cm', speed: 'km/h', elevation: 'm', distance: 'km' },
+  imperial: { temp: '°F', rate: 'in/h', rain: 'in', snow: 'in', speed: 'mph', elevation: 'ft', distance: 'mi' },
+};
+/** The unit's symbol for stat cards and legends: "km/h" or "mph". */
+export function unitLabel(kind: UnitKind, u: UnitSystem = current): string {
+  return LABELS[u][kind];
+}
 
 const intl = new Intl.NumberFormat('en-CA', { maximumFractionDigits: 0 });
+const twoDecimals = new Intl.NumberFormat('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const threeDecimals = new Intl.NumberFormat('en-CA', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const upToOne = new Intl.NumberFormat('en-CA', { maximumFractionDigits: 1 });
+const upToTwo = new Intl.NumberFormat('en-CA', { maximumFractionDigits: 2 });
+const upToThree = new Intl.NumberFormat('en-CA', { maximumFractionDigits: 3 });
 
-/** "1,180 m". Rounds to the metre. */
-export function formatElevation(metres: number, units: UnitSystem = 'metric'): string {
-  void units; // one system for now; the setting arrives with app settings
-  return `${intl.format(Math.round(metres))} m`;
+/** "1,180" or "3,871": a height's number in the shown unit, whole. */
+export function formatElevationNumber(metres: number, u: UnitSystem = current): string {
+  return intl.format(Math.round(elevationValue(metres, u)));
+}
+
+/** "1,180 m" or "3,871 ft". Rounds to the metre (or foot). */
+export function formatElevation(metres: number, u: UnitSystem = current): string {
+  return `${formatElevationNumber(metres, u)} ${unitLabel('elevation', u)}`;
+}
+
+/** "2.5" or "1.6": a distance's number in the shown unit; one decimal under 10 unless `whole`. */
+export function formatDistanceNumber(km: number, u: UnitSystem = current, whole = false): string {
+  const v = u === 'imperial' ? kmToMi(km) : km;
+  return !whole && Math.abs(v) < 10 ? upToOne.format(v) : intl.format(Math.round(v));
+}
+/** "2.5 km" or "1.6 mi". */
+export function formatDistance(km: number, u: UnitSystem = current, whole = false): string {
+  return `${formatDistanceNumber(km, u, whole)} ${unitLabel('distance', u)}`;
 }
 
 const TIME_ZONE = 'America/Vancouver';
@@ -37,19 +100,46 @@ export function formatRelative(target: Date, now: Date): string {
 
 const oneDecimal = new Intl.NumberFormat('en-CA', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-/** "2.4 mm/h" (liquid rate). */
-export function formatRate(mmPerHour: number): string {
-  return `${oneDecimal.format(mmPerHour)} mm/h`;
+/** "2.4" mm/h, or "0.09" in/h (three decimals under 0.01 in/h): a liquid rate's number. */
+export function formatRateNumber(mmPerHour: number, u: UnitSystem = current): string {
+  if (u === 'metric') return oneDecimal.format(mmPerHour);
+  const v = mmToIn(mmPerHour);
+  return v > 0 && v < 0.01 ? threeDecimals.format(v) : twoDecimals.format(v);
 }
 
-/** "12 mm", or "0.4 mm" below 1. */
-export function formatMm(mm: number): string {
-  return `${mm < 1 && mm > 0 ? oneDecimal.format(mm) : intl.format(Math.round(mm))} mm`;
+/** "2.4 mm/h" or "0.09 in/h" (liquid rate). */
+export function formatRate(mmPerHour: number, u: UnitSystem = current): string {
+  return `${formatRateNumber(mmPerHour, u)} ${unitLabel('rate', u)}`;
 }
 
-/** "21 cm", or "0.7 cm" below 1. */
-export function formatCm(cm: number): string {
-  return `${cm < 1 && cm > 0 ? oneDecimal.format(cm) : intl.format(Math.round(cm))} cm`;
+/** A legend's span of rates: "0.1 to 6+ mm/h", or "0.004 to 0.24+ in/h". */
+export function formatRateRange(lo: number, hi: number, u: UnitSystem = current): string {
+  const n = (mm: number) => (u === 'metric' ? upToOne.format(mm) : upToThree.format(mmToIn(mm)));
+  return `${n(lo)} to ${u === 'metric' ? n(hi) : upToTwo.format(mmToIn(hi))}+ ${unitLabel('rate', u)}`;
+}
+
+/** Rain's number: "12", "0.4" below 1 mm; inches "0.47", "1.2" from 1 in. `whole` rounds metric to the mm (tables). */
+export function formatMmNumber(mm: number, u: UnitSystem = current, whole = false): string {
+  if (u === 'metric') return (whole || !(mm < 1 && mm > 0)) ? intl.format(Math.round(mm)) : oneDecimal.format(mm);
+  const v = mmToIn(mm);
+  return v < 1 ? twoDecimals.format(v) : oneDecimal.format(v);
+}
+
+/** "12 mm", or "0.4 mm" below 1; "0.47 in". */
+export function formatMm(mm: number, u: UnitSystem = current): string {
+  return `${formatMmNumber(mm, u)} ${unitLabel('rain', u)}`;
+}
+
+/** Snow's number: "21", "0.7" below 1 cm; inches "8", "0.3" below 1 in. `whole` rounds metric to the cm (tables). */
+export function formatCmNumber(cm: number, u: UnitSystem = current, whole = false): string {
+  const v = u === 'imperial' ? cmToIn(cm) : cm;
+  if (u === 'metric' && whole) return intl.format(Math.round(v));
+  return v < 1 && v > 0 ? oneDecimal.format(v) : intl.format(Math.round(v));
+}
+
+/** "21 cm", or "0.7 cm" below 1; "8 in". */
+export function formatCm(cm: number, u: UnitSystem = current): string {
+  return `${formatCmNumber(cm, u)} ${unitLabel('snow', u)}`;
 }
 
 /** Chart axis label: "Fri" at midnight, "12 PM" at noon, else "3 PM". */
@@ -78,16 +168,31 @@ export function formatSpan(hours: number): string {
 const MINUS = '−';
 const signed = (n: number, plus: boolean) => (n < 0 ? `${MINUS}${Math.abs(n)}` : plus && n > 0 ? `+${n}` : String(n));
 
-/** "−1 °C" (readout). Rounds to the degree; never shows "−0". */
-export function formatTemp(c: number): string {
-  const n = Math.round(c) || 0;
-  return `${signed(n, false)} °C`;
+/** "−6", "+2" with `plus`: a temperature's number in the shown unit, whole, with a real minus. */
+export function formatTempNumber(c: number, plus = false, u: UnitSystem = current): string {
+  const n = Math.round(tempValue(c, u)) || 0;
+  return signed(n, plus);
+}
+
+/** "−1 °C" or "30 °F" (readout). Rounds to the degree; never shows "−0". */
+export function formatTemp(c: number, u: UnitSystem = current): string {
+  return `${formatTempNumber(c, false, u)} ${unitLabel('temp', u)}`;
+}
+
+/** "0.5 °C" or "32.9 °F": a threshold to one decimal. */
+export function formatTempOneDecimal(c: number, u: UnitSystem = current): string {
+  const v = tempValue(c, u);
+  return `${v < 0 ? MINUS : ''}${oneDecimal.format(Math.abs(v))} ${unitLabel('temp', u)}`;
+}
+
+/** "+2 °C" (stat values and In view lines, sign shown). */
+export function formatTempSigned(c: number, u: UnitSystem = current): string {
+  return `${formatTempNumber(c, true, u)} ${unitLabel('temp', u)}`;
 }
 
 /** "+2°", "−5°", "0°" (summaries and the week strip, sign shown). */
-export function formatDegrees(c: number, plus = true): string {
-  const n = Math.round(c) || 0;
-  return `${signed(n, plus)}°`;
+export function formatDegrees(c: number, plus = true, u: UnitSystem = current): string {
+  return `${formatTempNumber(c, plus, u)}°`;
 }
 
 /** "Thu 5 PM – Sat 5 PM". */
@@ -112,10 +217,10 @@ export function formatWhole(n: number): string {
   return intl.format(Math.round(n));
 }
 
-/** Wind speed: "28 km/h". Whole km/h; model wind is not finer than that. */
-export function formatSpeed(kmh: number, unit = true): string {
-  const v = String(Math.round(kmh));
-  return unit ? `${v} km/h` : v;
+/** Wind speed: "28 km/h" or "17 mph". Whole units; model wind is not finer than that. */
+export function formatSpeed(kmh: number, unit = true, u: UnitSystem = current): string {
+  const v = String(Math.round(speedValue(kmh, u)) || 0);
+  return unit ? `${v} ${unitLabel('speed', u)}` : v;
 }
 
 /** Where the wind blows from, with its bearing: "SW 230°". `name` is the compass name. */

@@ -122,6 +122,18 @@ Plan: keep Mapterhorn for hillshade and contours everywhere; for slope shading, 
 
 Animated wind options: [maplibre-gl-wind](https://github.com/geoql/maplibre-gl-wind) (MIT, deck.gl), mapbox-exif-layer, and WeatherLayers GL's particle layer.
 
+### Place names for search
+
+Checked Nov 17, 2026 (used by `adapters/bc-geonames/`, search panel in M9):
+
+- **Source.** BC Geographical Names Web Service (BCGNWS), the Province's official names: peaks, ranges, passes, glaciers, lakes, creeks, parks and communities, with feature type and position. OpenAPI spec `bcgov/api-specs` `bcgnws/bcgnws.json`, version 3.x.x.
+- **Request.** `GET https://apps.gov.bc.ca/pub/bcgnws/names/search?outputFormat=json&name=Seymour*&outputSRS=4326&outputStyle=detail&itemsPerPage=40`. `*` is the wildcard. Matching is by whole words of the name, so "Seymour" finds Mount Seymour, Seymour Lake and Seymour Creek; several words return names with any of them, relevance first, so the app filters again. Other parameters: `exactSpelling`, `featureClass`, `featureCategory`, `featureType`, `sortBy` (relevance, name, featureType, decisionDate), `startIndex`.
+- **Answer.** GeoJSON. Per name: `name`, `status` (adopted, recorded, rescinded), `isOfficial`, `featureType` ("Mount", "Creek (1)"), `featureCategory` (15 Elevated, 19 Depressed, 21 glaciers and névés, 10 lakes, 2 rural communities, 4 parks…), `feature.id`; with `outputStyle=detail` also `feature.relativeLocation` ("Between Seymour River and Indian Arm, S of Mount Elsay, NE corner of North Vancouver") and `feature.landDistrict`. `geometry.coordinates` is `[lon, lat]`. **No elevation.** Rescinded (former) names come back too; the app leaves them out.
+- **Browsers.** `Access-Control-Allow-Origin: *` on GET and OPTIONS, so the app calls it directly. 40 detailed names are about 80 kB in about 0.6 s.
+- **Licence.** The OpenAPI spec states "Crown Copyright" and links the B.C. copyright page. BC's data catalogue lists the service under the Open Government Licence – British Columbia, but the catalogue (catalogue.data.gov.bc.ca) and gov.bc.ca pages could not be opened from this session: confirm before publishing. No published rate limit; the app asks only while someone types (300 ms pause, one request at a time, answers kept for the session).
+- **Fallback not needed.** Open-Meteo's geocoding API (`geocoding-api.open-meteo.com/v1/search`) also answers browsers (`Access-Control-Allow-Origin: *`) and gives elevation (Mount Seymour, 1,449 m), but it is GeoNames-based and knows fewer BC peaks by official name.
+- Test answers saved in `adapters/bc-geonames/fixtures/` (Seymour*, Garibaldi*).
+
 ## Observations and Canadian models
 
 Stations give the ground truth models miss: ridge wind, valley cold pools, new snow. The ECCC partner feed is the single most useful find, because one adapter reaches most mountain stations in BC.
@@ -135,6 +147,12 @@ Stations give the ground truth models miss: ridge wind, valley cold pools, new s
 | [Avalanche Canada weather stations](https://avalanche.ca/api-docs) | Station list and measurements, last week by default | JSON API |
 | ECCC observations | Real-time surface observations and hourly climate records | [OGC API collections](https://api.weather.gc.ca/collections) |
 | Open-Meteo Historical and Previous Runs APIs | What each model said, and reanalysis back decades | Free tier |
+
+Checked Nov 17, 2026 (after M7), for real measurements of the past at the pin:
+
+- **ECCC's own stations** (`swob-realtime` on the OGC API) answer from a browser (CORS open), every minute, with temperature, wind, gusts and precipitation. Near the North Shore and Sea to Sky they are low: Callaghan Valley 887 m, Whistler Nesters 662 m, Squamish, Pemberton, Point Atkinson.
+- **Partner stations** (BC highways' avalanche stations such as Blowdown Peak 2,320 m, BC snow pillows, BC Hydro, BC Wildfire) are listed with locations in `swob-partner-stations` (CORS open), but their readings are only on the Datamart (`dd.weather.gc.ca/…/swob-ml/partners/bc-tran/…`), which sends no CORS header: a web app cannot read them without a server of its own. Their notices say "All rights reserved" (BC government), so the terms need checking before any use.
+- Gridded analyses of temperature and wind (as HRDPA is for precipitation) were not found as open files.
 
 ### Stations and observation networks
 
@@ -190,6 +208,16 @@ Layer design: colour each forecast region by today's highest rating; tapping sho
 ### Weather alerts
 
 ECCC alerts come as GeoJSON from the [weather-alerts collection](https://api.weather.gc.ca/collections/weather-alerts) and as a map layer. The [GeoMet 3.0 release](https://comm.collab.science.gc.ca/mailman3/hyperkitty/list/dd_info@comm.collab.science.gc.ca/2026/2/) replaced the old `ALERTS` layer with `Current-Alerts`. Fetch on open, cache, show the fetch time.
+
+Checked Nov 17, 2026 (used by `adapters/eccc-alerts/`):
+
+- **Request.** `https://api.weather.gc.ca/collections/weather-alerts/items?f=json&skipGeometry=true&limit=100&bbox=w,s,e,n` (pygeoapi 0.20.0). A box 0.0002° wide around the pin works as a point query: it returns only the areas whose polygons contain the point (a point in the City of Lethbridge returned the city, not the county around it). Without `skipGeometry` the polygons make answers large; whole-country requests were cut off through this session's proxy. The answer is a few kB.
+- **CORS.** `Access-Control-Allow-Origin: *`, so the app asks directly. No key.
+- **Shape.** One GeoJSON feature per alert per area. `id` is `<alert>_<area>`. Fields used: `alert_type` (warning, watch, advisory, statement), `alert_name_en` ("snowfall warning"), `feature_name_en` (area name), `risk_colour_en` (yellow, orange, red; null for statements), `publication_datetime`, `expiration_datetime`, `status_en` (seen: issued, continued), `province`. Also present, not shown: `alert_text_en` (full text), `confidence_en`, `impact_en`, `validity_datetime`, `event_end_datetime`, French versions. Queryables include `province` and `alert_type`.
+- **No link field.** Each row links to ECCC's provincial alerts page, `https://weather.gc.ca/warnings/index_e.html?prov=bc` (the address BC government pages give; weather.gc.ca itself is blocked from this session, so not opened).
+- **Colours.** ECCC has colour-coded warnings, watches and advisories since Nov 26, 2025 (yellow, orange, red by impact and confidence); statements have no colour. The hex values come from the legend of ECCC's own `Current-Alerts` map layer (GeoMet GetLegendGraphic): warnings and advisories red `#DA3333`, orange `#FF9500`, yellow `#FFFF00`; watches the lighter `#EB9898`, `#FDC87F`, `#FDFD7F`; statements grey `#DBDBDB`. canada.ca's page on the colours could not be opened from this session.
+- **On Nov 17, 2026** there were 119 alert-areas in Canada (Alberta snowfall warnings and statements, a Yukon blizzard warning), none in BC. The test answers saved in `adapters/eccc-alerts/fixtures/` are real ones from Lethbridge, Calgary and the North Shore (empty).
+- **Licence.** Open Government Licence – Canada, attribution to ECCC.
 
 ### Water
 
@@ -284,6 +312,7 @@ Most sources only ask for attribution. The ones below carry extra terms; record 
 | CWFIS | Cite NRCan |
 | SalishSeaCast | UBC copyright; read the licence text |
 | BC Wildfire perimeters, evacuation orders | Stated as reference only |
+| BC Geographical Names (place search) | Crown Copyright per its API spec; listed as Open Government Licence – BC (not confirmed this session) |
 | Federal and BC open data (HRDEM, LidarBC, roads, trails, DriveBC, HighwayCams) | Open government licences |
 | Trailforks | API by approval only |
 | AllTrails | No public API; terms restrict automated access |

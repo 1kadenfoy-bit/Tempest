@@ -2,14 +2,24 @@
 // as JSON next to the files it names; a format version from the first save
 // (architecture rule 7). Pure logic.
 
-export const SAVED_AREA_VERSION = 1;
+/** 2 (M8): a name, the choices made, and later models' hours in `more`. Version 1 records still read. */
+export const SAVED_AREA_VERSION = 2;
+
+/** One model run's weather in a saved area: one region file per variable, all its saved steps. */
+export type SavedWeatherPart = SavedArea['weather'];
 
 export interface SavedArea {
   version: number;
   id: string;
+  /** The place the box is centred on (a map label), for the list. */
+  name?: string;
+  /** The layers ticked and the window chosen, so a refresh saves the same again. */
+  layers?: string[];
+  /** Hours from the save, or null for the models' end. */
+  window?: number | null;
   bbox: [number, number, number, number];
   savedAt: string;
-  /** Weather: one region file per variable, all steps of one run. */
+  /** Weather: one region file per variable, all steps of one run (the first model). */
   weather: {
     source: string;
     model: string;
@@ -23,6 +33,8 @@ export interface SavedArea {
     nx: number;
     ny: number;
   };
+  /** Later models' runs, for the hours past the first model's end (the chain), in order. */
+  more?: SavedWeatherPart[];
   /** Base map for the box, as one PMTiles file. */
   basemap: { file: string; minzoom: number; maxzoom: number };
   /** Terrain tiles, fonts and icons kept in the offline cache, by URL. */
@@ -34,6 +46,32 @@ export function parseSavedAreas(json: unknown): SavedArea[] {
   if (!Array.isArray(json)) return [];
   return json.filter((a): a is SavedArea =>
     typeof a === 'object' && a !== null && (a as SavedArea).version <= SAVED_AREA_VERSION && Array.isArray((a as SavedArea).bbox));
+}
+
+/**
+ * Each model run in the area as an area of its own (same box and files, one
+ * run each), so every reader matches a run the way it always has. Ids differ
+ * per part so each is loaded and kept apart.
+ */
+export function areaParts(a: SavedArea): SavedArea[] {
+  return [a, ...(a.more ?? []).map((w, k) => ({ ...a, id: `${a.id}~${k + 1}`, weather: w, more: [] }))];
+}
+
+/** Every file the area wrote for its weather. */
+export function weatherFiles(a: SavedArea): string[] {
+  return [a.weather, ...(a.more ?? [])].flatMap((w) => Object.values(w.files));
+}
+
+/** The area's last saved hour, across its models. */
+export function lastHour(a: SavedArea): Date | null {
+  const times = [a.weather, ...(a.more ?? [])].flatMap((w) => w.validTimes);
+  return times.length ? new Date(times.reduce((x, y) => (x > y ? x : y))) : null;
+}
+
+/** Expired: every hour it holds has passed. */
+export function isExpired(a: SavedArea, now: Date): boolean {
+  const last = lastHour(a);
+  return !last || last.getTime() < now.getTime();
 }
 
 export function totalBytes(a: SavedArea): number {
@@ -61,11 +99,17 @@ const TERRAIN_TILE_BYTES = [1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8e5, 1.8
  * (0.65 MB per square degree for 48 h); fonts and icons about 0.9 MB.
  */
 /** `variables`: how many weather variables are kept (precipitation is 2; temperature's profile 31). */
-export function estimateSaveBytes(bbox: [number, number, number, number], hours: number, variables = 2) {
+/**
+ * `coarseHours`: of those hours, how many come from a model with 4 times the
+ * spacing (RDPS's 10 km after HRDPS's 2.5 km): 16 times fewer cells each.
+ */
+export function estimateSaveBytes(bbox: [number, number, number, number], hours: number, variables = 2, coarseHours = 0) {
   let terrain = 0;
   TERRAIN_TILE_BYTES.forEach((b, z) => { terrain += tilesInBox(bbox, z, z).length * b; });
   const area = Math.max(0, bbox[2] - bbox[0]) * Math.max(0, bbox[3] - bbox[1]);
-  return { terrain, weather: area * 0.65e6 * (hours / 48) * (variables / 2), other: 0.9e6 };
+  const fine = Math.max(0, hours - coarseHours);
+  const coarse = coarseHours / 16;
+  return { terrain, weather: area * 0.65e6 * ((fine + coarse) / 48) * (variables / 2), other: 0.9e6 };
 }
 
 /** Terrain tiles (Terrarium, 512 px) covering a box, zoom 0 to maxZoom. */

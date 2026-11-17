@@ -8,7 +8,8 @@
 // (first kind, mixed, second kind) blended by the share. Values reach the GPU
 // as numbers; colour is applied on the device. Changing steps cross-fades the
 // picture; readouts never see the blend.
-import type { CustomLayerInterface, CustomRenderMethodInput, Map as MapLibreMap } from 'maplibre-gl';
+import type { CustomLayerInterface, CustomRenderMethodInput, CustomTerrainRenderInput, Map as MapLibreMap } from 'maplibre-gl';
+import { DrapeRevision, tileMatrix } from './terrain-drape';
 
 export type RGBA = [number, number, number, number];
 
@@ -138,6 +139,7 @@ export class TypedRateLayer implements CustomLayerInterface {
   private fadeStart = 0;
   private readonly fadeMs = 200;
   private loc: Record<string, WebGLUniformLocation | null> = {};
+  private drape = new DrapeRevision();
 
   constructor(readonly id: string, private style: TypedRateStyle) {}
 
@@ -191,7 +193,7 @@ export class TypedRateLayer implements CustomLayerInterface {
     this.shareField = f;
     const g = this.gl;
     if (!g) return;
-    if (!f) { this.map?.triggerRepaint(); return; }
+    if (!f) { this.drape.changed(this.map); return; }
     if (!this.shareTex) this.shareTex = g.createTexture();
     g.bindTexture(g.TEXTURE_2D, this.shareTex);
     g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
@@ -200,13 +202,13 @@ export class TypedRateLayer implements CustomLayerInterface {
     g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.NEAREST);
     g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE);
     g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
-    this.map?.triggerRepaint();
+    this.drape.changed(this.map);
   }
 
   setStyle(style: TypedRateStyle): void {
     this.style = style;
     this.uploadStrip();
-    this.map?.triggerRepaint();
+    this.drape.changed(this.map);
   }
 
   /** Show these fields; the previous ones on the same grid fade out under them. */
@@ -217,7 +219,7 @@ export class TypedRateLayer implements CustomLayerInterface {
     this.previous = this.current;
     this.current = fields.map((field) => ({ field, tex: this.uploadField(field) }));
     this.fadeStart = performance.now();
-    this.map?.triggerRepaint();
+    this.drape.changed(this.map);
   }
 
   private uploadField(f: DrawField): WebGLTexture {
@@ -254,12 +256,28 @@ export class TypedRateLayer implements CustomLayerInterface {
   }
 
   render(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {
+    this.draw(gl as WebGL2RenderingContext, options.defaultProjectionData.mainMatrix as unknown as Float32Array, true);
+  }
+
+  /**
+   * With 3D terrain: the same picture into one terrain tile, which MapLibre
+   * drapes over the terrain. No cross-fade here: MapLibre redraws changed
+   * tiles a few per frame, so a fade would cost a full redraw of every tile
+   * per frame and still arrive unevenly. Steps change at once instead.
+   */
+  renderToTerrainTile(gl: WebGL2RenderingContext, input: CustomTerrainRenderInput): void {
+    this.draw(gl, tileMatrix(input.tileID), false);
+  }
+
+  get terrainTileRevision(): number { return this.drape.value; }
+
+  private draw(gl: WebGL2RenderingContext, matrix: Float32Array, fade: boolean): void {
     const g = gl as WebGL2RenderingContext;
     if (!this.program || !this.current.length) return;
-    const t = Math.min(1, (performance.now() - this.fadeStart) / this.fadeMs);
+    const t = fade ? Math.min(1, (performance.now() - this.fadeStart) / this.fadeMs) : 1;
     g.useProgram(this.program);
     // Projects 0..1 web-mercator coordinates (MapLibre 6: defaultProjectionData.mainMatrix).
-    g.uniformMatrix4fv(this.loc.u_matrix!, false, options.defaultProjectionData.mainMatrix as unknown as Float32Array);
+    g.uniformMatrix4fv(this.loc.u_matrix!, false, matrix);
     g.uniform1f(this.loc.u_max!, this.style.max);
     g.uniform1f(this.loc.u_opacity!, this.style.opacity);
     g.uniform2f(this.loc.u_share!, this.style.mixedFrom, this.style.secondFrom);
@@ -302,6 +320,6 @@ export class TypedRateLayer implements CustomLayerInterface {
       g.uniform2f(this.loc.u_size!, f.nx, f.ny);
       g.drawArrays(g.TRIANGLES, 0, 6);
     }
-    if (t < 1) this.map?.triggerRepaint();
+    if (t < 1) this.drape.changed(this.map);
   }
 }

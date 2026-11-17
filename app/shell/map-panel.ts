@@ -1,9 +1,17 @@
 // The map panel (grows from the map layers button). Only switches that work
-// are shown: Hillshade and Contours. Base map choice, slope angle, 3D,
-// routes and offline arrive when they work.
+// are shown: Hillshade, Contours, 3D terrain and, where the base map holds
+// building heights, 3D buildings. Base map choice, slope angle and routes
+// arrive when they work.
 import { icons } from './icons';
 
-export interface MapPanelState { hillshade: boolean; contours: boolean }
+export interface MapPanelState {
+  hillshade: boolean;
+  contours: boolean;
+  /** Left out when 3D terrain cannot work here. */
+  terrain3d?: boolean | undefined;
+  /** Left out when the base map has no building heights. */
+  buildings3d?: boolean | undefined;
+}
 
 function toggle(label: string, on: boolean, onChange: (on: boolean) => void): HTMLButtonElement {
   const b = document.createElement('button');
@@ -28,6 +36,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     toggle('Hillshade', state.hillshade, (on) => { state.hillshade = on; onChange({ ...state }); }),
     toggle('Contours', state.contours, (on) => { state.contours = on; onChange({ ...state }); }),
   );
+  if (state.terrain3d !== undefined) grid.append(toggle('3D terrain', state.terrain3d, (on) => { state.terrain3d = on; onChange({ ...state }); }));
+  if (state.buildings3d !== undefined) grid.append(toggle('3D buildings', state.buildings3d, (on) => { state.buildings3d = on; onChange({ ...state }); }));
   // Temporary, for building: the phone test page Claude asks for results
   // from. Plain row from the existing components; remove when no longer needed.
   const tests = document.createElement('div');

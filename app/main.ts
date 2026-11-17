@@ -10,7 +10,7 @@ import { formatCursorTime, formatElevation } from '../core/units/format';
 import type { PointSeries } from '../core/vocabulary';
 import { MODELS, fetchPointSeries } from '../adapters/openmeteo-maps/point-series';
 import { fetchRunMetadata, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
-import { CHAIN, MODELS as REGISTRY, type ModelId } from '../adapters/openmeteo-maps/models';
+import { CHAIN, MODELS as REGISTRY, modelForMapModel, type ModelId } from '../adapters/openmeteo-maps/models';
 import { buildTimeline, orderFor, segmentAt, type Timeline } from '../core/time/timeline';
 import * as precip from '../layers/precipitation';
 import { precipitation } from '../layers/precipitation';
@@ -43,16 +43,17 @@ import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
 import { gridRequest } from '../core/geo/grid-request';
 import type { GridField } from '../core/vocabulary';
 import { TypedRateLayer } from '../render/grid-gl/typed-rate-layer';
-import { areaContains, areaOverlaps, tilesInBox, type SavedArea } from '../core/offline/saved-area';
-import { offlineGroup, progressText } from './offline/offline-panel';
+import { areaContains, areaOverlaps, areaParts, tilesInBox, type SavedArea } from '../core/offline/saved-area';
+import { offlineGroup, progressText, savedAreasBody } from './offline/offline-panel';
 import { openSaveMode } from './offline/save-mode';
-import { deleteArea, forgetSavedWeather, listSavedAreas, loadSavedWeather, saveArea, savedStep } from './offline/saved-areas';
-import { regridNative, sampleNative } from '../render/openmeteo-starter';
-import { readFile } from './offline/storage';
+import { deleteArea, listSavedAreas, loadSavedWeather, saveArea, savedStep } from './offline/saved-areas';
+import { coveringRanges, regridNative, sampleNative } from '../render/openmeteo-starter';
+import { readFile, storageState } from './offline/storage';
 import { loadBasemap } from './map/basemap-router';
 import { maplibregl } from './map/maplibre';
-import { topoStyle } from './map/style';
-import { addTerrain } from './map/terrain';
+import { applyBaseTheme, topoStyle } from './map/style';
+import { addTerrain, applyTerrainTheme } from './map/terrain';
+import { hasBuildingHeights, setupThreeD } from './map/three-d';
 import { hydrateIcons, icons } from './shell/icons';
 import { applyInsetOverride } from './shell/insets';
 import { mapPanelBody } from './shell/map-panel';
@@ -62,15 +63,26 @@ import { loadPrefs, savePrefs } from './shell/prefs';
 import { setupScrubber } from './shell/scrubber';
 import { setupSheet } from './shell/sheet';
 import { setupViewport } from './shell/viewport';
-import { applyTokens, colorToken } from './theme/tokens';
+import { colorToken, type Theme } from './theme/tokens';
+import { startAppSettings } from './settings/app-settings';
+import { alertsAt } from './alerts/alerts';
+import { setupSearch } from './search/search';
 
-applyTokens(document);
+const prefs = loadPrefs();
+// App settings: units and theme apply before anything draws; the hooks redraw
+// what CSS cannot reach (defined further down, called only on a change).
+const appSettings = startAppSettings(prefs, {
+  savePrefs: () => savePrefs(prefs),
+  onUnits: () => redrawForUnits(),
+  onTheme: (t) => recolourForTheme(t),
+  onSavedOnly: (on) => setSavedOnly(on),
+  basemapAttribution: () => String(basemap.source.attribution ?? ''),
+});
 applyInsetOverride(document, location.search);
 setupViewport(document);
 hydrateIcons(document);
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
-const prefs = loadPrefs();
 
 // North Shore, the start region on every design screen.
 const NORTH_SHORE: [number, number] = [-123.02, 49.38];
@@ -79,19 +91,22 @@ const basemap = await loadBasemap(document.baseURI);
 
 // Saved areas: their base map files are read first, inside their boxes.
 let savedAreas: SavedArea[] = [];
+/** Each saved model run as an area of its own (HRDPS, then RDPS past its end): what the readers match runs against. */
+let savedParts: SavedArea[] = [];
 async function registerSavedAreas() {
   try {
     savedAreas = await listSavedAreas();
+    savedParts = savedAreas.flatMap(areaParts);
     for (const a of savedAreas) {
       const file = await readFile(a.basemap.file);
       if (file) basemap.addSaved(a.id, file, a.bbox, a.basemap.minzoom, a.basemap.maxzoom);
     }
-  } catch { savedAreas = []; }
+  } catch { savedAreas = []; savedParts = []; }
 }
 await registerSavedAreas();
 const map = new maplibregl.Map({
   container: 'map',
-  style: topoStyle(basemap.source),
+  style: topoStyle(basemap.source, appSettings.theme()),
   center: prefs.lastPin ? [prefs.lastPin.lng, prefs.lastPin.lat] : NORTH_SHORE,
   zoom: 11,
   minZoom: 4,
@@ -250,7 +265,7 @@ function settingsFor(l: LayerSlots): Record<string, string | boolean> {
   const saved = prefs.layerSettings[l.id] ?? {};
   return Object.fromEntries(l.settings.map((x) => [x.key, saved[x.key] ?? x.default]));
 }
-const profiles = new ProfileSource(() => savedAreas);
+const profiles = new ProfileSource(() => savedParts, () => usingSaved);
 
 /** Point the shell's slots at the active layer. */
 function showLayer() {
@@ -315,6 +330,10 @@ if (new URLSearchParams(location.search).has('fps')) {
   }, 1000);
 }
 (window as unknown as { tempestFlow: FlowCanvas }).tempestFlow = flow;
+// 3D terrain and buildings. The flow is drawn in screen space for a flat,
+// north-up map, so it waits while the map is tilted or turned.
+const buildingsOk = hasBuildingHeights(basemap.manifest.vector_layers);
+const threeD = setupThreeD(map, document.querySelector<HTMLElement>('.thumbs')!, () => appSettings.theme(), (flat) => flow.setShown(active.id === 'wind' && flat));
 /** The flow's mode from the wind settings: animated, still arrows, or nothing. */
 const flowMode = (): FlowMode => { const s = settingsFor(wind); return s.flow ? 'flow' : s.arrows ? 'arrows' : 'off'; };
 let mosaic: Mosaic | null = null;
@@ -334,7 +353,7 @@ const covers = (a: Box, b: Box) => a[0] <= b[0] && a[1] <= b[1] && a[2] >= b[2] 
 
 /** A saved area's field for this run and step, if it has one (and covers `need`, when given). */
 async function savedField(r: RunMetadata, t: Date, need: Box | null, overlap: Box): Promise<{ field: GridField; key: string } | null> {
-  for (const a of savedAreas) {
+  for (const a of savedParts) {
     if (a.weather.model !== r.model || new Date(a.weather.run).getTime() !== r.referenceTime.getTime()) continue;
     if (need ? !covers(a.bbox, need) : !areaOverlaps(a, overlap)) continue;
     if (!precip.needs.every((v) => a.weather.files[v])) continue; // saved without precipitation
@@ -361,6 +380,12 @@ async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typ
   if (hit) return { field: hit, key: req.key };
   const saved = await savedField(r, t, req.bbox, req.bbox);
   if (saved) return saved;
+  // Saved data only (no signal, or the switch): never wait on the network.
+  if (usingSaved) {
+    const partial = await savedField(r, t, null, req.bbox);
+    if (partial) return partial;
+    throw new Error('not saved for this view');
+  }
   try {
     const f = await fetchGridField(r, t, precip.needs, req);
     fieldStore.put(key, f);
@@ -374,12 +399,8 @@ async function getField(r: RunMetadata, t: Date, req: NonNullable<ReturnType<typ
 
 /** The temperature fill: profiles at a lattice of nodes, terrain per pixel on the GPU. */
 async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
-  // A margin around the screen, so panning shows colour straight away.
-  const b = map.getBounds();
-  const padX = (b.getEast() - b.getWest()) * PAN_MARGIN;
-  const padY = (b.getNorth() - b.getSouth()) * PAN_MARGIN;
-  const view: Box = [Math.max(BC_BOX[0], b.getWest() - padX), Math.max(BC_BOX[1], b.getSouth() - padY), Math.min(BC_BOX[2], b.getEast() + padX), Math.min(BC_BOX[3], b.getNorth() + padY)];
-  if (view[0] >= view[2] || view[1] >= view[3]) { tempLayer.setProfiles(null); return; }
+  const view = marginView();
+  if (!view) { tempLayer.setProfiles(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
   const set = settingsFor(temperature);
@@ -467,7 +488,16 @@ function marginView(): Box | null {
   const padX = (b.getEast() - b.getWest()) * PAN_MARGIN;
   const padY = (b.getNorth() - b.getSouth()) * PAN_MARGIN;
   const view: Box = [Math.max(BC_BOX[0], b.getWest() - padX), Math.max(BC_BOX[1], b.getSouth() - padY), Math.min(BC_BOX[2], b.getEast() + padX), Math.min(BC_BOX[3], b.getNorth() + padY)];
-  return view[0] < view[2] && view[1] < view[3] ? view : null;
+  if (view[0] >= view[2] || view[1] >= view[3]) return null;
+  // With saved data only, the fill covers the saved area in view (its nodes
+  // must fall inside it, so the lattice is laid over the area, not the screen).
+  if (usingSaved) {
+    const overlap = (a: SavedArea): Box => [Math.max(a.bbox[0], view[0]), Math.max(a.bbox[1], view[1]), Math.min(a.bbox[2], view[2]), Math.min(a.bbox[3], view[3])];
+    const size = (x: Box) => Math.max(0, x[2] - x[0]) * Math.max(0, x[3] - x[1]);
+    const best = savedAreas.map(overlap).sort((x, y) => size(y) - size(x))[0];
+    return best && size(best) > 0 ? best : null;
+  }
+  return view;
 }
 
 /**
@@ -551,7 +581,7 @@ async function updateFills(moving = false) {
   const when = mapTime(cursor.time);
   const at = runAt(when);
   if (!at) return;
-  flow.setShown(active.id === 'wind');
+  flow.setShown(active.id === 'wind' && threeD.flat());
   windLayer.visible = active.id === 'wind';
   if (active.id === 'wind') {
     precipLayer.setFields([]);
@@ -626,12 +656,24 @@ cursor.subscribe(() => {
   scheduleDetails();
 });
 
-/** The run a saved area holds, for use without signal. */
-function savedRun(): RunMetadata | null {
-  const a = [...savedAreas].sort((x, y) => y.weather.run.localeCompare(x.weather.run))[0];
-  if (!a) return null;
-  const ref = new Date(a.weather.run);
-  return { model: a.weather.model, completed: true, referenceTime: ref, lastModified: new Date(a.savedAt), validTimes: [ref, ...a.weather.validTimes.map((t) => new Date(t))], variables: [] };
+/**
+ * The runs a saved area holds, by model, for use without signal: the area
+ * the pin is in (else the newest saved), its first model and any later ones.
+ */
+function savedRuns(): Partial<Record<ModelId, RunMetadata>> {
+  const p = pin?.get();
+  const inPin = p ? savedAreas.filter((a) => areaContains(a, p.lng, p.lat)) : [];
+  const a = [...(inPin.length ? inPin : savedAreas)].sort((x, y) => y.savedAt.localeCompare(x.savedAt))[0];
+  if (!a) return {};
+  const out: Partial<Record<ModelId, RunMetadata>> = {};
+  for (const part of areaParts(a)) {
+    const w = part.weather;
+    const spec = modelForMapModel(w.model);
+    if (!spec || out[spec.id]) continue;
+    const ref = new Date(w.run);
+    out[spec.id] = { model: w.model, completed: true, referenceTime: ref, lastModified: new Date(a.savedAt), validTimes: [ref, ...w.validTimes.map((t) => new Date(t))], variables: [] };
+  }
+  return out;
 }
 
 /**
@@ -672,7 +714,9 @@ async function fetchAllRuns() {
 const runsKey = (r: Partial<Record<ModelId, RunMetadata>>) => Object.entries(r).map(([k, v]) => `${k}:${v!.referenceTime.toISOString()}`).sort().join('|');
 
 async function loadRun() {
-  const next = await fetchAllRuns().catch(() => ({ surface: {}, profile: {} }));
+  // "Saved data only": no network at all while a saved area exists.
+  const savedOnly = prefs.savedOnly && savedAreas.length > 0;
+  const next = savedOnly ? { surface: {}, profile: {} } : await fetchAllRuns().catch(() => ({ surface: {}, profile: {} }));
   if (Object.keys(next.surface).length) {
     const changed = usingSaved || runsKey(next.surface) !== runsKey(runs) || runsKey(next.profile) !== runsKey(profileRuns);
     usingSaved = false;
@@ -687,11 +731,12 @@ async function loadRun() {
     document.body.dataset.run = 'ready';
     return;
   }
-  // No signal: the newest saved area's run.
-  const saved = savedRun();
+  // No signal (or saved data only): a saved area's runs.
+  const savedSet = savedRuns();
+  const saved = savedSet.hrdps ?? Object.values(savedSet)[0];
   if (saved) {
-    const changed = !usingSaved || !run || saved.referenceTime.getTime() !== run.referenceTime.getTime();
-    runs = { hrdps: saved };
+    const changed = !usingSaved || runsKey(savedSet) !== runsKey(runs);
+    runs = savedSet;
     profileRuns = {};
     usingSaved = true;
     if (changed) {
@@ -742,7 +787,8 @@ async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: n
     // Without the point API (or offline): amounts from the map files or the
     // saved area; the profile joins when it comes, which can take minutes
     // read from the files hour by hour.
-    const own = (usingSaved ? await savedSeries(r, lat, lng) : null) ?? await fetchPointSeries(r, precip.needs, lat, lng);
+    const own = (usingSaved ? await savedSeries(r, lat, lng) : null) ?? (usingSaved ? null : await fetchPointSeries(r, precip.needs, lat, lng));
+    if (!own) throw new Error('the pin is outside the saved areas');
     const profP = profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past, extra }).catch((err) => { console.warn('no profile for the pin', err); return null; });
     const quick = await Promise.race([profP, new Promise<null>((res) => setTimeout(() => res(null), 5000))]);
     if (quick) return overlay(quick, own);
@@ -760,7 +806,7 @@ async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: n
     // the service, profiles wait for it (the series asks again); amounts read their own files.
     return await profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, noFiles: true, extra });
   } catch (err) {
-    if (!amounts) throw err;
+    if (!amounts || usingSaved) throw err;
     return fetchPointSeries(runs[m]!, precip.needs, lat, lng);
   }
 }
@@ -879,7 +925,7 @@ async function loadSeries() {
 
 /** The pin's series from a saved area's grids (same run), for use without signal. */
 async function savedSeries(r: RunMetadata, lat: number, lng: number): Promise<PointSeries | null> {
-  for (const a of savedAreas) {
+  for (const a of savedParts) {
     if (!areaContains(a, lng, lat) || new Date(a.weather.run).getTime() !== r.referenceTime.getTime()) continue;
     if (!precip.needs.every((v) => a.weather.files[v])) continue;
     const w = await loadSavedWeather(a).catch(() => null);
@@ -913,6 +959,7 @@ const renderPlace = (p: PinState) => {
   const where = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
   if (where !== lastPlace) {
     lastPlace = where;
+    alertsAt(p.lat, p.lng);
     clearTimeout(seriesTimer);
     seriesTimer = window.setTimeout(() => void loadSeries(), 250);
   }
@@ -964,6 +1011,16 @@ map.on('click', (e) => {
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
+});
+
+// Search: a chosen place moves the pin as a tap would, named, and the map flies there.
+setupSearch($('search-button') as HTMLButtonElement, {
+  choose: (place) => {
+    pin.set({ lng: place.lon, lat: place.lat, kind: 'dropped', name: place.name });
+    rememberPin({ lng: place.lon, lat: place.lat, name: place.name });
+    map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 12), duration: 900 });
+  },
+  near: () => { const c = map.getCenter(); return { lat: c.lat, lon: c.lng }; },
 });
 
 // Sheet: the details are drawn when it is pulled up, and kept fresh while it is.
@@ -1175,53 +1232,155 @@ layersBtn.addEventListener('click', () => {
     icon: icons.layersPanel,
     title: 'Map',
     caption: 'Base map and terrain',
-    body: mapPanelBody({ hillshade: prefs.hillshade, contours: prefs.contours }, (s) => {
+    headerAction: appSettings.gear(layersBtn),
+    body: mapPanelBody({ hillshade: prefs.hillshade, contours: prefs.contours, terrain3d: prefs.terrain3d, buildings3d: buildingsOk ? prefs.buildings3d : undefined }, (s) => {
       prefs.hillshade = s.hillshade;
       prefs.contours = s.contours;
+      prefs.terrain3d = s.terrain3d ?? false;
+      prefs.buildings3d = s.buildings3d ?? false;
       savePrefs(prefs);
       applyTerrainPrefs();
+      threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, true);
     }, offlineGroup(savedAreas, {
       choose: () => {
         closePanel();
-        if (!run || usingSaved) return;
-        const r = run;
-        openSaveMode(map, {
-          modelHours: Math.round((r.validTimes[r.validTimes.length - 1]!.getTime() - Date.now()) / 3_600_000),
-          layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: l.saveNeeds.length })),
-          initial: active.id,
-          basemapBytes: (bb) => basemap.storedBytes(tilesInBox(bb, 0, 15)),
-          save: async (choice, onProgress) => {
-            const chosen = LAYERS.filter((l) => choice.layers.includes(l.id));
-            // Amounts need the per-step conversion; plain values (profiles) do not.
-            const amounts = [...new Set(chosen.flatMap((l) => l.saveNeeds.filter(isAmount)))];
-            const plain = [...new Set(chosen.flatMap((l) => l.saveNeeds.filter((v) => !isAmount(v))))];
-            await saveArea({ bbox: choice.bbox, hours: choice.hours, run: r, variables: amounts, plainVariables: plain, basemap, style: map.getStyle(), onProgress: (p) => onProgress(progressText(p)) });
-            for (const old of savedAreas) { basemap.removeSaved(old.id); forgetSavedWeather(old.id); }
-            await registerSavedAreas();
-            drawSavedOutlines();
-            document.body.dataset.saved = 'true';
-          },
-          onClose: () => undefined,
-        });
+        openSaveBox();
       },
-      remove: async (area) => {
-        await deleteArea(area);
-        basemap.removeSaved(area.id);
-        forgetSavedWeather(area.id);
-        await registerSavedAreas();
-        drawSavedOutlines();
-      },
-    })),
+      list: () => openSavedList(),
+    }, !!run && !usingSaved)),
   });
 });
 
+const H_MS = 3_600_000;
+/** The chain a save holds: HRDPS, then RDPS for the hours past its end. */
+function saveRuns(): RunMetadata[] {
+  return (['hrdps', 'rdps'] as ModelId[]).flatMap((m) => { const r = runs[m]; return r ? [r] : []; });
+}
+const hoursTo = (r: RunMetadata) => Math.round((r.validTimes[r.validTimes.length - 1]!.getTime() - Date.now()) / H_MS);
+
+/** Save the chosen layers for a box: the same choices serve a first save and a refresh. */
+async function saveChoice(bbox: Box, layers: string[], hours: number | null, name: string, onProgress: (text: string) => void): Promise<SavedArea> {
+  const chosen = LAYERS.filter((l) => layers.includes(l.id));
+  // Amounts need the per-step conversion; plain values (profiles, wind) do not.
+  const amounts = [...new Set(chosen.flatMap((l) => l.saveNeeds.filter(isAmount)))];
+  const plain = [...new Set(chosen.flatMap((l) => l.saveNeeds.filter((v) => !isAmount(v))))];
+  return saveArea({ bbox, hours, runs: saveRuns(), variables: amounts, plainVariables: plain, name, layers, basemap, style: map.getStyle(), onProgress: (p) => onProgress(progressText(p)) });
+}
+
+async function afterSavedChange() {
+  for (const a of savedAreas) basemap.removeSaved(a.id);
+  await registerSavedAreas();
+  drawSavedOutlines();
+  // Offline, the runs come from the saved areas: they may have changed.
+  if (usingSaved) void loadRun();
+}
+
+function openSaveBox() {
+  if (!run || usingSaved) return;
+  const [first, ...rest] = saveRuns();
+  if (!first) return;
+  // The save box is drawn on a flat, north-up map.
+  map.jumpTo({ pitch: 0, bearing: 0 });
+  openSaveMode(map, {
+    firstHours: hoursTo(first),
+    endHours: Math.max(hoursTo(first), ...rest.map(hoursTo)),
+    layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: [...new Set(l.saveNeeds)] })),
+    initial: active.id,
+    // Each model's cells over the box (as saved: 4 bytes a value), for its share of the hours.
+    weatherBytes: (bb, hours, variables) => {
+      const cells = (m: string) => coveringRanges(m, bb).reduce((n, r) => n * (r.end - r.start), 1);
+      const firstH = Math.min(hours, hoursTo(first));
+      const later = rest[0] ? Math.max(0, hours - firstH) * cells(rest[0].model) : 0;
+      return 4 * variables * (firstH * cells(first.model) + later);
+    },
+    basemapBytes: (bb) => basemap.storedBytes(tilesInBox(bb, 0, 15)),
+    save: async (choice, onProgress) => {
+      // Named after the place nearest the box's centre, as the map labels it.
+      const sw = map.project([choice.bbox[0], choice.bbox[1]]), ne = map.project([choice.bbox[2], choice.bbox[3]]);
+      const c = { x: (sw.x + ne.x) / 2, y: (sw.y + ne.y) / 2 };
+      const name = nameNear(map, c, Math.max(40, Math.min(Math.abs(ne.x - sw.x), Math.abs(sw.y - ne.y)) / 2)) ?? `Area ${savedAreas.length + 1}`;
+      await saveChoice(choice.bbox, choice.layers, choice.hours, name, onProgress);
+      await afterSavedChange();
+      document.body.dataset.saved = 'true';
+    },
+    onClose: () => undefined,
+  });
+}
+
+async function openSavedList() {
+  const st = await storageState();
+  openPanel({
+    origin: layersBtn,
+    icon: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>',
+    title: 'Saved areas',
+    caption: 'For use with no signal',
+    body: savedAreasBody(savedAreas, { savedOnly: prefs.savedOnly, online: !usingSaved && !!run, ...st }, {
+      refresh: async (a, onProgress) => {
+        // The same box, layers and window, from the newest forecast; the old copy goes once the new one is in.
+        await saveChoice(a.bbox, a.layers ?? ['precipitation'], a.window ?? null, a.name ?? 'Saved area', onProgress);
+        await deleteArea(a);
+        await afterSavedChange();
+        void openSavedList();
+      },
+      remove: async (a) => {
+        await deleteArea(a);
+        await afterSavedChange();
+      },
+      setSavedOnly,
+    }),
+  });
+}
+
+/** "Saved data only", from the saved areas list or app settings: one pref, one effect. */
+function setSavedOnly(on: boolean) {
+  prefs.savedOnly = on;
+  savePrefs(prefs);
+  document.body.dataset.savedOnly = String(on);
+  void loadRun();
+}
+
+/** Units changed in app settings: every number on screen is formatted again. */
+function redrawForUnits() {
+  showLayer();
+  const p = pin.get();
+  if (p) renderPlace(p);
+  renderReadout();
+  renderRunAge();
+  scrubber.refresh();
+  renderDetails();
+  // The line on the map is labelled with its height.
+  void updateFills();
+}
+
+/** The colours of the map's own lines (freezing line, saved areas) for a theme. */
+const linePaint = (t: Theme) => ({
+  freezing: colorToken('ink', t), label: colorToken('ink', t), halo: colorToken('surface', t), saved: colorToken('ink-2', t),
+});
+
+/** Theme changed: CSS follows the tokens by itself; the map and canvases are recoloured here. */
+function recolourForTheme(t: Theme) {
+  if (mapReady) {
+    applyBaseTheme(map, t);
+    applyTerrainTheme(map, t);
+    threeD.applyTheme(t);
+    const c = linePaint(t);
+    if (map.getLayer('freezing-line')) map.setPaintProperty('freezing-line', 'line-color', c.freezing);
+    if (map.getLayer('freezing-line-label')) { map.setPaintProperty('freezing-line-label', 'text-color', c.label); map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
+    if (map.getLayer('saved-areas')) map.setPaintProperty('saved-areas', 'line-color', c.saved);
+  }
+  // Canvases read the CSS variables when drawn.
+  scrubber.refresh();
+  renderDetails();
+}
+
 function addFreezingLineLayers(beforeId?: string) {
+  const c = linePaint(appSettings.theme());
   map.addSource('freezing-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-  map.addLayer({ id: 'freezing-line', type: 'line', source: 'freezing-line', paint: { 'line-color': colorToken('ink'), 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 2.5] } }, beforeId);
+  map.addLayer({ id: 'freezing-line', type: 'line', source: 'freezing-line', paint: { 'line-color': c.freezing, 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 2.5] } }, beforeId);
   map.addLayer({
     id: 'freezing-line-label', type: 'symbol', source: 'freezing-line',
     layout: { 'symbol-placement': 'line', 'text-field': ['get', 'label'], 'text-size': 12, 'symbol-spacing': 400, 'text-max-angle': 45, 'text-font': ['Noto Sans Regular'] },
-    paint: { 'text-color': colorToken('ink'), 'text-halo-color': colorToken('surface'), 'text-halo-width': 1.5 },
+    paint: { 'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.5 },
   });
 }
 
@@ -1237,18 +1396,19 @@ function drawSavedOutlines() {
   const src = map.getSource('saved-areas') as maplibregl.GeoJSONSource | undefined;
   if (src) { src.setData(data); return; }
   map.addSource('saved-areas', { type: 'geojson', data });
-  map.addLayer({ id: 'saved-areas', type: 'line', source: 'saved-areas', paint: { 'line-color': colorToken('ink-2'), 'line-width': 1.5, 'line-dasharray': [3, 2] } });
+  map.addLayer({ id: 'saved-areas', type: 'line', source: 'saved-areas', paint: { 'line-color': linePaint(appSettings.theme()).saved, 'line-width': 1.5, 'line-dasharray': [3, 2] } });
 }
 
 map.on('load', () => {
   const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  addTerrain(map, firstLabel);
+  addTerrain(map, firstLabel, appSettings.theme());
   applyTerrainPrefs();
   // Under the hillshade and contours, so the terrain reads through at any rate.
   map.addLayer(precipLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   map.addLayer(tempLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
+  threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
   mapReady = true;
   drawSavedOutlines();
   fitPadding();

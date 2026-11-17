@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SAVED_AREA_VERSION, areaContains, parseSavedAreas, estimateSaveBytes, tilesInBox, totalBytes, type SavedArea } from './saved-area';
+import { SAVED_AREA_VERSION, areaContains, areaParts, isExpired, lastHour, parseSavedAreas, estimateSaveBytes, tilesInBox, totalBytes, weatherFiles, type SavedArea } from './saved-area';
 
 const area: SavedArea = {
   version: SAVED_AREA_VERSION, id: 'a1', bbox: [-123.3, 49.3, -122.8, 49.6], savedAt: '2026-11-16T03:00:00Z',
@@ -33,5 +33,27 @@ describe('saved areas', () => {
   it('lists terrain tiles over the zooms', () => {
     const t = tilesInBox([-123.2, 49.3, -123, 49.4], 0, 2);
     expect(t).toEqual([[0, 0, 0], [1, 0, 0], [2, 0, 1]]);
+  });
+});
+
+describe('saved areas with more than one model', () => {
+  const two: SavedArea = {
+    ...area,
+    weather: { ...area.weather, validTimes: ['2026-11-16T01:00:00Z', '2026-11-18T00:00:00Z'], files: { precipitation: 'a1-p.bin' } },
+    more: [{ ...area.weather, model: 'cmc_gem_rdps_10km', run: '2026-11-16T00:00:00Z', validTimes: ['2026-11-18T01:00:00Z', '2026-11-19T00:00:00Z'], files: { precipitation: 'a1-r-p.bin' } }],
+  };
+  it('reads each run as its own part', () => {
+    const parts = areaParts(two);
+    expect(parts.map((p) => [p.id, p.weather.model])).toEqual([['a1', 'cmc_gem_hrdps'], ['a1~1', 'cmc_gem_rdps_10km']]);
+    expect(weatherFiles(two)).toEqual(['a1-p.bin', 'a1-r-p.bin']);
+  });
+  it('expires when its last hour, in any model, has passed', () => {
+    expect(lastHour(two)?.toISOString()).toBe('2026-11-19T00:00:00.000Z');
+    expect(isExpired(two, new Date('2026-11-18T12:00:00Z'))).toBe(false);
+    expect(isExpired(two, new Date('2026-11-19T01:00:00Z'))).toBe(true);
+  });
+  it('costs a sixteenth per hour for the coarser model', () => {
+    const fine = estimateSaveBytes([-123.5, 49.25, -122.5, 50.25], 48).weather;
+    expect(estimateSaveBytes([-123.5, 49.25, -122.5, 50.25], 64, 2, 16).weather).toBeCloseTo(fine * (49 / 48));
   });
 });

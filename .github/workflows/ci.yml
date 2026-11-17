@@ -1,8 +1,17 @@
 name: CI
 
+# Once per change: pull requests, and pushes to main. A push to a branch with
+# an open pull request used to start two identical runs at once, and together
+# they used up Open-Meteo's free per-minute and hourly limits (tests then
+# timed out waiting for the forecast).
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

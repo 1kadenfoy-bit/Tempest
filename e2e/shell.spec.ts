@@ -6,6 +6,10 @@ const YOU = { latitude: 49.3895, longitude: -122.948 };
 const HOME = '/?insets=47,34';
 
 test.use({ geolocation: YOU, permissions: ['geolocation'] });
+// No live weather alerts: a real one would add the badge and change the pictures.
+test.beforeEach(async ({ context }) => {
+  await context.route('**/collections/weather-alerts/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ type: 'FeatureCollection', features: [], numberMatched: 0, numberReturned: 0 }) }));
+});
 
 type MapHandle = {
   getLayoutProperty(layer: string, prop: string): string;
@@ -24,6 +28,13 @@ async function ready(page: Page) {
   await page.waitForFunction(() => document.body.dataset.idle === 'true');
 }
 
+/** For tests of the shell alone: the map and run are in, the pin's forecast need not be (the point service can be slow or refuse). */
+async function mapReady(page: Page) {
+  await expect(page.locator('body')).toHaveAttribute('data-pin', 'ready', { timeout: 45_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-run', 'ready', { timeout: 60_000 });
+  await page.waitForFunction(() => document.body.dataset.idle === 'true');
+}
+
 const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
 
 test('home: shell sits where the v8 template puts it', async ({ page }) => {
@@ -37,12 +48,11 @@ test('home: shell sits where the v8 template puts it', async ({ page }) => {
   // Sheet: collapsed to 320 px including the 34 px bottom inset when the
   // totals fit one line each; it grows a line at a time when they stack.
   await page.addStyleTag({ content: '.summary-main span:nth-child(n+2) { display: none; } .summary-sub { white-space: nowrap !important; }' });
-  await page.waitForTimeout(400);
-  expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 320, 0);
+  await expect.poll(async () => Math.round((await box(page, '#sheet')).y), { timeout: 5_000 }).toBe(844 - 320);
   // Thumb buttons: 56 px, 16 from the right, stacked 16 above the sheet.
+  await expect.poll(async () => { const l = await box(page, '#map-layers'); return Math.round(l.y + l.height); }, { timeout: 5_000 }).toBe(844 - 336);
   const layers = await box(page, '#map-layers');
   expect(layers).toMatchObject({ x: 390 - 16 - 56, width: 56, height: 56 });
-  expect(layers.y + layers.height).toBeCloseTo(844 - 336, 0);
   // Pin and readout describe your location with its elevation.
   await expect(page.locator('.pin-readout')).toContainText(/You · [\d,]+ m/);
   // The readout stays inside the screen.
@@ -99,8 +109,7 @@ test('window control sets the chart span and the week box together', async ({ pa
   await page.click('#window-button');
   await page.getByRole('dialog', { name: 'Window' }).getByRole('button', { name: '24 h' }).click();
   await expect(page.locator('#window-label')).toHaveText('24 h');
-  await page.waitForTimeout(100);
-  expect((await box(page, '#week-box')).width).toBeCloseTo(wide / 2, -1);
+  await expect.poll(async () => Math.abs((await box(page, '#week-box')).width - wide / 2), { timeout: 5_000 }).toBeLessThan(5);
   await page.reload();
   await ready(page);
   await expect(page.locator('#window-label')).toHaveText('24 h');
@@ -119,7 +128,7 @@ test('the map panel links to the phone tests and back', async ({ page }) => {
 
 test('map panel grows from its button, switches terrain, and remembers', async ({ page }) => {
   await page.goto(HOME);
-  await ready(page);
+  await mapReady(page);
   await page.click('#map-layers');
   const panel = page.getByRole('dialog', { name: 'Map' });
   await expect(panel).toBeVisible();
@@ -137,7 +146,7 @@ test('map panel grows from its button, switches terrain, and remembers', async (
 
   // Remembered after a reload.
   await page.reload();
-  await ready(page);
+  await mapReady(page);
   expect(await vis()).toBe('none');
   await page.click('#map-layers');
   await expect(page.getByRole('button', { name: 'Hillshade' })).toHaveAttribute('aria-pressed', 'false');
@@ -151,9 +160,8 @@ test('sheet pulls up under the top bar and back down', async ({ page }) => {
   await ready(page);
   await page.click('#sheet-handle');
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'up');
-  await page.waitForTimeout(400);
-  // 16 below the top bar: 55 + 56 + 16 = 127 on the artboard.
-  expect((await box(page, '#sheet')).y).toBeCloseTo(127, 0);
+  // 16 below the top bar: 55 + 56 + 16 = 127 on the artboard (waits for the slide to finish).
+  await expect.poll(async () => Math.round((await box(page, '#sheet')).y), { timeout: 5_000 }).toBe(127);
   await expect(page.locator('#subject-place')).toContainText('Your location');
   await page.screenshot({ path: 'test-results/screens/m1-sheet-up.png' });
 
@@ -177,12 +185,10 @@ test('sheet tucks away to its handle and comes back', async ({ page }) => {
   await page.mouse.move(h.x + h.width / 2, h.y + 320, { steps: 8 });
   await page.mouse.up();
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'tucked');
-  await page.waitForTimeout(400);
-  // Only the handle shows (21 px and 8 px of room) above the 34 px bottom inset.
-  expect((await box(page, '#sheet')).y).toBeCloseTo(844 - 63, 0);
+  // Only the handle shows (21 px and 8 px of room) above the 34 px bottom inset (waits for the slide to finish).
+  await expect.poll(async () => Math.round((await box(page, '#sheet')).y), { timeout: 5_000 }).toBe(844 - 63);
   // Thumb buttons follow the sheet down.
-  const layers = await box(page, '#map-layers');
-  expect(layers.y + layers.height).toBeCloseTo(844 - 63 - 16, 0);
+  await expect.poll(async () => { const l = await box(page, '#map-layers'); return Math.round(l.y + l.height); }, { timeout: 5_000 }).toBe(844 - 63 - 16);
   await page.screenshot({ path: 'test-results/screens/m1-sheet-tucked.png' });
   await page.click('#sheet-handle');
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'collapsed');

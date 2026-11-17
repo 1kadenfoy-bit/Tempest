@@ -10,7 +10,7 @@ import { crossings as rawCrossings, type Crossing } from '../../core/time/crossi
 const crossings = (...a: Parameters<typeof rawCrossings>): Crossing[] => rawCrossings(...a).map((c) => ({ ...c, time: new Date(Math.round(c.time.getTime() / 3_600_000) * 3_600_000) }));
 import { isDaylight } from '../../core/time/sun';
 import { dayStart } from '../../core/time/window';
-import { formatDayLabel, formatDegrees, formatElevation, formatTemp, formatWhen, formatWhole } from '../../core/units/format';
+import { formatDayLabel, formatDegrees, formatElevation, formatElevationNumber, formatSpeed, formatTemp, formatTempNumber, formatTempSigned, formatWhen, tempValue, unitLabel } from '../../core/units/format';
 import type { Card, DetailContext, Setting, ViewSample } from '../contract';
 import { temperatureRamp } from './fill';
 
@@ -31,7 +31,7 @@ function headline(v: PinValues, i: number, now: Date): Card {
   const t = v.temp[i]!;
   const parts: string[] = [];
   const f = v.feels[i]!;
-  if (v.kind[i] === 'wind chill' || v.kind[i] === 'humidex') parts.push(`Feels like ${formatDegrees(f, false).replace('°', '')} (${v.kind[i]}).`);
+  if (v.kind[i] === 'wind chill' || v.kind[i] === 'humidex') parts.push(`Feels like ${formatTempNumber(f)} (${v.kind[i]}).`);
   else parts.push('Feels like the air temperature.');
   const cross = crossings(v.times, v.temp, 0);
   const before = [...cross].reverse().find((c) => c.time <= v.times[i]!);
@@ -53,9 +53,9 @@ function today(v: PinValues, ctx: DetailContext): Card {
     const lo = idx.reduce((a, b) => (v.temp[b]! < v.temp[a]! ? b : a));
     const hi = idx.reduce((a, b) => (v.temp[b]! > v.temp[a]! ? b : a));
     stats.push({ label: 'Low', value: formatTemp(v.temp[lo]!), sub: formatWhen(v.times[lo]!, v.times[lo]!) });
-    stats.push({ label: 'High', value: formatDegrees(v.temp[hi]!).replace('°', ' °C'), sub: formatWhen(v.times[hi]!, v.times[hi]!) });
+    stats.push({ label: 'High', value: formatTempSigned(v.temp[hi]!), sub: formatWhen(v.times[hi]!, v.times[hi]!) });
   }
-  stats.push({ label: 'Freezing level', value: fl === null || fl === undefined ? '–' : formatWhole(Math.round(fl / 10) * 10), unit: fl === null || fl === undefined ? 'none in the column' : 'm' });
+  stats.push({ label: 'Freezing level', value: fl === null || fl === undefined ? '–' : formatElevationNumber(Math.round(fl / 10) * 10), unit: fl === null || fl === undefined ? 'none in the column' : unitLabel('elevation') });
   // Humidity over the day (model, 2 m), with the dew point range under it.
   const rh = idx.map((k) => s.values.relative_humidity_2m?.[k] ?? NaN).filter(Number.isFinite);
   const dew = idx.flatMap((k) => { const t2 = s.values.temperature_2m?.[k] ?? NaN, r = s.values.relative_humidity_2m?.[k] ?? NaN; return Number.isFinite(t2) && Number.isFinite(r) ? [dewPoint(t2, r)] : []; });
@@ -71,8 +71,8 @@ function today(v: PinValues, ctx: DetailContext): Card {
   const night = idx.filter((k) => !isDaylight(v.times[k]!, s.lat, s.lon)).map((k) => v.temp[k]!);
   const avg = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
   const notes = [];
-  if (day.length) notes.push(`Daytime average ${formatDegrees(avg(day)).replace('°', ' °C')}`);
-  if (night.length) notes.push(`night-time average ${formatDegrees(avg(night)).replace('°', ' °C')}`);
+  if (day.length) notes.push(`Daytime average ${formatTempSigned(avg(day))}`);
+  if (night.length) notes.push(`night-time average ${formatTempSigned(avg(night))}`);
   const label = formatDayLabel(new Date(d0.getTime() + 12 * H), ctx.now);
   return {
     kind: 'stats', title: label === 'Today' ? 'TODAY' : label.toUpperCase(),
@@ -85,11 +85,11 @@ function today(v: PinValues, ctx: DetailContext): Card {
 function byElevation(v: PinValues, ctx: DetailContext): Card | null {
   const p = profileAt(ctx.pin.series!.values, ctx.index);
   if (!isComplete(p)) return null;
-  const points = Array.from(p.gh, (gh, k) => ({ elevation: gh, value: p.temp[k]!, color: rgba(p.temp[k]!, 1) })).filter((x) => x.elevation >= -50);
+  const points = Array.from(p.gh, (gh, k) => ({ elevation: gh, value: tempValue(p.temp[k]!), color: rgba(p.temp[k]!, 1) })).filter((x) => x.elevation >= -50);
   const t = v.temp[ctx.index]!;
   return {
-    kind: 'value-elevation', title: 'BY ELEVATION', meta: `at ${formatWhen(ctx.cursor, ctx.now)}`, points, zero: true, unit: '°C',
-    you: { elevation: Math.max(0, ctx.pin.elevation ?? 0), value: t, label: `You · ${formatTemp(t)}` },
+    kind: 'value-elevation', title: 'BY ELEVATION', meta: `at ${formatWhen(ctx.cursor, ctx.now)}`, points, zero: true, zeroAt: tempValue(0), unit: unitLabel('temp'),
+    you: { elevation: Math.max(0, ctx.pin.elevation ?? 0), value: tempValue(t), label: `You · ${formatTemp(t)}` },
   };
 }
 
@@ -100,11 +100,11 @@ function aboveBelow(v: PinValues, ctx: DetailContext): Card {
   const next = cross.find((c) => c.time >= ctx.cursor) ?? cross[cross.length - 1];
   const hours = Math.round((ctx.end.getTime() - ctx.start.getTime()) / H);
   return {
-    kind: 'elevation-time', title: 'ABOVE OR BELOW 0 °C AT EACH ELEVATION', meta: `same ${hours} h as the chart`,
+    kind: 'elevation-time', title: `ABOVE OR BELOW ${formatTemp(0)} AT EACH ELEVATION`, meta: `same ${hours} h as the chart`,
     times: inWin.map((x) => x.t), level: inWin.map((x) => v.freezing[x.k] ?? null),
-    above: { label: 'Below 0 °C', color: rgba(-10, 0.3) }, below: { label: 'Above 0 °C', color: rgba(14, 0.3) },
+    above: { label: `Below ${formatTemp(0)}`, color: rgba(-10, 0.3) }, below: { label: `Above ${formatTemp(0)}`, color: rgba(14, 0.3) },
     you: { elevation: z, label: `You ${formatElevation(z)}` },
-    marker: next ? { time: next.time, text: `${next.dir === 'down' ? 'Below' : 'Above'} 0 °C from ${formatWhen(next.time, ctx.cursor)}` } : undefined,
+    marker: next ? { time: next.time, text: `${next.dir === 'down' ? 'Below' : 'Above'} ${formatTemp(0)} from ${formatWhen(next.time, ctx.cursor)}` } : undefined,
   };
 }
 
@@ -113,7 +113,7 @@ function freezeThaw(v: PinValues, ctx: DetailContext): Card {
   const cross = crossings(v.times, v.temp, 0).filter((c) => c.time >= ctx.start && c.time <= ctx.end);
   if (!cross.length) {
     const t = v.temp[ctx.index]!;
-    return { kind: 'status', icon: 'snowflake', text: `Freeze-thaw: none in this window · ${t < 0 ? 'below' : 'above'} 0 °C throughout the model’s hours here` };
+    return { kind: 'status', icon: 'snowflake', text: `Freeze-thaw: none in this window · ${t < 0 ? 'below' : 'above'} ${formatTemp(0)} throughout the model’s hours here` };
   }
   const text = cross.map((c, n) => `${c.dir}${n === cross.length - 1 && c.time > ctx.now ? ' about' : ''} ${formatWhen(c.time, n ? cross[n - 1]!.time : ctx.start)}`).join(', ');
   // A refreeze at night after a thaw of 3 hours or more: a crust is likely.
@@ -123,7 +123,7 @@ function freezeThaw(v: PinValues, ctx: DetailContext): Card {
     const thawHours = prev && prev.dir === 'up' ? (c.time.getTime() - prev.time.getTime()) / H : 0;
     if (c.dir === 'down' && !isDaylight(c.time, s.lat, s.lon) && thawHours >= 3) note = 'Snow surface likely crusted overnight';
   });
-  return { kind: 'status', icon: 'snowflake', text: `Freeze-thaw: crossed 0 °C ${text}`, note };
+  return { kind: 'status', icon: 'snowflake', text: `Freeze-thaw: crossed ${formatTemp(0)} ${text}`, note };
 }
 
 function hourly(v: PinValues, ctx: DetailContext): Card {
@@ -138,10 +138,10 @@ function hourly(v: PinValues, ctx: DetailContext): Card {
     rows.push([
       formatWhen(t, ctx.cursor),
       formatTemp(v.temp[k]!),
-      `${formatDegrees(v.feels[k]!, false).replace('°', '')}${kind}`,
+      `${formatTempNumber(v.feels[k]!)}${kind}`,
       Number.isFinite(rh) ? `${Math.round(rh)}%` : '–',
       Number.isFinite(t2) && Number.isFinite(rh) ? formatDegrees(dewPoint(t2, rh), false) : '–',
-      Number.isFinite(wind) ? `${Math.round(wind)} km/h` : '–',
+      Number.isFinite(wind) ? formatSpeed(wind) : '–',
     ]);
   });
   return { kind: 'expandable', title: 'Hourly detail', caption: 'Humidity, dew point, feels-like index and the wind it used', header: ['Time', 'Air', 'Feels', 'Humidity', 'Dew point', 'Wind 10 m'], rows };
@@ -166,5 +166,5 @@ export function temperatureInView(view: ViewSample): string | null {
   const warm = cells.reduce((a, b) => (b.value > a.value ? b : a));
   const cold = cells.reduce((a, b) => (b.value < a.value ? b : a));
   const where = (c: { lon: number; lat: number }, prep: string) => { const n = view.nameAt(c.lon, c.lat); return n ? ` ${prep} ${n}` : ''; };
-  return `In view: warmest ${formatDegrees(warm.value).replace('°', ' °C')}${where(warm, 'at')} · coldest ${formatDegrees(cold.value).replace('°', ' °C')}${where(cold, 'on')}`;
+  return `In view: warmest ${formatTempSigned(warm.value)}${where(warm, 'at')} · coldest ${formatTempSigned(cold.value)}${where(cold, 'on')}`;
 }

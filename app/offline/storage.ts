@@ -39,3 +39,12 @@ export async function readJson<T>(name: string): Promise<T | null> {
 export async function requestPersistence(): Promise<boolean> {
   try { return (await navigator.storage.persist?.()) ?? false; } catch { return false; }
 }
+
+/** Whether the browser has agreed to keep this app's data (null when it cannot say), and how much it uses. */
+export async function storageState(): Promise<{ kept: boolean | null; usedBytes: number | null }> {
+  let kept: boolean | null = null;
+  let usedBytes: number | null = null;
+  try { if (navigator.storage?.persisted) kept = await navigator.storage.persisted(); } catch { /* unknown */ }
+  try { usedBytes = (await navigator.storage?.estimate?.())?.usage ?? null; } catch { /* unknown */ }
+  return { kept, usedBytes };
+}
