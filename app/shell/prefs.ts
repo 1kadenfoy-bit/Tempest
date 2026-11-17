@@ -13,10 +13,12 @@ export interface Prefs {
   layerModels: Record<string, string>;
   /** Each layer's settings, by layer id. */
   layerSettings: Record<string, Record<string, string | boolean>>;
+  /** Read only saved areas, never the network (weak signal hangs requests and drains the battery). */
+  savedOnly: boolean;
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {} };
+const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false };
 
 export function loadPrefs(): Prefs {
   try {

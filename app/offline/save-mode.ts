@@ -14,7 +14,7 @@ export interface SaveChoice {
 }
 
 /** A layer that can be saved, and how many weather variables it keeps. */
-export interface SaveLayer { id: string; title: string; variables: number }
+export interface SaveLayer { id: string; title: string; variables: string[] }
 
 const CHECK = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
 const DOWNLOAD = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -25,10 +25,15 @@ const mb = (b: number) => (b < 1e6 ? `${Math.max(1, Math.round(b / 1e3))} kB` : 
 const MAX_BYTES = 400e6;
 
 export function openSaveMode(map: MapLibreMap, opts: {
-  modelHours: number;
+  /** Hours from now to the first model's end (HRDPS); later hours come from the next model, at a coarser grid. */
+  firstHours: number;
+  /** Hours from now to the last saved model's end ("Model end"). */
+  endHours: number;
   layers: SaveLayer[];
   /** Ticked at the start: the layer on screen. */
   initial: string;
+  /** Weather bytes for a box, the hours from now and how many variables (from the models' own cells). */
+  weatherBytes(bbox: [number, number, number, number], hours: number, variables: number): number;
   /** Exact base map bytes for a box, from the map files' indexes. */
   basemapBytes(bbox: [number, number, number, number]): Promise<number>;
   save(choice: SaveChoice, onProgress: (text: string) => void): Promise<void>;
@@ -53,7 +58,7 @@ export function openSaveMode(map: MapLibreMap, opts: {
         </div>
         <div class="group">
           <span class="group-title">TIME WINDOW</span>
-          <div class="segmented save-window"><button data-h="24" aria-pressed="false">24 h</button><button data-h="end" aria-pressed="true">Model end</button></div>
+          <div class="segmented save-window"><button data-h="24" aria-pressed="false">24 h</button><button data-h="48" aria-pressed="true">48 h</button><button data-h="72" aria-pressed="false">3 days</button><button data-h="end" aria-pressed="false">Model end</button></div>
         </div>
         <div class="save-map-line"><span>Map and terrain, finest detail</span><span class="save-map-size"></span></div>
         <button class="primary-button save-go"></button>
@@ -81,7 +86,7 @@ export function openSaveMode(map: MapLibreMap, opts: {
   const strip = $('.save-strip').getBoundingClientRect();
   const panel = $('.save-panel').getBoundingClientRect();
   let rect = { x: 44, y: strip.bottom + 24, w: innerWidth - 88, h: Math.max(80, panel.top - strip.bottom - 48) };
-  let hours: number | null = null;
+  let hours: number | null = 48;
   let saving = false;
 
   const bbox = (): [number, number, number, number] => {
@@ -96,13 +101,14 @@ export function openSaveMode(map: MapLibreMap, opts: {
     const kmW = (bb[2] - bb[0]) * 111.32 * Math.cos((((bb[1] + bb[3]) / 2) * Math.PI) / 180);
     const kmH = (bb[3] - bb[1]) * 110.57;
     $('.save-area-size').textContent = `Area · ${Math.round(kmW)} × ${Math.round(kmH)} km`;
-    const h = hours ?? opts.modelHours;
-    let weather = 0;
+    const h = Math.min(hours ?? opts.endHours, opts.endHours);
+    // Layers share values (the profile): the total counts each once.
+    const shared = new Set<string>();
     for (const l of opts.layers) {
-      const b = estimateSaveBytes(bb, h, l.variables).weather;
-      layerRows.get(l.id)!.textContent = `Grids for this area · about ${mb(b)}`;
-      if (ticked.has(l.id)) weather += b;
+      layerRows.get(l.id)!.textContent = `Grids for this area · about ${mb(opts.weatherBytes(bb, h, l.variables.length))}`;
+      if (ticked.has(l.id)) l.variables.forEach((v) => shared.add(v));
     }
+    const weather = opts.weatherBytes(bb, h, shared.size);
     const est = { ...estimateSaveBytes(bb, h), weather };
     const key = bb.map((v) => v.toFixed(3)).join(',');
     const known = basemapSizes.get(key);
