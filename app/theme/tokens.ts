@@ -37,6 +37,14 @@ export function tokenCss(theme: Theme = 'dark'): string {
   for (const name of Object.keys(tokens.color) as ColorName[]) {
     lines.push(`--${name}: ${colorToken(name, theme)};`);
   }
+  // Rain and snow amounts written as text (the totals table). Dark: the
+  // tokens' text accents. Light has none, so the darkest stop of each light
+  // ramp, which reads on white. The map's ramps are not themed.
+  const precip = tokens.data.precipitation;
+  lines.push(
+    `--accent-rain: ${theme === 'dark' ? precip.textAccent.rain : precip.rain.light.at(-1)};`,
+    `--accent-snow: ${theme === 'dark' ? precip.textAccent.snow : precip.snow.light.at(-1)};`,
+  );
   lines.push(`--font-display: ${tokens.font.display};`, `--font-body: ${tokens.font.body};`);
   for (const [name, t] of Object.entries(tokens.type)) {
     lines.push(`--type-${name}: ${t.weight} ${t.size}px var(--font-${t.family});`);

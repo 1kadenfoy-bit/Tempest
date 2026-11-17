@@ -1,7 +1,6 @@
 // Precipitation details (v8 15-PrecipUp, 16-PrecipScroll) and settings (17).
 // Amounts and type come from the pin's model cell; the snow line and the
 // freezing level from the same hour's profile (wet-bulb 0.5 °C and 0 °C).
-import tokens from '../../design/tokens.json';
 import { rampColor } from '../../core/color/ramp';
 import { ratioFor, shareAtHeight, totalAtHeight, type SnowRatio } from '../../core/precip/by-elevation';
 import { PRECIP_CUTOFF, snowShare, typeFromShare } from '../../core/precip/type';
@@ -16,7 +15,8 @@ import { precipRamp } from './fill';
 import { withObserved } from './observed';
 
 const H = 3_600_000;
-const accent = tokens.data.precipitation.textAccent;
+/** Text colours for rain and snow amounts: the tokens' text accents, per theme (app/theme/tokens.ts). */
+const accent = { rain: 'var(--accent-rain)', snow: 'var(--accent-snow)' };
 
 /** The settings, labelled in the units chosen in app settings (read when the panel opens). */
 export const settings = (): Setting[] => [
