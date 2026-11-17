@@ -6,7 +6,7 @@ import type { LngLatLike } from 'maplibre-gl';
 import { MemoryStore } from '../core/store/memory-store';
 import { TimeCursor } from '../core/time/cursor';
 import { formatRunAge, runAgeHours } from '../core/time/run-age';
-import { formatCursorTime, formatElevation } from '../core/units/format';
+import { formatCursorTime, formatElevation, formatMinutesAgo } from '../core/units/format';
 import type { PointSeries } from '../core/vocabulary';
 import { MODELS, fetchPointSeries } from '../adapters/openmeteo-maps/point-series';
 import { fetchRunMetadata, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
@@ -67,6 +67,10 @@ import { colorToken, type Theme } from './theme/tokens';
 import { startAppSettings } from './settings/app-settings';
 import { alertsAt } from './alerts/alerts';
 import { setupSearch } from './search/search';
+import { COVERAGE, PRODUCTS, fetchFrames, radarAt, source as radarSource, tileUrl as radarTileUrl } from '../adapters/eccc-radar/radar';
+import { radarLayer, shownOf, type RadarShown } from '../layers/radar';
+import type { RadarAtPin, RadarPoint } from '../layers/contract';
+import { ImageFrames } from './map/image-frames';
 
 const prefs = loadPrefs();
 // App settings: units and theme apply before anything draws; the hooks redraw
@@ -141,7 +145,109 @@ const scrubber = setupScrubber(cursor, prefs.windowHours, (h) => { prefs.windowH
 setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh(); }, 30_000);
 
 // The condition layers that work, in menu order. One is shown at a time.
-const LAYERS: LayerSlots[] = [precipitation, temperature, wind];
+// Radar (no v8 design yet): ECCC's pictures in ECCC's colours; the layer gets its legend from here, never from the source.
+const radarShown = (): RadarShown => shownOf(settingsFor(radar));
+const radar: LayerSlots = radarLayer((s) => PRODUCTS[s].legend, () => radarShown());
+const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar];
+/** Why a layer cannot be saved for offline use, when its source does not allow it. */
+const onlineOnly = (l: LayerSlots): string | undefined => (l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving' : undefined);
+
+// ---- Radar frames: the times ECCC holds (last 3 h, every 6 min), and what the cursor's frame shows at the pin.
+let radarFrames: Date[] = [];
+let radarFor = '';
+let radarFetchedAt = 0;
+let radarError = false;
+const RADAR_REFRESH_MS = 6 * 60_000;
+/** Values at the pin by product, place and frame (each frame is final once issued). */
+const radarPoints = new Map<string, RadarPoint | 'error'>();
+let radarPinTimer = 0;
+/** Radar is online only: no signal, or saved data only, means none. */
+const radarOffline = () => usingSaved || (prefs.savedOnly && savedAreas.length > 0) || !navigator.onLine;
+const radarPointKey = (lat: number, lng: number, t: Date) => `${radarShown()}|${lat.toFixed(4)},${lng.toFixed(4)}|${t.toISOString()}`;
+// ECCC's pictures sit over the terrain and under the labels; ECCC's colours, a little see-through so the map reads.
+const radarImages = new ImageFrames(map, 'radar', { opacity: 0.85, keep: 12, attribution: 'Radar © Environment and Climate Change Canada', maxzoom: 10 });
+
+function radarPinData(): RadarAtPin | undefined {
+  if (!active.frames) return undefined;
+  const t = cursor.time && radarFrames.length ? cursor.time : null;
+  const p = pin?.get();
+  if (radarOffline()) return { frames: radarFrames, time: t, point: 'offline' };
+  if (!radarFrames.length) return { frames: [], time: null, point: radarError ? 'error' : null };
+  return { frames: radarFrames, time: t, point: p && t ? radarPoints.get(radarPointKey(p.lat, p.lng, t)) ?? null : null };
+}
+
+/** The frames the cursor steps through while radar is shown: it stays on the newest unless moved back. */
+function setFrameSteps() {
+  const t = cursor.time;
+  const onFrames = !!t && radarFrames.some((f) => f.getTime() === t.getTime());
+  const atNewest = !t || !onFrames || (cursor.last && t.getTime() === cursor.last.getTime());
+  cursor.setSteps(radarFrames, atNewest ? radarFrames[radarFrames.length - 1] : t);
+  scrubber.setTimeline({ seams: [] });
+}
+
+/** Ask ECCC which frames it holds (once a frame, or now when `force`). */
+async function loadRadarFrames(force = false) {
+  if (!active.frames) return;
+  const shown = radarShown();
+  if (radarOffline()) { renderRunAge(); renderReadout(); scrubber.refresh(); void updateFills(); return; }
+  if (!force && shown === radarFor && Date.now() - radarFetchedAt < RADAR_REFRESH_MS) return;
+  if (shown !== radarFor) { radarFrames = []; setFrameSteps(); }
+  try {
+    const times = await fetchFrames(PRODUCTS[shown].layer);
+    if (shown !== radarShown()) return;
+    radarFrames = times;
+    radarFor = shown;
+    radarFetchedAt = Date.now();
+    radarError = false;
+  } catch (err) {
+    console.warn('radar frames unavailable', err);
+    radarError = true;
+  }
+  if (!active.frames) return;
+  setFrameSteps();
+  renderRunAge();
+  renderReadout();
+  scrubber.refresh();
+  void updateFills();
+  scheduleRadarPin();
+  document.body.dataset.radar = radarFrames.length ? 'ready' : 'error';
+}
+
+/** The cursor's frame at the pin, once the cursor rests (not on every frame while playing). */
+function scheduleRadarPin() {
+  clearTimeout(radarPinTimer);
+  if (active.frames) radarPinTimer = window.setTimeout(() => void loadRadarPin(), 800);
+}
+async function loadRadarPin() {
+  const p = pin?.get();
+  const t = cursor.time;
+  if (!active.frames || !p || !t || radarOffline() || !radarFrames.some((f) => f.getTime() === t.getTime())) return;
+  const key = radarPointKey(p.lat, p.lng, t);
+  if (radarPoints.get(key) && radarPoints.get(key) !== 'error') return;
+  const v = await radarAt(radarShown(), p.lat, p.lng, t).catch((err) => { console.warn('radar at the pin', err); return 'error' as const; });
+  radarPoints.set(key, v);
+  if (radarPoints.size > 300) radarPoints.delete(radarPoints.keys().next().value!);
+  renderReadout();
+  scrubber.refresh();
+}
+
+/** Show the cursor's frame, with the next ones loading behind it (and the loop's start at the newest). */
+function showRadarFrame() {
+  const t = cursor.time;
+  if (!t || !radarFrames.length || radarOffline()) { radarImages.show(null); radarImages.setCoverage(null); return; }
+  const shown = radarShown();
+  const prod = PRODUCTS[shown];
+  radarImages.setSource(shown, (x) => radarTileUrl(prod.layer, prod.style, x));
+  const i = radarFrames.findIndex((f) => f.getTime() === t.getTime());
+  const newest = radarFrames[radarFrames.length - 1]!;
+  const loopStart = radarFrames.find((f) => f.getTime() >= newest.getTime() - (active.frames?.loopHours ?? 1) * 3_600_000) ?? radarFrames[0]!;
+  const ahead = i < 0 ? [] : [radarFrames[i + 1] ?? loopStart, radarFrames[i + 2]].filter((x): x is Date => !!x);
+  radarImages.show(t, ahead);
+  // ECCC's coverage at the newest frame: where its radars reach (grey beyond), so gaps never read as dry.
+  radarImages.setCoverage(settingsFor(radar).coverage ? radarTileUrl(COVERAGE.layer, COVERAGE.style, newest) : null);
+  document.body.dataset.fill = 'ready';
+  document.body.dataset.radarFrame = t.toISOString();
+}
 /** Layers read from the pressure-level profile (GDPS's separate profile files, its 3-hourly steps). */
 const usesProfile = (l: LayerSlots) => l.id !== 'precipitation';
 /**
@@ -210,6 +316,8 @@ function rebuildTimeline() {
   // has it (earlier runs, observed precipitation), the map does not.
   const firstStep = timeline.steps[0];
   pastSteps = firstStep && !usingSaved ? Array.from({ length: PAST_HOURS }, (_, k) => new Date(firstStep.getTime() - (PAST_HOURS - k) * 3_600_000)) : [];
+  // An observed layer (radar): the one cursor steps through its frames instead.
+  if (active.frames) { setFrameSteps(); return; }
   cursor.setSteps([...pastSteps, ...timeline.steps], cursor.time ?? new Date());
   scrubber.setTimeline({
     seams: timeline.seams.map((x) => ({ time: x.time, label: REGISTRY[x.to as ModelId]?.label ?? x.to })),
@@ -222,7 +330,7 @@ let usingSaved = false;
 /** Observed precipitation at the pin for the week's past (HRDPA), online only. */
 let observed: PinData['observed'] = undefined;
 let observedFor = '';
-const pinData = (): PinData => ({ series, elevation: pin?.get()?.elevation ?? null, observed, ground: pinGround.values });
+const pinData = (): PinData => ({ series, elevation: pin?.get()?.elevation ?? null, observed, ground: pinGround.values, radar: radarPinData() });
 
 /** The model's own ground near the pin, per model on the time line (wind reads the terrain against it). */
 const pinGround: { key: string; values: Record<string, number> } = { key: '', values: {} };
@@ -277,12 +385,25 @@ function showLayer() {
     drawChart: (ctx, w, h, start, end) => active.drawChart(ctx, w, h, pinData(), start, end),
     summary: (start, c, end) => active.summary(pinData(), start, c, end, settingsFor(active)),
     ...(weekDay ? { weekDay: (a: Date, b: Date) => weekDay(pinData(), a, b) } : {}),
+    frames: active.frames,
   });
+  // An observed layer has no model to choose.
+  $('model-pill').hidden = Boolean(active.frames);
   document.body.dataset.layer = active.id;
 }
 showLayer();
 
 function renderRunAge() {
+  if (active.frames) {
+    // Radar: the newest frame's age (stale past 30 minutes), or why there is none.
+    const el = $('run-age');
+    const newest = radarFrames[radarFrames.length - 1];
+    el.textContent = radarOffline() ? 'Radar · needs a connection'
+      : newest ? `ECCC radar · newest ${formatMinutesAgo(newest, new Date())}`
+      : radarError ? 'Radar not reachable · tap to retry' : 'Finding the radar frames…';
+    el.dataset.stale = String(!newest || radarOffline() || Date.now() - newest.getTime() > 30 * 60_000);
+    return;
+  }
   // The run of the model under the cursor; a missing model is named (visible fallback).
   const seg = cursor.time ? segmentAt(timeline, mapTime(cursor.time)) : timeline.segments[0];
   const r = seg ? runs[seg.model as ModelId] ?? run : run;
@@ -577,7 +698,24 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
  * per-minute limit); the release fetches what is new.
  */
 async function updateFills(moving = false) {
-  if (!cursor.time || !mapReady) return;
+  if (!mapReady) return;
+  if (active.frames) {
+    // Radar alone fills the map: the forecast fills step aside (and any still on their way are dropped).
+    ++fillSeq;
+    precipLayer.setFields([]);
+    precipLayer.setShare(null);
+    tempLayer.visible = false;
+    windLayer.visible = false;
+    windLayer.setProfiles(null);
+    flow.setShown(false);
+    flow.setField(null);
+    setLine(null, null);
+    showRadarFrame();
+    return;
+  }
+  radarImages.show(null);
+  radarImages.setCoverage(null);
+  if (!cursor.time) return;
   const when = mapTime(cursor.time);
   const at = runAt(when);
   if (!at) return;
@@ -654,6 +792,7 @@ cursor.subscribe(() => {
   renderRunAge();
   scheduleFills(60);
   scheduleDetails();
+  scheduleRadarPin();
 });
 
 /**
@@ -748,9 +887,10 @@ async function loadRun() {
     document.body.dataset.run = 'saved';
     return;
   }
+  document.body.dataset.run = 'error';
+  if (active.frames) { renderRunAge(); return; }
   $('run-age').textContent = 'Weather unavailable · tap to retry';
   scrubber.setStatus('Could not reach the weather data');
-  document.body.dataset.run = 'error';
 }
 
 let seriesSeq = 0;
@@ -860,6 +1000,8 @@ function stitch(parts: (PointSeries | null)[]): PointSeries | null {
 }
 
 async function loadSeries() {
+  // Radar has no forecast at the pin: drop any series still on its way.
+  if (active.frames) { ++seriesSeq; scrubber.setStatus(''); return; }
   const p = pin.get();
   if (!run || !p || !timeline.segments.length) return;
   void loadObserved();
@@ -942,6 +1084,9 @@ async function savedSeries(r: RunMetadata, lat: number, lng: number): Promise<Po
 setInterval(() => { if (document.visibilityState === 'visible') renderRunAge(); }, 60_000);
 // A new run can land while the app stays open: look every 10 minutes while it is on screen.
 setInterval(() => { if (document.visibilityState === 'visible' && !usingSaved) void loadRun(); }, 10 * 60_000);
+// Radar: ECCC adds a frame every 6 minutes; ask again once one is due, while it is on screen.
+setInterval(() => { if (document.visibilityState === 'visible' && active.frames) { void loadRadarFrames(); renderRunAge(); scrubber.refresh(); } }, 60_000);
+addEventListener('online', () => void loadRadarFrames(true));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderRunAge(); void loadRun(); } });
 
 // Pin
@@ -960,6 +1105,7 @@ const renderPlace = (p: PinState) => {
   if (where !== lastPlace) {
     lastPlace = where;
     alertsAt(p.lat, p.lng);
+    scheduleRadarPin();
     clearTimeout(seriesTimer);
     seriesTimer = window.setTimeout(() => void loadSeries(), 250);
   }
@@ -1066,7 +1212,9 @@ function renderDetails() {
   // A layer's own first line (precipitation: the snow ratio) sits above the model line.
   const own = active.id === 'precipitation' ? extra : [];
   const after = active.id === 'precipitation' ? [] : extra;
-  for (const text of [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`]) {
+  // Radar is observed, not a model run: its own lines only.
+  const footLines = active.frames ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
+  for (const text of footLines) {
     const l = document.createElement('span');
     l.textContent = text;
     lines.append(l);
@@ -1097,6 +1245,8 @@ function openLayerSettings(origin: HTMLElement) {
     prefs.layerSettings[layer.id] = { ...(prefs.layerSettings[layer.id] ?? {}), [key]: v };
     savePrefs(prefs);
     if (layer.id === 'precipitation' && key === 'type') precipLayer.setStyle(precip.precipRenderStyle(v as 'all' | 'rain' | 'snow'));
+    // Radar: another product has its own frames and legend.
+    if (layer.id === radar.id && key === 'shown') { showLayer(); void loadRadarFrames(true); }
     renderReadout();
     scrubber.refresh();
     renderDetails();
@@ -1164,8 +1314,11 @@ function setActive(l: LayerSlots) {
   void updateFills();
   void loadSeries();
   void loadPinGround();
+  scrubber.setStatus('');
+  void loadRadarFrames();
 }
 layerBtn.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('#run-age') && active.frames && radarError) { void loadRadarFrames(true); return; }
   if ((e.target as HTMLElement).closest('#run-age') && document.body.dataset.run === 'error') { void loadRun(); return; }
   if (isOpenFrom(layerBtn)) { closePanel(); return; }
   openPanel({
@@ -1284,7 +1437,7 @@ function openSaveBox() {
   openSaveMode(map, {
     firstHours: hoursTo(first),
     endHours: Math.max(hoursTo(first), ...rest.map(hoursTo)),
-    layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: [...new Set(l.saveNeeds)] })),
+    layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: [...new Set(l.saveNeeds)], onlineOnly: onlineOnly(l) })),
     initial: active.id,
     // Each model's cells over the box (as saved: 4 bytes a value), for its share of the hours.
     weatherBytes: (bb, hours, variables) => {
@@ -1409,7 +1562,9 @@ map.on('load', () => {
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
   threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
+  radarImages.setBefore(firstLabel);
   mapReady = true;
+  void loadRadarFrames();
   drawSavedOutlines();
   fitPadding();
   locate(false);

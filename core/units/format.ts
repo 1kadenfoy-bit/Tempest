@@ -98,6 +98,15 @@ export function formatRelative(target: Date, now: Date): string {
   return hours > 0 ? `in ${text}` : `${text} ago`;
 }
 
+/** Minutes for recent frames (radar): "now" under 3 minutes, "18 min ago", then "2 h 6 min ago". */
+export function formatMinutesAgo(target: Date, now: Date): string {
+  const min = Math.round((now.getTime() - target.getTime()) / 60_000);
+  if (min < 3) return min < -2 ? formatRelative(target, now) : 'now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h} h ${m} min ago` : `${h} h ago`;
+}
+
 const oneDecimal = new Intl.NumberFormat('en-CA', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /** "2.4" mm/h, or "0.09" in/h (three decimals under 0.01 in/h): a liquid rate's number. */
@@ -116,6 +125,18 @@ export function formatRate(mmPerHour: number, u: UnitSystem = current): string {
 export function formatRateRange(lo: number, hi: number, u: UnitSystem = current): string {
   const n = (mm: number) => (u === 'metric' ? upToOne.format(mm) : upToThree.format(mmToIn(mm)));
   return `${n(lo)} to ${u === 'metric' ? n(hi) : upToTwo.format(mmToIn(hi))}+ ${unitLabel('rate', u)}`;
+}
+
+/** "0.7 cm/h" or "0.28 in/h": a snowfall rate (radar's snow product). */
+export function formatSnowRate(cmPerHour: number, u: UnitSystem = current): string {
+  const n = u === 'metric' ? oneDecimal.format(cmPerHour) : twoDecimals.format(cmToIn(cmPerHour));
+  return `${n} ${unitLabel('snow', u)}/h`;
+}
+
+/** A legend's span of snowfall rates: "0.1 to 20+ cm/h", or "0.04 to 7.9+ in/h". */
+export function formatSnowRateRange(lo: number, hi: number, u: UnitSystem = current): string {
+  const n = (cm: number) => (u === 'metric' ? upToOne.format(cm) : upToTwo.format(cmToIn(cm)));
+  return `${n(lo)} to ${u === 'metric' ? n(hi) : upToOne.format(cmToIn(hi))}+ ${unitLabel('snow', u)}/h`;
 }
 
 /** Rain's number: "12", "0.4" below 1 mm; inches "0.47", "1.2" from 1 in. `whole` rounds metric to the mm (tables). */

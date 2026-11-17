@@ -4,7 +4,7 @@
 // supplies only its chart drawing and its window summary.
 import { TimeCursor } from '../../core/time/cursor';
 import { DEFAULT_WINDOW_HOURS, WINDOW_OPTIONS, dayStart, weekRange, windowRange } from '../../core/time/window';
-import { formatAxisTime, formatCursorTime, formatDayLabel, formatRelative, formatSpan } from '../../core/units/format';
+import { formatAxisTime, formatCursorTime, formatDayLabel, formatMinutesAgo, formatRelative, formatSpan } from '../../core/units/format';
 import type { WindowSummary } from '../../layers/contract';
 import { icons } from './icons';
 import { closePanel, isOpenFrom, openPanel } from './panel';
@@ -16,6 +16,8 @@ export interface ScrubberLayer {
   /** Small values under a week-strip day, or null. */
   weekDay?(dayStart: Date, dayEnd: Date): string | null;
   chartLabel: string;
+  /** An observed layer's own frames (radar): fixed chart span, minutes-ago times, and Play loops the last `loopHours`. */
+  frames?: { windowHours: number; loopHours: number; stepMinutes: number } | undefined;
 }
 
 const H = 3_600_000;
@@ -34,6 +36,10 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   let status = '';
   /** Where one model hands over to the next, marked on the chart and the week strip. */
   let seams: { time: Date; label: string }[] = [];
+  /** The chart's span: the chosen window, or an observed layer's own span. */
+  const chartHours = () => layer?.frames?.windowHours ?? windowHours;
+  /** Hours between the cursor's steps while dragging (forecast steps are treated as hourly). */
+  const stepHours = () => (layer?.frames ? layer.frames.stepMinutes / 60 : 1);
 
   const canvas = $('chart-canvas') as HTMLCanvasElement;
   const chart = $('chart');
@@ -44,15 +50,16 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     const now = new Date();
     // Time row
     $('cursor-time').textContent = t ? formatCursorTime(t) : formatCursorTime(now);
-    $('cursor-note').textContent = t ? formatRelative(t, now) : '';
+    $('cursor-note').textContent = t ? (layer?.frames ? formatMinutesAgo(t, now) : formatRelative(t, now)) : '';
+    $('window-button').hidden = Boolean(layer?.frames);
     $('subject-time').textContent = t ? formatCursorTime(t) : '';
     if (!t) return;
-    const { start, end } = windowRange(t, windowHours);
+    const { start, end } = windowRange(t, chartHours());
     $('window-label').textContent = WINDOW_OPTIONS.find((o) => o.hours === windowHours)?.label ?? `${windowHours} h`;
 
     // Summary
     const sum: WindowSummary = layer?.summary(start, t, end) ?? { kind: 'split', before: [], after: [] };
-    const half = formatSpan(windowHours / 2);
+    const half = formatSpan(chartHours() / 2);
     // "Last/Next" when the needle is on now; "before/after" when moved away.
     const atNow = Math.abs(t.getTime() - now.getTime()) < 60 * 60_000;
     const lines = (el: HTMLElement, parts: string[]) => {
@@ -110,7 +117,7 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     // Axis: midnights and noons inside the window (every 6 h for short windows).
     const axis = $('chart-axis');
     axis.innerHTML = '';
-    const every = windowHours <= 12 ? 3 : windowHours <= 24 ? 6 : windowHours <= 72 ? 12 : 24;
+    const every = chartHours() <= 4 ? 1 : chartHours() <= 12 ? 3 : windowHours <= 24 ? 6 : windowHours <= 72 ? 12 : 24;
     // Ticks line up with BC midnight and noon, not UTC.
     let first = dayStart(start).getTime();
     while (first < start.getTime()) first += every * H;
@@ -176,7 +183,7 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
       model.style.left = `${pct(new Date(first_.getTime() - H))}%`;
       model.style.width = `${pct(last) - pct(new Date(first_.getTime() - H))}%`;
       beyond.style.left = `calc(${pct(last)}% + 6px)`;
-      beyond.style.display = pct(last) < 88 ? 'block' : 'none';
+      beyond.style.display = pct(last) < 88 && !layer?.frames ? 'block' : 'none';
     }
     $('week-now').style.left = `${pct(now)}%`;
     $('week-past').style.width = `${pct(now)}%`;
@@ -213,7 +220,7 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   });
   chart.addEventListener('pointermove', (e) => {
     if (!dragging) return;
-    const hoursPerPx = windowHours / chart.clientWidth;
+    const hoursPerPx = chartHours() / chart.clientWidth / stepHours();
     cursor.setIndex(dragIndex - (e.clientX - dragX) * hoursPerPx);
   });
   const endDrag = () => { dragging = false; };
@@ -247,10 +254,20 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   playBtn.addEventListener('click', () => {
     if (timer) { stopPlay(); return; }
     // From the end, start again at now (not two days back).
-    if (cursor.index >= cursor.count - 1) cursor.now();
+    // An observed layer's frames (radar) loop over the last hour or so, pausing a beat on the newest.
+    const loop = layer?.frames;
+    const loopStart = () => (cursor.last ? new Date(cursor.last.getTime() - (loop?.loopHours ?? 1) * H) : new Date());
+    if (cursor.index >= cursor.count - 1) { if (loop) cursor.setTime(loopStart()); else cursor.now(); }
     playBtn.innerHTML = icons.pause;
     playBtn.setAttribute('aria-label', 'Pause');
-    timer = window.setInterval(() => { if (!cursor.stepBy(1)) stopPlay(); }, 700);
+    let dwell = 0;
+    timer = window.setInterval(() => {
+      if (cursor.stepBy(1)) return;
+      if (!loop) { stopPlay(); return; }
+      if (dwell++ < 2) return;
+      dwell = 0;
+      cursor.setTime(loopStart());
+    }, loop ? 500 : 700);
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopPlay(); });
 
@@ -283,6 +300,6 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     setStatus(s: string) { status = s; schedule(); },
     setTimeline(t: { seams: { time: Date; label: string }[] }) { seams = t.seams; schedule(); },
     refresh: schedule,
-    get windowHours() { return windowHours; },
+    get windowHours() { return chartHours(); },
   };
 }
