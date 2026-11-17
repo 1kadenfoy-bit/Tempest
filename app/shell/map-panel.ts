@@ -1,7 +1,8 @@
 // The map panel (grows from the map layers button). Only switches that work
 // are shown: Hillshade, Contours, 3D terrain and, where the base map holds
-// building heights, 3D buildings. Base map choice, slope angle and routes
-// arrive when they work.
+// building heights, 3D buildings; and under OVERLAYS, Weather stations (over
+// every layer; no v8 design, the same tiles). Base map choice, slope angle and
+// routes arrive when they work.
 import { icons } from './icons';
 
 export interface MapPanelState {
@@ -11,6 +12,10 @@ export interface MapPanelState {
   terrain3d?: boolean | undefined;
   /** Left out when the base map has no building heights. */
   buildings3d?: boolean | undefined;
+  /** The weather stations overlay. */
+  stations: boolean;
+  /** No connection (or saved data only): the stations switch cannot work. */
+  stationsOffline?: boolean | undefined;
 }
 
 function toggle(label: string, on: boolean, onChange: (on: boolean) => void): HTMLButtonElement {
@@ -43,9 +48,22 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   const tests = document.createElement('div');
   tests.className = 'group';
   tests.innerHTML = '<span class="group-title">FOR TESTING</span><a class="link-row" href="spike.html">Phone tests<span class="link-row-note">Results to send to Claude</span></a>';
+  const overlays = document.createElement('div');
+  overlays.className = 'group';
+  overlays.innerHTML = '<span class="group-title">OVERLAYS</span><div class="toggle-grid"></div>';
+  const stations = toggle('Weather stations', state.stations, (on) => { state.stations = on; onChange({ ...state }); });
+  stations.id = 'stations-switch';
+  overlays.querySelector('.toggle-grid')!.append(stations);
+  if (state.stationsOffline) {
+    stations.disabled = true;
+    const note = document.createElement('span');
+    note.className = 'toggle-note';
+    note.textContent = 'Needs a connection';
+    overlays.querySelector('.toggle-grid')!.append(note);
+  }
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
-  wrap.append(body);
+  wrap.append(body, overlays);
   if (extra) wrap.append(extra);
   wrap.append(tests);
   return wrap;

@@ -26,3 +26,5 @@ Branch: `claude/tempest-m0-setup-930073` (the only branch Claude may push to). P
 ## Next round (Kaden, Nov 17)
 
 After PR #7 merges: radar layer, then the avalanche layer (Avalanche Canada-like: regions coloured by danger as issued, MIN reports pinned, tap to read with photos), and a weather-stations overlay over every layer (tap a station). Three helper agents started in parallel at ~14:00 UTC (radar, avalanche, stations); merge each into the branch as it finishes, then full check, reports, PR.
+
+Status (Nov 17, ~17:00 UTC): PR #7 merged (M8, M9, 3D). Radar, avalanche and weather stations merged together on the branch and opened as the next PR. Avalanche terrain complexity (ATES) not built: its data is in Avalanche Canada's private Mapbox map; Kaden to ask them (see docs/reports/avalanche/report.md).

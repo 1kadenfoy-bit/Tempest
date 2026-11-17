@@ -73,6 +73,7 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Freeze-thaw areas (M5) | Not built: the setting has no map design yet, so the switch is not shown | "A switch appears only when it works" |
 | Models (M6) | HRDPS, RDPS, GDPS for both layers; ECMWF IFS for precipitation only (no height profile in its open data). GFS and HRDPS West not yet offered. Choosing a chain model starts the chain there (HRDPS, then RDPS, then GDPS, as the HRDPS card describes); GDPS and ECMWF stop at their own ends | |
 | Model menu order (M6) | HRDPS, RDPS; ECMWF IFS, GDPS (v8 04). "Compare two models" left out until designed | |
+| Radar (Nov 17; no v8 design) | ECCC's 1 km composite as ECCC draws it, online only. Settings: Shown (Type by default, Rain rate, Snow rate) and grey beyond radar range (on). While Radar is shown the one cursor steps through its frames (last 3 h, every 6 min); the chart spans 3 h with no window choice; Now goes to the newest frame; Play loops the last hour. The readout is ECCC's value at the pin's pixel for the frame the cursor rests on | Plainest version from existing parts until Kaden designs it |
 | Observed precipitation (M6) | ECCC HRDPA 6-hour totals at the pin for the week's past, online only; final where it exists, else preliminary; spread evenly over the 6 hours in totals | GeoMet is not for bulk copying, so saved areas leave it out |
 | Temperature's past (M6) | Earlier model runs (point API past days), hatched; no gridded temperature analysis is used yet | |
 | Scrubbing the past (Nov 17, after M7) | The cursor reaches the 48 hours before the forecast, hour by hour, at the pin (readout, chart, summary, details). The map holds the forecast's first hour and says "map from …". Not with a saved area (no past is saved) | Past maps from earlier runs' grids not yet checked |
@@ -115,7 +116,8 @@ These came from research and were not all confirmed. Check each at the milestone
 - Whether Open-Meteo's map files offer HRDPS as its own model, and whether partial reads work in an iPhone web view.
 - The starter library's current name and API. Last seen: npm package `@openmeteo/weather-map-layer`, an `om://` protocol registered with MapLibre's `addProtocol`, data under `openmeteo-data-spatial.b-cdn.net`. It is young and changes often; read its README first.
 - Real download sizes for a saved area. M8, Nov 17: an 8 × 6 km box with all three layers for 3 days was 7.3 MB (weather 1.9, map 1.6, terrain 3.0, labels 0.9); the estimate said about 7.
-- Avalanche Canada's terms, including keeping bulletins offline. Kaden should email them before the avalanche layer.
+- Avalanche Canada's terms, including keeping bulletins offline. Kaden should email them before the avalanche layer. Read Nov 17 (`docs/05-data-sources.md`, Avalanche): no licence for the API, website material not to be reproduced without written consent, nothing on offline. The layer is built for testing, online only, pending their answer; the questions are in `docs/reports/avalanche/report.md`.
+- Avalanche Canada's ATES (terrain complexity) data: the Trip Planner reads it from a private Mapbox style with Avalanche Canada's own token; only per-zone KMZ downloads are published. Not built; ask Avalanche Canada.
 - Mapterhorn's coverage and resolution in BC.
 - How much storage iOS grants a home-screen web app, and when it evicts it. M8 asks for persistent storage on every save and the saved areas list says whether the phone agreed: Kaden to report what it says on the iPhone.
 - Every access detail marked "not confirmed" in `docs/05-data-sources.md`.
@@ -131,4 +133,4 @@ These came from research and were not all confirmed. Check each at the milestone
 2. Set the cloud environment's network access so the weather and map servers are reachable (see `README.md`).
 3. Create a hosting account if the preview host needs one.
 4. Test each milestone on his phone and say go or change.
-5. Email Avalanche Canada about data terms before the avalanche layer.
+5. Email Avalanche Canada about data terms before the avalanche layer (draft questions in `docs/reports/avalanche/report.md`).

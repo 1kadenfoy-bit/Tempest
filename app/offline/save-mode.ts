@@ -15,7 +15,11 @@ export interface SaveChoice {
 }
 
 /** A layer that can be saved, and how many weather variables it keeps. */
-export interface SaveLayer { id: string; title: string; variables: string[] }
+export interface SaveLayer {
+  id: string; title: string; variables: string[];
+  /** Why it cannot be saved (its source does not allow it), for an online-only layer: shown greyed out, never ticked. */
+  onlineOnly?: string | undefined;
+}
 
 const CHECK = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
 const DOWNLOAD = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -66,7 +70,8 @@ export function openSaveMode(map: MapLibreMap, opts: {
       </div>
     </div>`;
   document.body.append(root);
-  const ticked = new Set<string>([opts.initial]);
+  const saveable = opts.layers.filter((l) => !l.onlineOnly);
+  const ticked = new Set<string>(saveable.some((l) => l.id === opts.initial) ? [opts.initial] : saveable[0] ? [saveable[0].id] : []);
   const layerRows = new Map<string, HTMLElement>();
   for (const l of opts.layers) {
     const row = document.createElement('label');
@@ -74,9 +79,16 @@ export function openSaveMode(map: MapLibreMap, opts: {
     row.innerHTML = `<input type="checkbox"><span class="check-box">${CHECK}</span><span class="check-text"><span class="check-title"></span><span class="check-note"></span></span>`;
     row.querySelector('.check-title')!.textContent = l.title;
     const input = row.querySelector('input')!;
+    root.querySelector('.save-layers')!.append(row);
+    if (l.onlineOnly) {
+      // v8 08-SaveArea: online-only layers are listed, greyed out, with the reason.
+      input.disabled = true;
+      row.dataset.disabled = 'true';
+      row.querySelector('.check-note')!.textContent = l.onlineOnly;
+      continue;
+    }
     input.checked = ticked.has(l.id);
     input.addEventListener('change', () => { if (input.checked) ticked.add(l.id); else ticked.delete(l.id); render(); });
-    root.querySelector('.save-layers')!.append(row);
     layerRows.set(l.id, row.querySelector<HTMLElement>('.check-note')!);
   }
   const box = root.querySelector<HTMLElement>('.save-box')!;
@@ -105,7 +117,7 @@ export function openSaveMode(map: MapLibreMap, opts: {
     const h = Math.min(hours ?? opts.endHours, opts.endHours);
     // Layers share values (the profile): the total counts each once.
     const shared = new Set<string>();
-    for (const l of opts.layers) {
+    for (const l of saveable) {
       layerRows.get(l.id)!.textContent = `Grids for this area · about ${mb(opts.weatherBytes(bb, h, l.variables.length))}`;
       if (ticked.has(l.id)) l.variables.forEach((v) => shared.add(v));
     }
