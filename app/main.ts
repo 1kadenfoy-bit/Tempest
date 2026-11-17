@@ -1256,6 +1256,8 @@ function openSaveBox() {
   if (!run || usingSaved) return;
   const [first, ...rest] = saveRuns();
   if (!first) return;
+  // The save box is drawn on a flat, north-up map.
+  map.jumpTo({ pitch: 0, bearing: 0 });
   openSaveMode(map, {
     firstHours: hoursTo(first),
     endHours: Math.max(hoursTo(first), ...rest.map(hoursTo)),
