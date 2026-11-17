@@ -12,6 +12,8 @@ export interface PanelOptions {
   onClose?: () => void;
   /** Show the icon small, after the title (menus that grow from a title, such as the layer menu). */
   iconAfterTitle?: boolean;
+  /** A button in the header, before Close (the map panel's settings gear). */
+  headerAction?: HTMLElement;
 }
 
 let current: { close: () => void; origin: HTMLElement } | null = null;
@@ -48,6 +50,10 @@ export function openPanel(opts: PanelOptions): void {
     panel.querySelector('.panel-header')!.classList.add('panel-header-plain');
   }
   panel.querySelector('.panel-caption')!.textContent = opts.caption;
+  if (opts.headerAction) {
+    opts.headerAction.classList.add('panel-action');
+    panel.querySelector('.panel-close')!.before(opts.headerAction);
+  }
   const body = document.createElement('div');
   body.className = 'panel-body';
   body.append(opts.body);

@@ -15,10 +15,14 @@ export interface Prefs {
   layerSettings: Record<string, Record<string, string | boolean>>;
   /** Read only saved areas, never the network (weak signal hangs requests and drains the battery). */
   savedOnly: boolean;
+  /** App settings: the unit system for every number shown. */
+  units: 'metric' | 'imperial';
+  /** App settings: dark, light, or match the phone. */
+  theme: 'dark' | 'light' | 'system';
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false };
+const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false, units: 'metric', theme: 'dark' };
 
 export function loadPrefs(): Prefs {
   try {
