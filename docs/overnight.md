@@ -22,3 +22,7 @@ Branch: `claude/tempest-m0-setup-930073` (the only branch Claude may push to). P
 1. Read this file and `git log --oneline -15`.
 2. Continue the first step not marked Done. Update this table and commit it after each step.
 3. Keep Open-Meteo use low: the build machine shares one daily limit (10,000). Run the full browser suite once per milestone, not per change.
+
+## Next round (Kaden, Nov 17)
+
+After PR #7 merges: radar layer, then the avalanche layer (Avalanche Canada-like: regions coloured by danger as issued, MIN reports pinned, tap to read with photos), and a weather-stations overlay over every layer (tap a station). Three helper agents started in parallel at ~14:00 UTC (radar, avalanche, stations); merge each into the branch as it finishes, then full check, reports, PR.
