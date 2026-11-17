@@ -248,3 +248,12 @@ export function formatSpeed(kmh: number, unit = true, u: UnitSystem = current): 
 export function formatBearing(name: string, degrees: number): string {
   return `${name} ${Math.round(degrees) % 360}°`;
 }
+
+/** How old a measurement is: "just now", "25 min ago", "3 h ago", "2 d ago" (minutes under an hour, days from 48 h). */
+export function formatAgo(t: Date, now: Date): string {
+  const min = Math.max(0, Math.round((now.getTime() - t.getTime()) / 60_000));
+  if (min < 2) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.round(min / 60);
+  return h >= 48 ? `${Math.round(h / 24)} d ago` : `${h} h ago`;
+}

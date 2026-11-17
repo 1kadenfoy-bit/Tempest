@@ -71,6 +71,7 @@ import { COVERAGE, PRODUCTS, fetchFrames, radarAt, source as radarSource, tileUr
 import { radarLayer, shownOf, type RadarShown } from '../layers/radar';
 import type { RadarAtPin, RadarPoint } from '../layers/contract';
 import { ImageFrames } from './map/image-frames';
+import { setupStations } from './stations/stations';
 
 const prefs = loadPrefs();
 // App settings: units and theme apply before anything draws; the hooks redraw
@@ -124,6 +125,15 @@ map.touchZoomRotate.disableRotation();
 map.touchPitch.disable();
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 (window as unknown as { tempestMap: typeof map }).tempestMap = map;
+
+// Weather stations: an overlay over every layer (map panel), online only.
+const stations = setupStations(map, {
+  enabled: prefs.stations,
+  layerId: prefs.layer,
+  // Read only on a tap, after the pin exists (set up further down).
+  pin: () => { const p = pin.get(); return p ? { lat: p.lat, lon: p.lng } : null; },
+  savedOnly: () => prefs.savedOnly,
+});
 
 // Keep "centre" meaning the part of the map above the collapsed sheet. The
 // pulled-up sheet covers the map without moving it.
@@ -1157,6 +1167,8 @@ $('place-line').addEventListener('click', () => {
 });
 
 map.on('click', (e) => {
+  // A tap on a weather station opens it; the pin stays.
+  if (stations.hit(e.originalEvent.target)) return;
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
@@ -1305,6 +1317,7 @@ function setActive(l: LayerSlots) {
   active = l;
   prefs.layer = l.id;
   savePrefs(prefs);
+  stations.setLayer(l.id);
   series = null;
   document.body.dataset.fill = '';
   document.body.dataset.series = '';
@@ -1389,7 +1402,12 @@ layersBtn.addEventListener('click', () => {
     title: 'Map',
     caption: 'Base map and terrain',
     headerAction: appSettings.gear(layersBtn),
-    body: mapPanelBody({ hillshade: prefs.hillshade, contours: prefs.contours, terrain3d: prefs.terrain3d, buildings3d: buildingsOk ? prefs.buildings3d : undefined }, (s) => {
+    body: mapPanelBody({
+      hillshade: prefs.hillshade, contours: prefs.contours, terrain3d: prefs.terrain3d, buildings3d: buildingsOk ? prefs.buildings3d : undefined,
+      stations: prefs.stations, stationsOffline: !navigator.onLine || prefs.savedOnly,
+    }, (s) => {
+      if (s.stations !== prefs.stations) stations.setEnabled(s.stations);
+      prefs.stations = s.stations;
       prefs.hillshade = s.hillshade;
       prefs.contours = s.contours;
       prefs.terrain3d = s.terrain3d ?? false;
@@ -1492,11 +1510,13 @@ function setSavedOnly(on: boolean) {
   prefs.savedOnly = on;
   savePrefs(prefs);
   document.body.dataset.savedOnly = String(on);
+  stations.refresh();
   void loadRun();
 }
 
 /** Units changed in app settings: every number on screen is formatted again. */
 function redrawForUnits() {
+  stations.redraw();
   showLayer();
   const p = pin.get();
   if (p) renderPlace(p);
