@@ -246,7 +246,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   }
   playBtn.addEventListener('click', () => {
     if (timer) { stopPlay(); return; }
-    if (cursor.index >= cursor.count - 1) cursor.setIndex(0);
+    // From the end, start again at now (not two days back).
+    if (cursor.index >= cursor.count - 1) cursor.now();
     playBtn.innerHTML = icons.pause;
     playBtn.setAttribute('aria-label', 'Pause');
     timer = window.setInterval(() => { if (!cursor.stepBy(1)) stopPlay(); }, 700);

@@ -50,7 +50,11 @@ async function readOne(root: OmFileReader, variable: string, ranges: { start: nu
     // Map files hold [y, x], or [y, x, time] with one time.
     const r = dims.length === 3 ? [...ranges, { start: 0, end: 1 }] : ranges;
     const data = await child.read({ type: OmDataType.FloatArray, ranges: r });
-    return Float32Array.from(data as Float32Array);
+    const out = Float32Array.from(data as Float32Array);
+    // The files keep wind in m/s; the app's vocabulary is km/h (checked Nov 17
+    // against the point service, which answers in km/h).
+    if (/^wind_(speed|gusts)_/.test(variable)) for (let i = 0; i < out.length; i++) out[i]! *= 3.6;
+    return out;
   } finally {
     child.dispose();
   }
@@ -77,4 +81,24 @@ export async function readStepsFast(model: string, fileUrls: string[], variables
     onStep?.(i, box);
     return box;
   }), 2);
+}
+
+/**
+ * Values at one point from many steps' files: the nearest model cell, as the
+ * library's readPointSeries gives, but with small blocks and in parallel.
+ * The library's per-hour conversion divides by the step length, so with
+ * hourly files the stored values are the same (checked Nov 17).
+ */
+export async function readPointFast(model: string, fileUrls: string[], variables: string[], lat: number, lon: number): Promise<Record<string, number[]>> {
+  const ranges = coveringRanges(model, [lon, lat, lon, lat], 0.03);
+  const grid = GridFactory.create(domainFor(model).grid, ranges);
+  const out: Record<string, number[]> = Object.fromEntries(variables.map((v) => [v, new Array<number>(fileUrls.length).fill(NaN)]));
+  await limited(fileUrls.map((url, i) => async () => {
+    const box = await readBoxFast(model, url, variables, ranges);
+    for (const v of variables) {
+      const src = box.values[v];
+      out[v]![i] = src && src.length ? grid.getInterpolatedValue(src, lat, lon, 'nearest') : NaN;
+    }
+  }), 4);
+  return out;
 }

@@ -488,3 +488,25 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   font: 600 15px var(--font-body); padding: 0 12px;
 }
 .primary-button:disabled { opacity: 0.6; }
+
+/* Wind flow (M7): streaks over the map, never in the way of a tap. */
+.flow-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+/* Frame-rate check (?fps in the address); not part of the design. */
+.fps-meter {
+  position: fixed;
+  left: 8px;
+  top: calc(env(safe-area-inset-top, 0px) + var(--inset-top, 0px));
+  z-index: 50;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: 500 11px/1.4 system-ui, sans-serif;
+  pointer-events: none;
+}

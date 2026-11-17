@@ -49,7 +49,14 @@ interface ApiLocation {
   reason?: string;
 }
 
-export function apiUrl(model: string, points: readonly { lat: number; lon: number }[], variables: readonly string[]): string {
+/** "2026-11-17T06:00" (the API's hour format, UTC). */
+const apiHour = (t: Date) => t.toISOString().slice(0, 16);
+
+/**
+ * `hours`: ask only for this span (the map's nodes need the run's own hours);
+ * without it, two days back and as far ahead as the model reaches (the pin).
+ */
+export function apiUrl(model: string, points: readonly { lat: number; lon: number }[], variables: readonly string[], hours?: [Date, Date]): string {
   const params = new URLSearchParams({
     latitude: points.map((p) => p.lat.toFixed(4)).join(','),
     longitude: points.map((p) => p.lon.toFixed(4)).join(','),
@@ -59,10 +66,15 @@ export function apiUrl(model: string, points: readonly { lat: number; lon: numbe
     timeformat: 'unixtime',
     timezone: 'GMT',
     wind_speed_unit: 'kmh',
-    // Two days back (the week strip's past) and as far ahead as the longest model.
-    past_days: '2',
-    forecast_days: String(FORECAST_DAYS[model] ?? 3),
   });
+  if (hours) {
+    params.set('start_hour', apiHour(hours[0]));
+    params.set('end_hour', apiHour(hours[1]));
+  } else {
+    // Two days back (the week strip's past) and as far ahead as the longest model.
+    params.set('past_days', '2');
+    params.set('forecast_days', String(FORECAST_DAYS[model] ?? 3));
+  }
   return `${source.baseUrl}/v1/forecast?${params}`;
 }
 
@@ -93,9 +105,49 @@ export function parseApiSeries(json: unknown, model: string, run: Date, variable
   });
 }
 
-export async function fetchApiSeries(model: string, run: Date, variables: readonly VariableName[], points: readonly { lat: number; lon: number }[], validTimes: readonly Date[], fetchFn: typeof fetch = fetch): Promise<PointSeries[]> {
-  const res = await fetchFn(apiUrl(model, points, variables));
-  const json = (await res.json()) as unknown;
-  if (!res.ok) throw new Error((json as { reason?: string }).reason ?? `point API ${res.status}`);
-  return parseApiSeries(json, model, run, variables, points, validTimes);
+/**
+ * The API said no because of its free limits (HTTP 429). `until`: when to ask
+ * again, from its reason: the next minute, hour or day.
+ */
+export class ApiLimitError extends Error {
+  constructor(readonly reason: string, readonly until: Date) { super(reason); }
+}
+
+/** When a refusal's limit resets, from its reason ("Minutely API request limit exceeded…"). */
+export function limitResets(reason: string, now = new Date()): Date {
+  const r = reason.toLowerCase();
+  const next = new Date(now);
+  if (r.includes('daily')) { next.setUTCHours(24, 0, 30, 0); return next; }
+  if (r.includes('hourly')) { next.setUTCMinutes(60, 30, 0); return next; }
+  next.setUTCSeconds(60, 0);
+  return next;
+}
+
+const pause = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+/**
+ * Every hour of a run at several places. A dropped connection or a server
+ * error is tried again twice, after half a second and after two; a refusal
+ * for the free limits throws ApiLimitError at once.
+ */
+export async function fetchApiSeries(model: string, run: Date, variables: readonly VariableName[], points: readonly { lat: number; lon: number }[], validTimes: readonly Date[], fetchFn: typeof fetch = fetch, hours?: [Date, Date]): Promise<PointSeries[]> {
+  const url = apiUrl(model, points, variables, hours);
+  let lastErr: unknown;
+  for (const wait of [0, 500, 2000]) {
+    if (wait) await pause(wait);
+    let res: Response;
+    try {
+      // A connection that hangs is given up after 15 s and tried again.
+      res = await fetchFn(url, { signal: AbortSignal.timeout(15_000) });
+    } catch (err) {
+      lastErr = err; // dropped connection (a refusal without the CORS headers also lands here)
+      continue;
+    }
+    const json = (await res.json().catch(() => ({}))) as { reason?: string };
+    if (res.status === 429) throw new ApiLimitError(json.reason ?? 'API request limit exceeded', limitResets(json.reason ?? ''));
+    if (res.status >= 500) { lastErr = new Error(json.reason ?? `point API ${res.status}`); continue; }
+    if (!res.ok) throw new Error(json.reason ?? `point API ${res.status}`);
+    return parseApiSeries(json, model, run, variables, points, validTimes);
+  }
+  throw lastErr;
 }

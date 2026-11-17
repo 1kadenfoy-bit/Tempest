@@ -15,6 +15,8 @@ export const VOCABULARY = {
   temperature_2m: { unit: '°C', meaning: 'Air temperature 2 m above the model’s own ground' },
   relative_humidity_2m: { unit: '%', meaning: 'Relative humidity 2 m above the model’s own ground' },
   wind_speed_10m: { unit: 'km/h', meaning: 'Wind speed 10 m above the model’s own ground' },
+  wind_direction_10m: { unit: '°', meaning: 'Direction the 10 m wind blows from, clockwise from north' },
+  wind_gusts_10m: { unit: 'km/h', meaning: 'Strongest gust 10 m above the model’s own ground during the step' },
 } as const;
 
 /** The temperature profile: temperature and height of each pressure level. */
@@ -33,7 +35,15 @@ export const PROFILE_VARIABLES: ProfileVariable[] = [
   ...PROFILE_LEVELS.map((l) => `geopotential_height_${l}hPa` as const),
 ];
 
-export type VariableName = keyof typeof VOCABULARY | ProfileVariable;
+/** Wind on each pressure level (M7): speed in km/h, direction it blows from in degrees. */
+export type WindLevelVariable = `wind_speed_${ProfileLevel}hPa` | `wind_direction_${ProfileLevel}hPa`;
+export const WIND_LEVEL_VARIABLES: WindLevelVariable[] = [
+  ...PROFILE_LEVELS.map((l) => `wind_speed_${l}hPa` as const),
+  ...PROFILE_LEVELS.map((l) => `wind_direction_${l}hPa` as const),
+];
+export const WIND_SURFACE_VARIABLES = ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'] as const;
+
+export type VariableName = keyof typeof VOCABULARY | ProfileVariable | WindLevelVariable;
 
 /** The label every value carries (architecture: data contract). */
 export interface ValueLabel {
