@@ -134,3 +134,16 @@ You asked for particles that flow with the wind rather than short dashes.
   - there is no full-screen fading layer, which is what usually makes these animations heavy and leaves smudges.
 - **The same pauses as before:** hidden while you drag the map, stopped when the app is hidden or another layer is shown, at most 60 frames a second.
 - **Measured in the test browser:** 57 frames a second. Please check with `?fps` on your phone.
+
+## Follow-up: fewer, clearer direction arrows on the chart
+
+You found the arrows along the top of the chart too crowded. A 48 h window had 16 of them, about 22 px apart.
+
+- **They're now spaced by the room available:** every 3, 6, 12 or 24 hours, whichever first leaves at least 40 px between them.
+  - A 48 h window gets one every 6 hours (8 arrows).
+  - A 24 h window gets one every 3 hours.
+- **They sit on round hours** in BC time: midnight, 6 AM, noon and 6 PM.
+- **They're bigger, with a solid head,** and still point where the wind blows.
+- **Calm hours (under 3 km/h) show a small dot** instead, since their direction means little.
+
+![The 48 h chart with arrows every 6 hours](chart-arrows.png)

@@ -79,7 +79,7 @@ function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, pin: Pin
   const x = (t: number) => ((t - start.getTime()) / span) * w;
   const barW = (3_600_000 / span) * w;
   const gap = barW > 4 ? 1 : 0;
-  const arrowRow = 14;
+  const arrowRow = 18;
   const top = arrowRow + 4;
   const idx = v.times.flatMap((t, i) => (x(t.getTime()) >= -barW && x(t.getTime()) <= w + barW && Number.isFinite(v.speed[i]) ? [i] : []));
   if (!idx.length) {
@@ -106,26 +106,43 @@ function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, pin: Pin
       ctx.fillRect(left + gap / 2, Math.round(y(v.gust[i]!)) - 1, Math.max(1, barW - gap), 2);
     }
   }
-  // Direction arrows every 3 hours (on the clock), pointing downwind.
-  ctx.strokeStyle = cssVar(ctx, '--ink-2', '#9AA6B2');
-  ctx.lineWidth = 1.3;
+  // Direction arrows, pointing downwind, spaced by the room there is: every
+  // 3, 6, 12 or 24 hours, whichever first leaves 40 px between them, on round
+  // BC hours (midnight, 6 AM, noon, 6 PM). Calm hours show a small dot instead.
+  const pxPerHour = (3_600_000 / span) * w;
+  const every = [3, 6, 12, 24].find((hh) => hh * pxPerHour >= 40) ?? 24;
+  ctx.strokeStyle = ctx.fillStyle = cssVar(ctx, '--ink-2', '#9AA6B2');
+  ctx.lineWidth = 1.6;
   ctx.lineCap = 'round';
+  const cy = arrowRow / 2;
   for (const i of idx) {
-    if (v.times[i]!.getUTCHours() % 3 !== 0 || !Number.isFinite(v.dir[i])) continue;
+    if (v.times[i]!.getUTCMinutes() !== 0 || !Number.isFinite(v.dir[i])) continue;
+    if (localHour(v.times[i]!) % every !== 0) continue;
     const cx = x(v.times[i]!.getTime());
-    if (cx < 6 || cx > w - 6) continue;
+    if (cx < 8 || cx > w - 8) continue;
+    if (v.speed[i]! < 3) { ctx.beginPath(); ctx.arc(cx, cy, 1.8, 0, Math.PI * 2); ctx.fill(); continue; }
     const a = ((v.dir[i]! + 180) * Math.PI) / 180;
     const dx = Math.sin(a), dy = -Math.cos(a);
-    const cy = arrowRow / 2 + 1, L = 5;
+    const L = 6.5;
+    const hx = cx + dx * L, hy = cy + dy * L;
     ctx.beginPath();
     ctx.moveTo(cx - dx * L, cy - dy * L);
-    ctx.lineTo(cx + dx * L, cy + dy * L);
-    // Head
-    const hx = cx + dx * L, hy = cy + dy * L;
-    ctx.moveTo(hx, hy); ctx.lineTo(hx - dx * 3.2 + dy * 2.6, hy - dy * 3.2 - dx * 2.6);
-    ctx.moveTo(hx, hy); ctx.lineTo(hx - dx * 3.2 - dy * 2.6, hy - dy * 3.2 + dx * 2.6);
+    ctx.lineTo(hx - dx * 3, hy - dy * 3);
     ctx.stroke();
+    // A filled head reads better than two thin strokes at this size.
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(hx - dx * 5 + dy * 3.4, hy - dy * 5 - dx * 3.4);
+    ctx.lineTo(hx - dx * 5 - dy * 3.4, hy - dy * 5 + dx * 3.4);
+    ctx.closePath();
+    ctx.fill();
   }
+}
+
+/** The hour of day in BC, 0–23 (for placing arrows on round hours). */
+const hourFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Vancouver', hour: 'numeric', hourCycle: 'h23' });
+function localHour(t: Date): number {
+  return Number(hourFormat.format(t));
 }
 
 function legend(doc: Document): HTMLElement {
