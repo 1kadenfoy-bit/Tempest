@@ -7,6 +7,7 @@ import { source as openMeteoMaps } from '../../adapters/openmeteo-maps/run-metad
 import { source as openMeteoApi } from '../../adapters/openmeteo-api/point-series';
 import { source as ecccHrdpa } from '../../adapters/eccc-geomet/hrdpa';
 import { source as ecccAlerts } from '../../adapters/eccc-alerts/alerts';
+import { source as bcGeonames } from '../../adapters/bc-geonames/geonames';
 import { originators } from '../../adapters/openmeteo-maps/models';
 import { terrainSource } from '../map/terrain-source';
 import { renderer } from '../../render/openmeteo-starter/about';
@@ -64,6 +65,7 @@ export function credits(basemapAttribution: string = BASEMAP_ATTRIBUTION): Credi
       provides: 'Hillshade, contours and ground heights',
       licence: terrainSource.licence, attribution: plainText(terrainSource.attribution), link: terrainSource.link,
     },
+    { ...adapter(bcGeonames), group: 'Base map and terrain' },
     {
       id: 'openmeteo-starter', group: 'Software', name: renderer.name,
       provides: 'Reads the weather model files',
