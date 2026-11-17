@@ -11,6 +11,12 @@ export interface PinData {
   elevation: number | null;
   /** Observed precipitation at the pin (analysis totals), oldest first; online only. */
   observed?: { end: Date; hours: number; mm: number; prelim: boolean }[] | undefined;
+  /**
+   * The model's own ground near the pin (the terrain smoothed over one model
+   * cell), by model id, as segments name them. Wind uses it: ground standing
+   * above the model's ground reaches into the wind aloft.
+   */
+  ground?: Record<string, number> | undefined;
 }
 
 /** The window summary: split at the needle, or one block for the whole window. */
@@ -81,7 +87,7 @@ export type Card =
       you: { elevation: number; value: number; label: string };
       zero: boolean; unit: string;
     }
-  | { kind: 'status'; icon: 'snowflake' | 'info'; text: string; note?: string | undefined }
+  | { kind: 'status'; icon: 'snowflake' | 'info' | 'shift' | 'calm'; text: string; note?: string | undefined }
   | { kind: 'expandable'; title: string; caption: string; header: string[]; rows: string[][] }
   | { kind: 'later'; text: string };
 
