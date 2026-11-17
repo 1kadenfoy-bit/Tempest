@@ -188,3 +188,24 @@ You found loading a layer or a model very slow, and wind sometimes missing when 
 
 - The "before" column comes from running the previous version side by side. After two dropped connections it never finished wind, the model switch or the zoom-out within 2 minutes.
 - Reopening the app took 3.8 s in one run and 13 s in another, where a connection was dropped and waited out the 15 s limit before retrying.
+
+## Follow-up: the chart missing later days after fast panning and switching
+
+Your screenshot showed the map loaded but the chart empty after Thursday, where RDPS and then GDPS take over.
+
+**Why**
+
+- **Fetched once, never again.** The longer models' part of the pin's forecast was fetched once. When that request failed, it was never asked for again. Fast panning and switching could use up the service's per-minute allowance, so it failed.
+- **The gap was kept.** The incomplete forecast was then kept in memory, so the gap stayed until you reopened the app.
+- **A fallback that never finishes.** For wind and temperature, a failed request fell back to reading days of map files hour by hour, which in practice never finishes.
+
+**What changed**
+
+- **The app keeps count of its own requests.** It counts each one against the service's free limits the way Open-Meteo counts them. Near the limit it waits a moment instead of being refused. The count survives reloads.
+- **Missing stretches are asked for again,** a few seconds later, then less often, or when the service says it's ready. The chart keeps what it has meanwhile.
+- **Only a complete forecast is kept in memory.**
+- **No hour-by-hour file reading over days.** The pin waits for the service instead. The map files are used only if the service is out for a long time (its hourly or daily limit), and offline from saved areas as before.
+
+**Checked:** after 15 seconds of rapid panning and layer switching, with a 7-day window, the pin's forecast was complete across every model 4.3 s later, as below.
+
+![The 7-day chart filled through the RDPS stretch after fast switching](after-fast-switching.png)

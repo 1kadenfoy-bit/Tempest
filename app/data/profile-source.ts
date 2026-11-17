@@ -66,6 +66,9 @@ export class ProfileSource {
     console.warn('point API unavailable for now', err);
   }
 
+  /** The point API is out for more than a few minutes (its hourly or daily limit): the map files are worth their slowness. */
+  get apiLongDown(): boolean { return this.apiDownUntil - Date.now() > 5 * 60_000; }
+
   /** When the point API may be asked again (0: now). The map asks again then. */
   get apiRetryAt(): number { return this.apiDownUntil > Date.now() ? this.apiDownUntil : 0; }
 

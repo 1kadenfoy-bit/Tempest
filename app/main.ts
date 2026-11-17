@@ -692,6 +692,16 @@ async function loadRun() {
 }
 
 let seriesSeq = 0;
+/** Asking again for parts of the pin's series that did not come (service busy, connection dropped). */
+let seriesRetry = { timer: 0, key: '', tries: 0 };
+function retrySeries(key: string) {
+  if (seriesRetry.key !== key) seriesRetry = { timer: 0, key, tries: 0 };
+  clearTimeout(seriesRetry.timer);
+  // Soon at first, then less often; when the service gave a time, then.
+  const backoff = Math.min(60_000, 3_000 * 2 ** seriesRetry.tries++);
+  const delay = Math.max(backoff, profiles.apiRetryAt - Date.now() + 500);
+  seriesRetry.timer = window.setTimeout(() => void loadSeries(), delay);
+}
 /** Hours of the week's past to show before the run (the strip starts two days back). */
 const PAST_HOURS = 48;
 
@@ -724,13 +734,16 @@ async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: n
     void profP.then((prof) => { if (prof) onLater?.(overlay(prof, own)); });
     return own;
   }
-  if (m === 'hrdps') return profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, extra });
+  // Hour by hour from the map files (minutes) only when the service is out for long (its hourly or daily limit).
+  if (m === 'hrdps') return profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, extra, noFiles: !profiles.apiLongDown });
   // Longer models: the point API gives every hour in one request. Without it,
   // precipitation reads its amounts from the model's map files (the profile,
   // hour by hour over days, would be too slow; rain or snow then uses the
   // model's own split).
   try {
-    return await profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, noFiles: amounts, extra });
+    // Never days of map files hour by hour (that takes many minutes): without
+    // the service, profiles wait for it (the series asks again); amounts read their own files.
+    return await profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, noFiles: true, extra });
   } catch (err) {
     if (!amounts) throw err;
     return fetchPointSeries(runs[m]!, precip.needs, lat, lng);
@@ -797,10 +810,15 @@ async function loadSeries() {
   const mine = ++seriesSeq;
   if (cached) {
     series = cached;
+    document.body.dataset.seriesComplete = 'true';
   } else {
-    series = null;
-    scrubber.setStatus('Loading the pin’s forecast…');
-    renderReadout();
+    document.body.dataset.seriesComplete = 'false';
+    // Asking again for missing stretches: keep showing what is there meanwhile.
+    if (!(seriesRetry.key === key && series)) {
+      series = null;
+      scrubber.setStatus('Loading the pin’s forecast…');
+      renderReadout();
+    }
     const segs = timeline.segments;
     const parts: (PointSeries | null)[] = segs.map(() => null);
     // The first model first, so the readout comes quickly; the rest join it.
@@ -809,15 +827,16 @@ async function loadSeries() {
         if (mine !== seriesSeq) return;
         parts[0] = part;
         series = stitch(parts);
-        if (series) store.put(key, series);
         renderReadout();
         scrubber.refresh();
       };
       parts[0] = await modelSeries(layer, segs[0]!.model as ModelId, true, p.lat, p.lng, update, update);
     } catch (err) {
       if (mine !== seriesSeq) return;
-      scrubber.setStatus(usingSaved ? 'The pin is outside the saved area' : 'Could not load the pin’s forecast');
       console.error(err);
+      if (usingSaved) { scrubber.setStatus('The pin is outside the saved area'); return; }
+      scrubber.setStatus('The forecast service is busy · trying again shortly');
+      retrySeries(key);
       return;
     }
     if (mine !== seriesSeq) return;
@@ -831,7 +850,11 @@ async function loadSeries() {
     }));
     if (mine !== seriesSeq) return;
     series = stitch(parts);
-    if (series) store.put(key, series);
+    // Kept only when whole: a stretch that did not come is asked for again
+    // (parts already read come from memory), never remembered as missing.
+    document.body.dataset.seriesComplete = String(parts.every(Boolean));
+    if (parts.every(Boolean)) { if (series) store.put(key, series); clearTimeout(seriesRetry.timer); seriesRetry = { timer: 0, key: '', tries: 0 }; }
+    else if (!usingSaved) retrySeries(key);
   }
   scrubber.setStatus('');
   renderReadout();
