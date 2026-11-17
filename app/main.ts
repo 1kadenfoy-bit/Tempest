@@ -16,6 +16,9 @@ import * as precip from '../layers/precipitation';
 import { precipitation } from '../layers/precipitation';
 import { temperature, temperatureRenderStyle } from '../layers/temperature';
 import { wind, windRenderStyle, WIND_NEEDS } from '../layers/wind';
+import { avalanche, setAvalancheCursor } from '../layers/avalanche';
+import { setAvalanchePin } from '../core/avalanche/danger';
+import { setupAvalanche } from './avalanche/avalanche';
 import { TerrainWindLayer } from '../render/grid-gl/terrain-wind-layer';
 import { FlowCanvas, type FlowMode } from '../render/flow/flow-canvas';
 import { modelGround, nodeProfiles, packWind, screenWind, windComplete } from './map/wind-field';
@@ -158,9 +161,12 @@ setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh
 // Radar (no v8 design yet): ECCC's pictures in ECCC's colours; the layer gets its legend from here, never from the source.
 const radarShown = (): RadarShown => shownOf(settingsFor(radar));
 const radar: LayerSlots = radarLayer((s) => PRODUCTS[s].legend, () => radarShown());
-const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar];
+const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche];
 /** Why a layer cannot be saved for offline use, when its source does not allow it. */
-const onlineOnly = (l: LayerSlots): string | undefined => (l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving' : undefined);
+const onlineOnly = (l: LayerSlots): string | undefined =>
+  l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving'
+  : l.id === 'avalanche' ? 'Online only: Avalanche Canada’s terms on keeping bulletins are not confirmed yet'
+  : undefined;
 
 // ---- Radar frames: the times ECCC holds (last 3 h, every 6 min), and what the cursor's frame shows at the pin.
 let radarFrames: Date[] = [];
@@ -262,7 +268,7 @@ function showRadarFrame() {
   document.body.dataset.radarFrame = t.toISOString();
 }
 /** Layers read from the pressure-level profile (GDPS's separate profile files, its 3-hourly steps). */
-const usesProfile = (l: LayerSlots) => l.id !== 'precipitation';
+const usesProfile = (l: LayerSlots) => l.id === 'temperature' || l.id === 'wind';
 /**
  * What the pin's series asks for beyond the profile, for every layer at once:
  * one request serves them all, so switching layers needs no new download.
@@ -416,6 +422,13 @@ function renderRunAge() {
       : radarError ? 'Radar not reachable · tap to retry' : 'Finding the radar frames…';
     el.dataset.stale = String(!newest || radarOffline() || Date.now() - newest.getTime() > 30 * 60_000);
     return;
+  } else if (active.id === 'avalanche' && pin?.get()) {
+    // Avalanche: the pin's bulletin and its age, not a model run.
+    const pinNow = pin!.get()!;
+    const a = avy.ageLine(pinNow.lng, pinNow.lat);
+    $('run-age').textContent = a.text;
+    $('run-age').dataset.stale = String(a.stale);
+    return;
   }
   // The run of the model under the cursor; a missing model is named (visible fallback).
   const seg = cursor.time ? segmentAt(timeline, mapTime(cursor.time)) : timeline.segments[0];
@@ -432,6 +445,8 @@ function renderRunAge() {
 }
 
 function renderReadout() {
+  // The avalanche layer needs no model run: until the time line is built, it reads now.
+  setAvalancheCursor(cursor.time ?? new Date());
   const i = seriesIndex();
   pin.setReadout(active.readout(pinData(), i, settingsFor(active)));
   scheduleDetails();
@@ -476,6 +491,12 @@ const PAN_MARGIN = 0.35;
 const fieldStore = new MemoryStore<GridField>(48);
 let fillTimer = 0;
 let mapReady = false;
+// The avalanche layer's regions, report pins and panels (online only).
+const avy = setupAvalanche(map, {
+  theme: () => appSettings.theme(),
+  settings: () => settingsFor(avalanche),
+  onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); },
+});
 let fillSeq = 0;
 
 function fieldKey(r: RunMetadata, t: Date, gridKey: string) {
@@ -728,6 +749,17 @@ async function updateFills(moving = false) {
   }
   radarImages.show(null);
   radarImages.setCoverage(null);
+  // Avalanche: issued bulletins, not model grids; the weather fills step aside.
+  avy.update(active.id === 'avalanche', cursor.time ?? new Date());
+  if (active.id === 'avalanche') {
+    flow.setShown(false);
+    windLayer.visible = false;
+    windLayer.setProfiles(null);
+    tempLayer.visible = false;
+    precipLayer.setFields([]);
+    setLine(null, null);
+    return;
+  }
   if (!cursor.time) return;
   const when = mapTime(cursor.time);
   const at = runAt(when);
@@ -1104,6 +1136,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
 
 // Pin
 const renderPlace = (p: PinState) => {
+  setAvalanchePin(p.lng, p.lat);
   const label = pinLabel(p).long;
   const text = p.elevation === null ? label : `${label} · ${formatElevation(p.elevation)}`;
   $('place-text').textContent = text;
@@ -1172,6 +1205,8 @@ map.on('click', (e) => {
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
+  // Avalanche: the tapped region's forecast opens, as on Avalanche Canada's map.
+  if (active.id === 'avalanche') avy.tapped(e.point, e.lngLat);
 });
 
 // Search: a chosen place moves the pin as a tap would, named, and the map flies there.
@@ -1227,8 +1262,8 @@ function renderDetails() {
   // A layer's own first line (precipitation: the snow ratio) sits above the model line.
   const own = active.id === 'precipitation' ? extra : [];
   const after = active.id === 'precipitation' ? [] : extra;
-  // Radar is observed, not a model run: its own lines only.
-  const footLines = active.frames ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
+  // Radar is observed and an avalanche bulletin is issued: their own lines only (no model, run or bands of the app's).
+  const footLines = active.frames || active.id === 'avalanche' ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
   for (const text of footLines) {
     const l = document.createElement('span');
     l.textContent = text;
@@ -1543,6 +1578,7 @@ function recolourForTheme(t: Theme) {
     if (map.getLayer('freezing-line')) map.setPaintProperty('freezing-line', 'line-color', c.freezing);
     if (map.getLayer('freezing-line-label')) { map.setPaintProperty('freezing-line-label', 'text-color', c.label); map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
     if (map.getLayer('saved-areas')) map.setPaintProperty('saved-areas', 'line-color', c.saved);
+    avy.recolour(t);
   }
   // Canvases read the CSS variables when drawn.
   scrubber.refresh();
@@ -1584,6 +1620,8 @@ map.on('load', () => {
   map.addLayer(tempLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
+  avy.addLayers(map.getLayer('hillshade') ? 'hillshade' : firstLabel, firstLabel);
+  if (active.id === 'avalanche') void updateFills();
   threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
   radarImages.setBefore(firstLabel);
   mapReady = true;

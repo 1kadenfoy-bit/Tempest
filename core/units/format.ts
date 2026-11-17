@@ -221,6 +221,13 @@ export function formatTimeRange(a: Date, b: Date, timeZone = TIME_ZONE): string 
   return `${formatCursorTime(a, timeZone)} – ${formatCursorTime(b, timeZone)}`;
 }
 
+/** "Thu Oct 1, 4 PM": a time that may be weeks away (issued bulletins). */
+export function formatDateTime(d: Date, timeZone = TIME_ZONE): string {
+  const p = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }).format(d).replace(',', '');
+  const full = formatCursorTime(d, timeZone);
+  return `${p}, ${full.slice(full.indexOf(' ') + 1)}`;
+}
+
 /** "4 PM" on the same BC day as `ref`, else "Fri 4 PM". */
 export function formatWhen(t: Date, ref: Date, timeZone = TIME_ZONE): string {
   const day = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone, dateStyle: 'short' }).format(d);
