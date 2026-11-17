@@ -100,9 +100,12 @@ export class ProfileSource {
     // 3. The point API: every hour for the missing nodes in one request
     if (Date.now() > this.apiDownUntil) {
       const missing = points.filter((p) => !has(this.nodes.get(nodeKey(run, p.lat, p.lon))));
+      // Ask only for what those nodes lack: switching layers adds the new
+      // layer's variables instead of downloading the profile again.
+      const lacking = vars.filter((v) => missing.some((p) => this.nodes.get(nodeKey(run, p.lat, p.lon))?.values[v] === undefined));
       try {
-        const key = `nodes|${run.referenceTime.toISOString()}|${vars.length}|${missing.map((p) => `${p.lat},${p.lon}`).join(';')}`;
-        const got = await this.once(key, () => fetchApiSeries(run.model, run.referenceTime, vars, missing, run.validTimes));
+        const key = `nodes|${run.referenceTime.toISOString()}|${lacking.join(',')}|${missing.map((p) => `${p.lat},${p.lon}`).join(';')}`;
+        const got = await this.once(key, () => fetchApiSeries(run.model, run.referenceTime, lacking, missing, run.validTimes));
         got.forEach((s, n) => {
           const k = nodeKey(run, missing[n]!.lat, missing[n]!.lon);
           const old = this.nodes.get(k);
@@ -133,9 +136,9 @@ export class ProfileSource {
    * for a model without pressure levels. `pastHours`: also that many hours
    * before the run's first hour, from earlier runs (the week's past).
    */
-  async pinSeries(run: RunMetadata, lat: number, lon: number, onPartial?: (s: PointSeries) => void, opts: { amounts?: boolean; profile?: boolean; pastHours?: number; noFiles?: boolean } = {}): Promise<PointSeries> {
-    const o = { amounts: false, profile: true, pastHours: 0, noFiles: false, ...opts };
-    const key = `${run.model}|${run.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}|${o.amounts}|${o.profile}|${o.pastHours}`;
+  async pinSeries(run: RunMetadata, lat: number, lon: number, onPartial?: (s: PointSeries) => void, opts: { amounts?: boolean; profile?: boolean; pastHours?: number; noFiles?: boolean; extra?: readonly VariableName[] } = {}): Promise<PointSeries> {
+    const o = { amounts: false, profile: true, pastHours: 0, noFiles: false, extra: [] as readonly VariableName[], ...opts };
+    const key = `${run.model}|${run.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}|${o.amounts}|${o.profile}|${o.pastHours}|${o.extra.length}`;
     const hit = this.pins.get(key);
     if (hit) return hit;
     // A second ask while the first is still reading (a layer switch) waits for it.
@@ -144,13 +147,14 @@ export class ProfileSource {
     return s;
   }
 
-  private async readPin(run: RunMetadata, lat: number, lon: number, onPartial: ((s: PointSeries) => void) | undefined, o: { amounts: boolean; profile: boolean; pastHours: number; noFiles: boolean }): Promise<PointSeries> {
+  private async readPin(run: RunMetadata, lat: number, lon: number, onPartial: ((s: PointSeries) => void) | undefined, o: { amounts: boolean; profile: boolean; pastHours: number; noFiles: boolean; extra: readonly VariableName[] }): Promise<PointSeries> {
+    const pinVars = [...new Set([...PIN_VARIABLES, ...o.extra])];
     // Saved first when the run is a saved one (no signal), else the API.
-    const fromSaved = await this.savedSeries(run, lat, lon);
+    const fromSaved = await this.savedSeries(run, lat, lon, pinVars);
     if (fromSaved) return fromSaved;
     if (Date.now() > this.apiDownUntil) {
       try {
-        const vars: VariableName[] = [...(o.profile ? PIN_VARIABLES : SURFACE_VARIABLES), ...(o.amounts ? (['precipitation', 'snowfall_water_equivalent'] as VariableName[]) : [])];
+        const vars: VariableName[] = [...new Set([...(o.profile ? pinVars : SURFACE_VARIABLES), ...(o.amounts ? (['precipitation', 'snowfall_water_equivalent'] as VariableName[]) : [])])];
         const first = run.validTimes[0]!.getTime();
         const past = Array.from({ length: o.pastHours }, (_, k) => new Date(first - (o.pastHours - k) * 3_600_000));
         const [s] = await fetchApiSeries(run.model, run.referenceTime, vars, [{ lat, lon }], [...past, ...run.validTimes]);
@@ -161,7 +165,7 @@ export class ProfileSource {
     }
     // The caller reads what it needs from the map files itself (long models: hour by hour is too slow).
     if (o.noFiles) throw new Error('point API unavailable');
-    return this.fileSeries(run, lat, lon, onPartial);
+    return this.fileSeries(run, lat, lon, onPartial, pinVars);
   }
 
   private async savedBoxFor(run: RunMetadata, t: Date, fits: (a: SavedArea) => boolean, extra: readonly VariableName[] = []): Promise<NativeBox | null> {
@@ -175,13 +179,15 @@ export class ProfileSource {
     return null;
   }
 
-  private async savedSeries(run: RunMetadata, lat: number, lon: number): Promise<PointSeries | null> {
+  private async savedSeries(run: RunMetadata, lat: number, lon: number, vars: readonly VariableName[]): Promise<PointSeries | null> {
     for (const a of this.savedAreas()) {
       if (!areaContains(a, lon, lat) || new Date(a.weather.run).getTime() !== run.referenceTime.getTime()) continue;
       if (!a.weather.files['temperature_850hPa']) continue;
       const w = await loadSavedWeather(a).catch(() => null);
       if (!w) continue;
-      const values = Object.fromEntries(PIN_VARIABLES.map((v) => [v, w.times.map((_, i) => sampleNative(savedStep(w, i), v, lat, lon))]));
+      // Only what the area kept (a layer not saved reads as missing, never as zero).
+      const kept = vars.filter((v) => a.weather.files[v]);
+      const values = Object.fromEntries(kept.map((v) => [v, w.times.map((_, i) => sampleNative(savedStep(w, i), v, lat, lon))]));
       return {
         label: { source: a.weather.source, model: a.weather.model, run: new Date(a.weather.run), gridKm: MODELS[a.weather.model]?.gridKm ?? NaN, licence: '', attribution: '', fetchedAt: new Date(a.savedAt), offline: true },
         lat, lon, times: w.times, stepHours: a.weather.stepHours, values,
@@ -203,10 +209,10 @@ export class ProfileSource {
   }
 
   /** The slow path: one file per hour, the cursor's hours first, reported as they arrive. */
-  private async fileSeries(run: RunMetadata, lat: number, lon: number, onPartial?: (s: PointSeries) => void): Promise<PointSeries> {
+  private async fileSeries(run: RunMetadata, lat: number, lon: number, onPartial: ((s: PointSeries) => void) | undefined, vars: readonly VariableName[]): Promise<PointSeries> {
     const times = run.validTimes;
     const ranges = coveringRanges(run.model, [lon, lat, lon, lat], 0.03);
-    const values = Object.fromEntries(PIN_VARIABLES.map((v) => [v, new Array<number>(times.length).fill(NaN)])) as PointSeries['values'];
+    const values = Object.fromEntries(vars.map((v) => [v, new Array<number>(times.length).fill(NaN)])) as PointSeries['values'];
     const series: PointSeries = {
       label: { source: 'openmeteo-maps', model: run.model, run: run.referenceTime, gridKm: MODELS[run.model]?.gridKm ?? NaN, licence: 'CC BY 4.0', attribution: 'Weather data by Open-Meteo.com (CC BY 4.0)', fetchedAt: new Date(), offline: true },
       lat, lon, times: [...times], stepHours: 1, values,
@@ -220,8 +226,8 @@ export class ProfileSource {
     const worker = async () => {
       while (next < order.length) {
         const i = order[next++]!;
-        const box = await readBoxFast(run.model, stepFileUrl(run.model, run.referenceTime, times[i]!), PIN_VARIABLES, ranges);
-        for (const v of PIN_VARIABLES) values[v]![i] = sampleNative(box, v, lat, lon);
+        const box = await readBoxFast(run.model, stepFileUrl(run.model, run.referenceTime, times[i]!), [...vars], ranges);
+        for (const v of vars) values[v]![i] = sampleNative(box, v, lat, lon);
         // A fresh copy each time: readers may cache by object.
         if (onPartial && Date.now() - lastReport > 500) { lastReport = Date.now(); onPartial(snapshot()); }
       }
