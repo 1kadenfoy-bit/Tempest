@@ -4,7 +4,7 @@
 import { rampColor } from '../../core/color/ramp';
 import { compass, directionShift, nextCalm, terrainWind, windProfileAt } from '../../core/wind/wind';
 import { dayStart } from '../../core/time/window';
-import { formatBearing, formatDayLabel, formatSpeed, formatSpan, formatWhen } from '../../core/units/format';
+import { formatBearing, formatDayLabel, formatSpeed, formatSpan, formatWhen, speedValue, unitLabel } from '../../core/units/format';
 import { PROFILE_LEVELS } from '../../core/vocabulary';
 import type { Card, DetailContext, Setting, ViewSample } from '../contract';
 import { windRamp } from './fill';
@@ -15,13 +15,14 @@ const H = 3_600_000;
 const ramp = windRamp();
 const color = (s: number) => { const [r, g, b] = rampColor(ramp, s); return `rgb(${r},${g},${b})`; };
 
-export const settings: Setting[] = [
+/** The settings, labelled in the units chosen in app settings (read when the panel opens). Thresholds stay km/h underneath. */
+export const settings = (): Setting[] => [
   { key: 'map', title: 'MAP SHOWS', kind: 'segmented', options: [{ value: 'speed', label: 'Speed' }, { value: 'gusts', label: 'Gusts' }], default: 'speed' },
   { key: 'flow', title: 'Flow animation', kind: 'toggle', default: true },
   { key: 'arrows', title: 'Arrows when animation is off', kind: 'toggle', default: true },
-  { key: 'calm', title: 'CALM THRESHOLD', kind: 'segmented', options: [{ value: '10', label: '10' }, { value: '15', label: '15' }, { value: '20', label: '20' }, { value: '25', label: '25 km/h' }], default: '15' },
+  { key: 'calm', title: 'CALM THRESHOLD', kind: 'segmented', options: ['10', '15', '20', '25'].map((v) => ({ value: v, label: formatSpeed(Number(v), v === '25') })), default: '15' },
 ];
-export const settingsNote = 'Wind at the terrain, from 10 m wind and pressure levels. Colours stop at 60 km/h; readouts always show the real value.';
+export const settingsNote = (): string => `Wind at the terrain, from 10 m wind and pressure levels. Colours stop at ${formatSpeed(60)}; readouts always show the real value.`;
 
 /** The hour of day in BC, 0–23. */
 function localHour(t: Date): number {
@@ -48,8 +49,8 @@ function nowCard(v: PinWind, ctx: DetailContext): Card {
   return {
     kind: 'stats', title: 'NOW', meta: ctx.cursor.getTime() === v.times[i]?.getTime() && Math.abs(ctx.cursor.getTime() - ctx.now.getTime()) > H ? `at ${formatWhen(ctx.cursor, ctx.now)}` : undefined,
     stats: [
-      { label: 'Speed', value: formatSpeed(v.speed[i]!, false), unit: 'km/h' },
-      { label: 'Gusts', value: formatSpeed(v.gust[i]!, false), unit: 'km/h' },
+      { label: 'Speed', value: formatSpeed(v.speed[i]!, false), unit: unitLabel('speed') },
+      { label: 'Gusts', value: formatSpeed(v.gust[i]!, false), unit: unitLabel('speed') },
       { label: 'From', value: compass(v.dir[i]!), unit: `${Math.round(v.dir[i]!) % 360}°` },
     ],
   };
@@ -63,12 +64,12 @@ function byElevation(v: PinWind, ctx: DetailContext, ground: number): Card | nul
   const points = [];
   for (let z = 0; z <= 4000; z += 100) {
     const w = terrainWind(p, z, ground);
-    points.push({ elevation: z, value: w.speed, color: color(w.speed) });
+    points.push({ elevation: z, value: speedValue(w.speed), color: color(w.speed) });
   }
   const sp = v.speed[ctx.index]!;
   return {
-    kind: 'value-elevation', title: 'BY ELEVATION', meta: `at ${formatWhen(ctx.cursor, ctx.now)} · ridge vs valley`, points, zero: false, unit: 'km/h',
-    you: { elevation: Math.max(0, ctx.pin.elevation ?? 0), value: sp, label: `You · ${formatSpeed(sp)}` },
+    kind: 'value-elevation', title: 'BY ELEVATION', meta: `at ${formatWhen(ctx.cursor, ctx.now)} · ridge vs valley`, points, zero: false, unit: unitLabel('speed'),
+    you: { elevation: Math.max(0, ctx.pin.elevation ?? 0), value: speedValue(sp), label: `You · ${formatSpeed(sp)}` },
   };
 }
 
@@ -107,11 +108,11 @@ function calmCard(v: PinWind, ctx: DetailContext): Card {
   const threshold = Number(ctx.settings.calm ?? 15);
   const c = nextCalm(v.times, v.speed, threshold, ctx.index);
   const note = 'Your calm threshold, set in Layer settings';
-  if (!c) return { kind: 'status', icon: 'calm', text: `No calm below ${threshold} km/h in the model’s hours`, note };
+  if (!c) return { kind: 'status', icon: 'calm', text: `No calm below ${formatSpeed(threshold)} in the model’s hours`, note };
   const now = c.start.getTime() === v.times[ctx.index]!.getTime();
   return {
     kind: 'status', icon: 'calm',
-    text: now ? `Calm now, below ${threshold} km/h, for about ${formatSpan(c.hours)}` : `Next calm below ${threshold} km/h: ${formatWhen(c.start, ctx.cursor)}, for about ${formatSpan(c.hours)}`,
+    text: now ? `Calm now, below ${formatSpeed(threshold)}, for about ${formatSpan(c.hours)}` : `Next calm below ${formatSpeed(threshold)}: ${formatWhen(c.start, ctx.cursor)}, for about ${formatSpan(c.hours)}`,
     note,
   };
 }

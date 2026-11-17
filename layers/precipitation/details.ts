@@ -10,7 +10,7 @@ import { crossings as rawCrossings, type Crossing } from '../../core/time/crossi
 
 /** Crossings to the nearest hour: they are "about", from hourly model steps. */
 const crossings = (...a: Parameters<typeof rawCrossings>): Crossing[] => rawCrossings(...a).map((c) => ({ ...c, time: new Date(Math.round(c.time.getTime() / 3_600_000) * 3_600_000) }));
-import { formatElevation, formatOneDecimal, formatWhen, formatWhole } from '../../core/units/format';
+import { formatCmNumber, formatElevation, formatElevationNumber, formatMmNumber, formatRate, formatRateNumber, formatTemp, formatTempOneDecimal, formatWhen, unitLabel } from '../../core/units/format';
 import type { BandsInfo, Card, DetailContext, Setting, ViewSample } from '../contract';
 import { precipRamp } from './fill';
 import { withObserved } from './observed';
@@ -18,14 +18,15 @@ import { withObserved } from './observed';
 const H = 3_600_000;
 const accent = tokens.data.precipitation.textAccent;
 
-export const settings: Setting[] = [
+/** The settings, labelled in the units chosen in app settings (read when the panel opens). */
+export const settings = (): Setting[] => [
   { key: 'type', title: 'TYPE SHOWN', kind: 'segmented', options: [{ value: 'all', label: 'All' }, { value: 'rain', label: 'Rain only' }, { value: 'snow', label: 'Snow only' }], default: 'all' },
   // HRDPS has no snow ratio of its own; Open-Meteo converts at a fixed 7:1.
   { key: 'ratio', title: 'SNOW RATIO', kind: 'segmented', options: [{ value: '7:1', label: '7:1' }, { value: 'kuchera', label: 'Kuchera' }, { value: '10:1', label: '10:1' }], default: 'kuchera' },
   // HRDPS's files carry no snow line of its own, so there is no "Model" choice.
-  { key: 'line', title: 'LINE ON THE MAP', kind: 'segmented', options: [{ value: 'off', label: 'Off' }, { value: 'wetbulb', label: 'Snow line' }, { value: '0c', label: '0 °C' }], default: 'wetbulb' },
+  { key: 'line', title: 'LINE ON THE MAP', kind: 'segmented', options: [{ value: 'off', label: 'Off' }, { value: 'wetbulb', label: 'Snow line' }, { value: '0c', label: formatTemp(0) }], default: 'wetbulb' },
 ];
-export const settingsNote = 'Nothing is drawn under 0.1 mm/h. The snow line is where the wet-bulb temperature falls to 0.5 °C.';
+export const settingsNote = (): string => `Nothing is drawn under ${formatRate(PRECIP_CUTOFF)}. The snow line is where the wet-bulb temperature falls to ${formatTempOneDecimal(0.5)}.`;
 
 const ratioSetting = (ctx: DetailContext) => (ctx.settings.ratio as SnowRatio | undefined) ?? 'kuchera';
 
@@ -74,12 +75,12 @@ function nowStats(ctx: DetailContext, snow: (number | null)[], freezing: (number
   const p = s.values.precipitation?.[i] ?? NaN;
   const rate = p / s.stepHours;
   const hasProfile = freezing.some((x) => x !== null) || snow.some((x) => x !== null);
-  const level = (v: number | null | undefined, none: string) => (v === null || v === undefined ? { value: hasProfile ? none : '–', unit: hasProfile ? '' : 'loading' } : { value: formatWhole(Math.round(v / 10) * 10), unit: 'm' });
+  const level = (v: number | null | undefined, none: string) => (v === null || v === undefined ? { value: hasProfile ? none : '–', unit: hasProfile ? '' : 'loading' } : { value: formatElevationNumber(Math.round(v / 10) * 10), unit: unitLabel('elevation') });
   const sl = level(snow[i], 'Sea level');
   const fl = level(freezing[i], 'None');
   return {
     kind: 'stats', title: 'NOW', stats: [
-      { label: 'Rate', value: Number.isFinite(rate) ? (rate < PRECIP_CUTOFF ? '0' : formatOneDecimal(rate)) : '–', unit: 'mm/h' },
+      { label: 'Rate', value: Number.isFinite(rate) ? (rate < PRECIP_CUTOFF ? '0' : formatRateNumber(rate)) : '–', unit: unitLabel('rate') },
       { label: 'Snow line', value: sl.value, unit: sl.unit },
       { label: 'Freezing level', value: fl.value, unit: fl.unit },
     ],
@@ -104,8 +105,8 @@ function totalsTable(ctx: DetailContext, bands: BandsInfo): Card {
     const t = totalAtHeight(s, z, a, b, ratio);
     // A span the model covers only in part shows what it holds, faded.
     const parts = [];
-    if (t.rainMm >= 0.5) parts.push({ text: formatWhole(t.rainMm), color: accent.rain });
-    if (t.snowCm >= 0.5) parts.push({ text: formatWhole(t.snowCm), color: accent.snow });
+    if (t.rainMm >= 0.5) parts.push({ text: formatMmNumber(t.rainMm, undefined, true), color: accent.rain });
+    if (t.snowCm >= 0.5) parts.push({ text: formatCmNumber(t.snowCm, undefined, true), color: accent.snow });
     return { parts: parts.length ? parts : [{ text: '0', color: 'var(--ink-2)' }], partial: !t.complete };
   };
   const rows = (['Alpine', 'Mid', 'Valley'] as const).map((band) => ({
@@ -121,7 +122,7 @@ function totalsTable(ctx: DetailContext, bands: BandsInfo): Card {
     groups: [{ label: 'Past, hours', columns: spans.map(String) }, { label: 'Next, hours', columns: [...spans].reverse().map(String) }],
     rows,
     note: [
-      { text: 'Rain mm', color: accent.rain }, { text: ' · ' }, { text: 'snow cm', color: accent.snow },
+      { text: `Rain ${unitLabel('rain')}`, color: accent.rain }, { text: ' · ' }, { text: `snow ${unitLabel('snow')}`, color: accent.snow },
       { text: ` · alpine above ${approx}${formatElevation(bands.alpineBottom)}, valley below ${approx}${formatElevation(bands.valleyTop)} · faded: the model run covers only part of that span (earlier hours come with observed data, later ones with more models)` },
     ],
   };
@@ -165,9 +166,9 @@ export function precipInView(view: ViewSample): string | null {
   else {
     const kind = typeFromShare(snowShare(top.value, top.second ?? 0));
     const name = view.nameAt(top.lon, top.lat);
-    parts.push(`heaviest ${formatOneDecimal(top.value)} mm/h ${kind}${name ? ` near ${name}` : ''}`);
+    parts.push(`heaviest ${formatRate(top.value)} ${kind}${name ? ` near ${name}` : ''}`);
   }
-  if (view.freezing) parts.push(`freezing level ${formatWhole(Math.round(view.freezing[0] / 50) * 50)}–${formatElevation(Math.round(view.freezing[1] / 50) * 50)}`);
+  if (view.freezing) parts.push(`freezing level ${formatElevationNumber(Math.round(view.freezing[0] / 50) * 50)}–${formatElevation(Math.round(view.freezing[1] / 50) * 50)}`);
   return `In view: ${parts.join(' · ')}`;
 }
 

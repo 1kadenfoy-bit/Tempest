@@ -65,14 +65,14 @@ export function formatElevation(metres: number, u: UnitSystem = current): string
   return `${formatElevationNumber(metres, u)} ${unitLabel('elevation', u)}`;
 }
 
-/** "2.5" or "1.6": a distance's number in the shown unit; one decimal under 10. */
-export function formatDistanceNumber(km: number, u: UnitSystem = current): string {
+/** "2.5" or "1.6": a distance's number in the shown unit; one decimal under 10 unless `whole`. */
+export function formatDistanceNumber(km: number, u: UnitSystem = current, whole = false): string {
   const v = u === 'imperial' ? kmToMi(km) : km;
-  return Math.abs(v) < 10 ? upToOne.format(v) : intl.format(Math.round(v));
+  return !whole && Math.abs(v) < 10 ? upToOne.format(v) : intl.format(Math.round(v));
 }
 /** "2.5 km" or "1.6 mi". */
-export function formatDistance(km: number, u: UnitSystem = current): string {
-  return `${formatDistanceNumber(km, u)} ${unitLabel('distance', u)}`;
+export function formatDistance(km: number, u: UnitSystem = current, whole = false): string {
+  return `${formatDistanceNumber(km, u, whole)} ${unitLabel('distance', u)}`;
 }
 
 const TIME_ZONE = 'America/Vancouver';
@@ -177,6 +177,12 @@ export function formatTempNumber(c: number, plus = false, u: UnitSystem = curren
 /** "−1 °C" or "30 °F" (readout). Rounds to the degree; never shows "−0". */
 export function formatTemp(c: number, u: UnitSystem = current): string {
   return `${formatTempNumber(c, false, u)} ${unitLabel('temp', u)}`;
+}
+
+/** "0.5 °C" or "32.9 °F": a threshold to one decimal. */
+export function formatTempOneDecimal(c: number, u: UnitSystem = current): string {
+  const v = tempValue(c, u);
+  return `${v < 0 ? MINUS : ''}${oneDecimal.format(Math.abs(v))} ${unitLabel('temp', u)}`;
 }
 
 /** "+2 °C" (stat values and In view lines, sign shown). */
