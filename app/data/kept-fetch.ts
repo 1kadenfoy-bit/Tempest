@@ -44,6 +44,42 @@ export async function keptAnswer(name: string): Promise<KeptAnswer | null> {
   } catch { return null; }
 }
 
+export interface KeptBytes { bytes: Uint8Array; fetchedAt: Date; kept: boolean }
+const bytesInFlight = new Map<string, Promise<KeptBytes | null>>();
+
+/**
+ * A file that changes rarely (an ATES area): the copy kept on the phone is
+ * used while younger than `freshMs`, without asking the network at all. An
+ * older one is asked for again (one try, 20 s limit) and the kept copy comes
+ * back if that fails. `online` false means kept copies only. Null when there
+ * is nothing to show.
+ */
+export function fetchKeptBytes(url: string, name: string, freshMs: number, online: boolean, fetchFn: typeof fetch = fetch): Promise<KeptBytes | null> {
+  const running = bytesInFlight.get(name);
+  if (running) return running;
+  const p = (async () => {
+    const cache = await openCache();
+    const address = `https://kept.tempest/${name}`;
+    const hit = await cache?.match(address).catch(() => undefined);
+    const kept = hit ? { bytes: new Uint8Array(await hit.arrayBuffer()), fetchedAt: new Date(Number(hit.headers.get(FETCHED_AT)) || 0), kept: true } : null;
+    if (kept && (!online || Date.now() - kept.fetchedAt.getTime() < freshMs)) return kept;
+    if (!online) return null;
+    try {
+      const res = await fetchFn(url, { signal: AbortSignal.timeout(20_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const fetchedAt = new Date();
+      await cache?.put(address, new Response(bytes, { headers: { 'content-type': res.headers.get('content-type') ?? 'application/octet-stream', [FETCHED_AT]: String(fetchedAt.getTime()) } })).catch(() => undefined);
+      return { bytes, fetchedAt, kept: false };
+    } catch (err) {
+      if (kept) return kept;
+      throw err;
+    }
+  })().finally(() => bytesInFlight.delete(name));
+  bytesInFlight.set(name, p);
+  return p;
+}
+
 /**
  * Fetch `url` as JSON, keeping the answer under `name`. Throws only when
  * there is neither a fresh answer nor a kept one; the error says why.

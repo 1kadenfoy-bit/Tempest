@@ -24,6 +24,8 @@ export const SETTINGS: Setting[] = [
     key: 'age', title: 'REPORTS FROM THE LAST', kind: 'segmented', default: '7',
     options: [{ value: '7', label: '7 days' }, { value: '14', label: '14 days' }, { value: '30', label: '30 days' }],
   },
+  // Avalanche Canada's ATES areas (also the round button beside the map while this layer is shown).
+  { key: 'ates', title: 'Terrain complexity (ATES)', kind: 'toggle', default: false },
 ];
 
 export const bandChoice = (s: Record<string, string | boolean>): BandChoice => {
@@ -185,7 +187,7 @@ export function footer(): string[] {
 }
 
 export function settingsNote(): string {
-  return 'Ratings, words and colours are Avalanche Canada’s, as issued. "Highest" colours each region by the highest of its three bands, as Avalanche Canada’s own map does. Bands are not set heights: each region’s treeline differs, so the pin’s band is not guessed. Online only.';
+  return 'Ratings, words and colours are Avalanche Canada’s, as issued. "Highest" colours each region by the highest of its three bands, as Avalanche Canada’s own map does. Bands are not set heights: each region’s treeline differs, so the pin’s band is not guessed. Online only. Terrain complexity shows Avalanche Canada’s ATES areas as published: simple (green), challenging (blue) and complex (black) terrain, access routes and points of interest, from zoom 10; an area seen once is kept on the phone. Ratings describe the terrain, not the day’s danger.';
 }
 
 export const avalanche: LayerSlots = {

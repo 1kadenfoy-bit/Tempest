@@ -56,9 +56,9 @@ self.addEventListener('fetch', (event) => {
   // Map files are read by byte range and saved per area by the app.
   if (req.headers.has('range') || url.pathname.endsWith('.pmtiles')) return;
 
-  // Pages, the manifest and the base map index: newest first, the saved copy
-  // without signal.
-  if (req.mode === 'navigate' || url.pathname.endsWith('.webmanifest') || url.pathname.endsWith('/tiles/basemap.json')) {
+  // Pages, the manifest, the base map index and the ATES area index (not
+  // hashed, refreshed by hand): newest first, the saved copy without signal.
+  if (req.mode === 'navigate' || url.pathname.endsWith('.webmanifest') || url.pathname.endsWith('/tiles/basemap.json') || url.pathname.endsWith('/ates/index.json')) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
       try {

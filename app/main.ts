@@ -19,6 +19,7 @@ import { wind, windRenderStyle, WIND_NEEDS } from '../layers/wind';
 import { avalanche, setAvalancheCursor } from '../layers/avalanche';
 import { setAvalanchePin } from '../core/avalanche/danger';
 import { setupAvalanche } from './avalanche/avalanche';
+import { ATES_ICON } from './avalanche/ates';
 import { TerrainWindLayer } from '../render/grid-gl/terrain-wind-layer';
 import { FlowCanvas, type FlowMode } from '../render/flow/flow-canvas';
 import { modelGround, nodeProfiles, packWind, screenWind, windComplete } from './map/wind-field';
@@ -396,10 +397,19 @@ function settingsFor(l: LayerSlots): Record<string, string | boolean> {
 }
 const profiles = new ProfileSource(() => savedParts, () => usingSaved);
 
+/** A second legend line some layers add (the avalanche layer's terrain ratings); set once the layer's map wiring exists. */
+const atesThumb = document.createElement('button');
+let extraLegend: (doc: Document) => HTMLElement | null = () => null;
+function renderLegend() {
+  const more = active.id === 'avalanche' ? extraLegend(document) : null;
+  $('legend-row').replaceChildren(active.legend(document), ...(more ? [more] : []));
+}
+
 /** Point the shell's slots at the active layer. */
 function showLayer() {
   $('layer-name').textContent = active.title;
-  $('legend-row').replaceChildren(active.legend(document));
+  renderLegend();
+  syncAtesThumb();
   const weekDay = active.weekDay;
   scrubber.setLayer({
     chartLabel: active.chartLabel,
@@ -484,6 +494,10 @@ if (new URLSearchParams(location.search).has('fps')) {
 // 3D terrain and buildings. The flow is drawn in screen space for a flat,
 // north-up map, so it waits while the map is tilted or turned.
 const buildingsOk = hasBuildingHeights(basemap.manifest.vector_layers);
+function syncAtesThumb() {
+  atesThumb.style.display = active.id === 'avalanche' ? '' : 'none';
+  atesThumb.setAttribute('aria-pressed', String(settingsFor(avalanche).ates === true));
+}
 const threeD = setupThreeD(map, document.querySelector<HTMLElement>('.thumbs')!, () => appSettings.theme(), (flat) => flow.setShown(active.id === 'wind' && flat));
 /** The flow's mode from the wind settings: animated, still arrows, or nothing. */
 const flowMode = (): FlowMode => { const s = settingsFor(wind); return s.flow ? 'flow' : s.arrows ? 'arrows' : 'off'; };
@@ -498,7 +512,19 @@ const avy = setupAvalanche(map, {
   theme: () => appSettings.theme(),
   settings: () => settingsFor(avalanche),
   onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); },
+  onLegend: () => { if (active.id === 'avalanche') renderLegend(); },
 });
+extraLegend = (doc) => avy.atesLegend(doc);
+// The terrain ratings' quick switch: a round button with the thumb buttons,
+// shown only while the avalanche layer is (no v8 design; the compass's shape).
+// The same setting as the layer settings' switch.
+atesThumb.className = 'thumb';
+atesThumb.id = 'ates-toggle';
+atesThumb.setAttribute('aria-label', 'Terrain complexity (ATES)');
+atesThumb.innerHTML = ATES_ICON;
+document.querySelector<HTMLElement>('.thumbs')!.prepend(atesThumb);
+atesThumb.addEventListener('click', () => setLayerSetting(avalanche, 'ates', settingsFor(avalanche).ates !== true));
+syncAtesThumb();
 let fillSeq = 0;
 
 function fieldKey(r: RunMetadata, t: Date, gridKey: string) {
@@ -1286,6 +1312,20 @@ function renderDetails() {
   document.body.dataset.details = 'ready';
 }
 
+/** Change one of a layer's settings (remembered between sessions) and redraw what depends on it. */
+function setLayerSetting(layer: LayerSlots, key: string, v: string | boolean) {
+  prefs.layerSettings[layer.id] = { ...(prefs.layerSettings[layer.id] ?? {}), [key]: v };
+  savePrefs(prefs);
+  if (layer.id === 'precipitation' && key === 'type') precipLayer.setStyle(precip.precipRenderStyle(v as 'all' | 'rain' | 'snow'));
+  // Radar: another product has its own frames and legend.
+  if (layer.id === radar.id && key === 'shown') { showLayer(); void loadRadarFrames(true); }
+  renderReadout();
+  scrubber.refresh();
+  renderDetails();
+  void updateFills();
+  if (layer.id === 'avalanche') { syncAtesThumb(); renderLegend(); }
+}
+
 /** The active layer's settings panel (v8 17-PrecipSettings, 22-TempSettings), remembered between sessions. */
 function openLayerSettings(origin: HTMLElement) {
   if (isOpenFrom(origin)) { closePanel(); return; }
@@ -1293,17 +1333,7 @@ function openLayerSettings(origin: HTMLElement) {
   const values = settingsFor(layer);
   const body = document.createElement('div');
   body.className = 'panel-groups';
-  const change = (key: string, v: string | boolean) => {
-    prefs.layerSettings[layer.id] = { ...(prefs.layerSettings[layer.id] ?? {}), [key]: v };
-    savePrefs(prefs);
-    if (layer.id === 'precipitation' && key === 'type') precipLayer.setStyle(precip.precipRenderStyle(v as 'all' | 'rain' | 'snow'));
-    // Radar: another product has its own frames and legend.
-    if (layer.id === radar.id && key === 'shown') { showLayer(); void loadRadarFrames(true); }
-    renderReadout();
-    scrubber.refresh();
-    renderDetails();
-    void updateFills();
-  };
+  const change = (key: string, v: string | boolean) => setLayerSetting(layer, key, v);
   for (const st of layer.settings) {
     if (st.kind === 'segmented') {
       const g = document.createElement('div');

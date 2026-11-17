@@ -23,6 +23,8 @@ import { closePanel, openPanel } from '../shell/panel';
 import { colorToken, type Theme } from '../theme/tokens';
 import { maplibregl } from '../map/maplibre';
 import { issuedHtml } from './html';
+import { anchorAt, el } from './dom';
+import { setupAtes } from './ates';
 
 /** Bulletins change once or twice a day: asking every 30 minutes is plenty, and polite. */
 const FORECAST_TTL = 30 * 60_000;
@@ -38,34 +40,22 @@ export interface AvalancheOptions {
   settings(): Record<string, string | boolean>;
   /** New data arrived: the readout, chart and details should redraw. */
   onData(): void;
+  /** The terrain ratings' legend line changed (areas loaded, zoom). */
+  onLegend(): void;
 }
 
-const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string) => {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
+/** The danger fill's opacity; with terrain ratings on it fades from zoom 8 to 10, where the zones appear. */
+const fillOpacity = (atesShown: boolean): unknown[] => {
+  const at = (o: number) => ['match', ['coalesce', ['feature-state', 'value'], 'none'], 'none', 0, o];
+  // Always the same kind of expression (by zoom): MapLibre 6.18 throws when a
+  // paint property changes between a zoom expression and a plain one.
+  return ['interpolate', ['linear'], ['zoom'], 8, at(0.42), 10, at(atesShown ? 0.12 : 0.42)];
 };
 
 const bandOf = (s: Record<string, string | boolean>): BandChoice => (s.band === 'alp' || s.band === 'tln' || s.band === 'btl' ? s.band : 'highest');
 
 /** The colour lookup the map runs on the device: rating value → official colour. */
 const colourMatch = (none: string): unknown[] => ['match', ['coalesce', ['feature-state', 'value'], 'none'], ...Object.entries(DANGER_COLOURS).flat(), none];
-
-/**
- * A small anchor for a panel to grow from (removed when the panel closes). It
- * sits at the tap's x and in the lower half of the screen, so the panel
- * stands on the bottom edge and gets the screen's full height to scroll in.
- */
-function anchorAt(x: number, y: number): HTMLElement {
-  const a = el('span', 'avy-anchor');
-  a.tabIndex = -1;
-  a.style.left = `${x}px`;
-  a.style.top = `${Math.max(y, window.innerHeight * 0.55)}px`;
-  document.body.append(a);
-  return a;
-}
-
 
 export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   let active = false;
@@ -77,6 +67,9 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   const markers = new Map<string, maplibregl.Marker>();
   let layersAdded = false;
   let regionIds: string[] = [];
+  /** Terrain ratings (ATES): the layer's switch, shown only with the layer. */
+  const atesOn = () => active && opts.settings().ates === true;
+  const ates = setupAtes(map, { theme: opts.theme, shown: atesOn, onChange: opts.onLegend });
 
   /** "Saved data only" asks for no network at all; the kept copy is shown instead. */
   const online = () => !savedOnlyActive();
@@ -184,6 +177,9 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     if (!layersAdded) return;
     const vis = active ? 'visible' : 'none';
     for (const id of ['avy-fill', 'avy-casing', 'avy-line']) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis);
+    // With terrain ratings on, the danger colour fades as the zones come in, so
+    // the zones read clearly; the region outlines keep their danger colour.
+    if (map.getLayer('avy-fill')) map.setPaintProperty('avy-fill', 'fill-opacity', fillOpacity(atesOn()) as never);
     if (!d || !cursor || !active) return;
     const band = bandOf(opts.settings());
     for (const id of regionIds) {
@@ -199,7 +195,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
       id: 'avy-fill', type: 'fill', source: 'avy-regions', layout: { visibility: 'none' },
       paint: {
         'fill-color': colourMatch('rgba(0,0,0,0)') as never,
-        'fill-opacity': ['match', ['coalesce', ['feature-state', 'value'], 'none'], 'none', 0, 0.42] as never,
+        'fill-opacity': fillOpacity(false) as never,
       },
     }, fillBefore);
     // A neutral casing under each outline keeps every colour (white, black) readable on the map.
@@ -212,6 +208,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
       paint: { 'line-color': colourMatch(colorToken('ink-2', t)) as never, 'line-width': 2 },
     }, lineBefore);
     layersAdded = true;
+    ates.addLayers(lineBefore);
     drawRegions();
     paint();
   }
@@ -220,6 +217,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     if (!layersAdded) return;
     map.setPaintProperty('avy-casing', 'line-color', colorToken('surface', t));
     map.setPaintProperty('avy-line', 'line-color', colourMatch(colorToken('ink-2', t)) as never);
+    ates.recolour(t);
   }
 
   /** The layer is on screen (or not), at this cursor time. */
@@ -227,6 +225,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     const was = active;
     active = isActive;
     cursor = t;
+    ates.sync();
     if (!active) {
       if (was) { showMarkers([]); paint(); }
       return;
@@ -239,6 +238,8 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   /** A tap on the map while the layer is on: the region's full forecast, growing from the tap. */
   function tapped(point: { x: number; y: number }, lngLat: { lng: number; lat: number }) {
     if (!active) return;
+    // Terrain ratings first: a tap on a zone, line, point or area opens that.
+    if (ates.tapped(point, lngLat)) return;
     const here = bulletinAt(lngLat.lng, lngLat.lat);
     if (!here) return;
     const r = map.getContainer().getBoundingClientRect();
@@ -454,7 +455,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   }
 
   /** Ask again now (a tap on the top bar's line after a failure). */
-  const retry = () => { reports = null; void loadForecasts(true); void loadReports(); };
+  const retry = () => { reports = null; void loadForecasts(true); void loadReports(); ates.retry(); };
   const needsRetry = () => !avalancheData() || showingKept;
-  return { addLayers, update, tapped, recolour, ageLine, retry, needsRetry, refresh: () => { void loadForecasts(); void loadReports(); paint(); }, close: closePanel };
+  return { addLayers, update, tapped, recolour, ageLine, retry, needsRetry, atesLegend: (doc: Document) => (atesOn() ? ates.legend(doc) : null), refresh: () => { void loadForecasts(); void loadReports(); paint(); }, close: closePanel };
 }
