@@ -89,10 +89,18 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
   await page.screenshot({ path: 'test-results/screens/radar.png' });
 
   // Play from the newest frame starts the loop an hour back, then steps forward.
+  // Every frame shown is recorded in the page (a frame lasts 0.5 s, too short to catch by polling on a busy machine).
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { seenFrames: string[] }).seenFrames = seen;
+    new MutationObserver(() => { const f = document.body.dataset.radarFrame; if (f && seen[seen.length - 1] !== f) seen.push(f); })
+      .observe(document.body, { attributes: true, attributeFilter: ['data-radar-frame'] });
+  });
   await page.click('#play-button');
   const loopStart = new Date(newest - STEP - 3_600_000).toISOString();
-  await expect(page.locator('body')).toHaveAttribute('data-radar-frame', loopStart, { timeout: 5000 });
-  await expect(page.locator('body')).toHaveAttribute('data-radar-frame', new Date(newest - STEP - 3_600_000 + STEP).toISOString(), { timeout: 5000 });
+  const next = new Date(newest - STEP - 3_600_000 + STEP).toISOString();
+  const seen = () => page.evaluate(() => (window as unknown as { seenFrames: string[] }).seenFrames);
+  await expect.poll(async () => { const f = await seen(); const i = f.indexOf(loopStart); return i >= 0 && f[i + 1] === next; }, { timeout: 10_000 }).toBe(true);
   await page.click('#play-button');
   // Polite: frames load only around the cursor (a few, not all 31).
   const times = new Set(asked.filter((u) => u.searchParams.get('request') === 'GetMap' && !u.searchParams.get('layers')!.startsWith('RADAR_COVERAGE')).map((u) => u.searchParams.get('time')));
