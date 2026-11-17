@@ -9,7 +9,7 @@ Branch: `claude/tempest-m0-setup-930073` (the only branch Claude may push to). P
 | Step | State | Notes |
 | --- | --- | --- |
 | M8 saved areas | Done, PR #7 | Rerun `e2e/shell.spec.ts` ("window control", "pulled up") after 00:00 UTC, when Open-Meteo's daily limit for the build machine resets |
-| M9 alerts panel | In progress (helper agent) | ECCC weather-alerts, exactly as issued |
+| M9 alerts panel | Done, merged (b3613d7) | ECCC weather-alerts, exactly as issued; shell pixel tests stub "no alerts" |
 | M9 place search | In progress (helper agent) | Moves the pin |
 | M9 app settings + light theme | In progress (helper agent) | Units, theme, saved-data-only, credits from source metadata |
 | 3D spike | In progress (helper agent) | Terrain 3D and buildings; how weather fills behave in 3D |
