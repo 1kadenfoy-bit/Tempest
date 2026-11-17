@@ -115,7 +115,8 @@ These came from research and were not all confirmed. Check each at the milestone
 - Whether Open-Meteo's map files offer HRDPS as its own model, and whether partial reads work in an iPhone web view.
 - The starter library's current name and API. Last seen: npm package `@openmeteo/weather-map-layer`, an `om://` protocol registered with MapLibre's `addProtocol`, data under `openmeteo-data-spatial.b-cdn.net`. It is young and changes often; read its README first.
 - Real download sizes for a saved area. M8, Nov 17: an 8 × 6 km box with all three layers for 3 days was 7.3 MB (weather 1.9, map 1.6, terrain 3.0, labels 0.9); the estimate said about 7.
-- Avalanche Canada's terms, including keeping bulletins offline. Kaden should email them before the avalanche layer.
+- Avalanche Canada's terms, including keeping bulletins offline. Kaden should email them before the avalanche layer. Read Nov 17 (`docs/05-data-sources.md`, Avalanche): no licence for the API, website material not to be reproduced without written consent, nothing on offline. The layer is built for testing, online only, pending their answer; the questions are in `docs/reports/avalanche/report.md`.
+- Avalanche Canada's ATES (terrain complexity) data: the Trip Planner reads it from a private Mapbox style with Avalanche Canada's own token; only per-zone KMZ downloads are published. Not built; ask Avalanche Canada.
 - Mapterhorn's coverage and resolution in BC.
 - How much storage iOS grants a home-screen web app, and when it evicts it. M8 asks for persistent storage on every save and the saved areas list says whether the phone agreed: Kaden to report what it says on the iPhone.
 - Every access detail marked "not confirmed" in `docs/05-data-sources.md`.
@@ -131,4 +132,4 @@ These came from research and were not all confirmed. Check each at the milestone
 2. Set the cloud environment's network access so the weather and map servers are reachable (see `README.md`).
 3. Create a hosting account if the preview host needs one.
 4. Test each milestone on his phone and say go or change.
-5. Email Avalanche Canada about data terms before the avalanche layer.
+5. Email Avalanche Canada about data terms before the avalanche layer (draft questions in `docs/reports/avalanche/report.md`).
