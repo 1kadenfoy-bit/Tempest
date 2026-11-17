@@ -66,6 +66,7 @@ import { setupViewport } from './shell/viewport';
 import { colorToken, type Theme } from './theme/tokens';
 import { startAppSettings } from './settings/app-settings';
 import { alertsAt } from './alerts/alerts';
+import { setupSearch } from './search/search';
 
 const prefs = loadPrefs();
 // App settings: units and theme apply before anything draws; the hooks redraw
@@ -1010,6 +1011,16 @@ map.on('click', (e) => {
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
+});
+
+// Search: a chosen place moves the pin as a tap would, named, and the map flies there.
+setupSearch($('search-button') as HTMLButtonElement, {
+  choose: (place) => {
+    pin.set({ lng: place.lon, lat: place.lat, kind: 'dropped', name: place.name });
+    rememberPin({ lng: place.lon, lat: place.lat, name: place.name });
+    map.flyTo({ center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 12), duration: 900 });
+  },
+  near: () => { const c = map.getCenter(); return { lat: c.lat, lon: c.lng }; },
 });
 
 // Sheet: the details are drawn when it is pulled up, and kept fresh while it is.
