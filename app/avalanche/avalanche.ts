@@ -2,8 +2,9 @@
 // the issued danger for the cursor's day, Mountain Information Network
 // reports as pins, the full forecast when a region is tapped and a report
 // when its pin is tapped. Everything is shown as issued or as written; the app
-// only chooses which issued day applies. Online only: Avalanche Canada's terms
-// on keeping bulletins have not been confirmed.
+// only chooses which issued day applies. The last answers are kept on the
+// phone (app/data/kept-fetch.ts), so without signal the latest bulletin and
+// reports still show, with their age.
 //
 // No v8 design exists for this layer: the panels reuse the grow panel, groups,
 // rows and notes of the other panels.
@@ -14,15 +15,17 @@ import {
   type BandChoice, type Bulletin, type DangerValue, type FieldReport,
 } from '../../core/avalanche/danger';
 import { formatDateTime, formatRelative, formatWhen } from '../../core/units/format';
-import { fetchForecasts, source as forecastSource } from '../../adapters/avalanche-canada/forecasts';
-import { fetchSubmissions, photoAt, source as minSource } from '../../adapters/avalanche-canada/min';
+import { areasUrl, parseAreas, parseProducts, productsUrl, source as forecastSource } from '../../adapters/avalanche-canada/forecasts';
+import { parseSubmissions, photoAt, source as minSource, submissionsUrl } from '../../adapters/avalanche-canada/min';
+import { failureReason, fetchKept, keptAnswer } from '../data/kept-fetch';
 import { closePanel, openPanel } from '../shell/panel';
 import { loadPrefs } from '../shell/prefs';
 import { colorToken, type Theme } from '../theme/tokens';
 import { maplibregl } from '../map/maplibre';
 import { issuedHtml } from './html';
 
-const FORECAST_TTL = 15 * 60_000;
+/** Bulletins change once or twice a day: asking every 30 minutes is plenty, and polite. */
+const FORECAST_TTL = 30 * 60_000;
 const REPORTS_TTL = 10 * 60_000;
 
 const MOUNTAIN = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 19 6.5-11 4 6.5 2-3L21 19z"/><path d="m8 10.5 1.5 1.5 1.5-1.5"/></svg>';
@@ -75,20 +78,41 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   let layersAdded = false;
   let regionIds: string[] = [];
 
-  const online = () => navigator.onLine && !loadPrefs().savedOnly;
+  /** "Saved data only" asks for no network at all; the kept copy is shown instead. */
+  const online = () => !loadPrefs().savedOnly;
+  /** Why the last ask failed, for the top bar (null when it worked). */
+  let lastFailure: string | null = null;
+  /** True while showing the copy kept on the phone (no fresh answer this time). */
+  let showingKept = false;
 
-  async function loadForecasts(): Promise<void> {
-    if (Date.now() - fetchedAt < FORECAST_TTL && avalancheData()) return;
-    if (!online()) { if (!avalancheData()) { setAvalancheData(null, true); opts.onData(); } return; }
+  /** Bulletins from the copy kept on the phone, when the network gives none. */
+  async function fromKept(): Promise<boolean> {
+    const [a, p] = await Promise.all([keptAnswer('avalanche-areas'), keptAnswer('avalanche-products')]);
+    if (!a || !p) return false;
+    setAvalancheData({ regions: parseAreas(a.json), bulletins: parseProducts(p.json), fetchedAt: new Date(Math.min(a.fetchedAt.getTime(), p.fetchedAt.getTime())), source: forecastSource.publisher });
+    showingKept = true;
+    drawRegions();
+    return true;
+  }
+
+  async function loadForecasts(force = false): Promise<void> {
+    if (!force && Date.now() - fetchedAt < FORECAST_TTL && avalancheData() && !showingKept) return;
     if (loading) return loading;
     loading = (async () => {
       try {
-        const got = await fetchForecasts();
-        setAvalancheData({ ...got, fetchedAt: new Date(), source: forecastSource.publisher });
+        if (!online()) {
+          if (!avalancheData() && !(await fromKept())) setAvalancheData(null, true);
+          return;
+        }
+        const [a, p] = await Promise.all([fetchKept(areasUrl(), 'avalanche-areas'), fetchKept(productsUrl(), 'avalanche-products')]);
+        setAvalancheData({ regions: parseAreas(a.json), bulletins: parseProducts(p.json), fetchedAt: new Date(Math.min(a.fetchedAt.getTime(), p.fetchedAt.getTime())), source: forecastSource.publisher });
+        showingKept = a.kept || p.kept;
+        lastFailure = showingKept ? 'no answer' : null;
         fetchedAt = Date.now();
         drawRegions();
       } catch (err) {
         console.warn('no avalanche forecasts', err);
+        lastFailure = failureReason(err);
         // Keep what was there, shown with its fetch time; ask again next time.
         if (!avalancheData()) setAvalancheData(null, true);
       } finally {
@@ -106,13 +130,14 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     if (!active || s.reports === false) { showMarkers([]); return; }
     const days = Number(s.age) || 7;
     if (reports && reports.days === days && Date.now() - reports.at < REPORTS_TTL) { showMarkers(reports.list); return; }
-    if (!online()) { showMarkers(reports?.list ?? []); return; }
     const key = `${days}`;
     if (reportsLoading === key) return;
     reportsLoading = key;
     try {
-      const list = await fetchSubmissions(days);
-      reports = { days, at: Date.now(), list };
+      // Kept per age choice, so without signal the last list for that span shows.
+      const name = `avalanche-reports-${days}`;
+      const got = online() ? await fetchKept(submissionsUrl(days, new Date()), name) : await keptAnswer(name);
+      if (got) reports = { days, at: got.kept ? 0 : Date.now(), list: parseSubmissions(got.json) };
     } catch (err) {
       console.warn('no field reports', err);
     } finally {
@@ -333,7 +358,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     link.append(el('span', '', 'Read the full forecast on avalanche.ca'));
     body.append(link);
     const d = avalancheData();
-    const note = el('p', 'panel-note', `${forecastSource.attribution}. As issued; fetched ${d ? formatWhen(d.fetchedAt, now) : '–'}. Online only.`);
+    const note = el('p', 'panel-note', `${forecastSource.attribution}. As issued; fetched ${d ? formatWhen(d.fetchedAt, now) : '–'}. Kept on the phone for use without signal.`);
     body.append(note);
     openPanel({ origin, icon: MOUNTAIN, title: short, caption: 'Avalanche forecast · as issued', body, onClose: () => origin.remove() });
     document.body.dataset.avalanchePanel = 'region';
@@ -405,7 +430,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.append(el('span', '', 'Open this report on avalanche.ca'));
-    body.append(link, el('p', 'panel-note', `${minSource.attribution}. Shown as written; not checked by Avalanche Canada or Tempest. Online only.`));
+    body.append(link, el('p', 'panel-note', `${minSource.attribution}. Shown as written; not checked by Avalanche Canada or Tempest. Kept on the phone for use without signal.`));
     openPanel({ origin, icon: NOTE, title: r.title || 'Field report', caption: 'Mountain Information Network report', body, onClose: () => origin.remove() });
     document.body.dataset.avalanchePanel = 'report';
   }
@@ -413,7 +438,9 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   /** The top bar's line while the layer is on: the pin's bulletin and its age. */
   function ageLine(lon: number, lat: number): { text: string; stale: boolean } {
     const d = avalancheData();
-    if (!d) return { text: loading ? 'Loading Avalanche Canada…' : 'Avalanche Canada unavailable · online only', stale: !loading };
+    if (!d) return { text: loading ? 'Loading Avalanche Canada…' : `Avalanche Canada did not answer (${lastFailure ?? 'no answer'}) · tap to retry`, stale: !loading };
+    // The copy kept on the phone: shown with when it was fetched, never hidden.
+    if (showingKept) return { text: `Avalanche Canada · kept copy from ${formatWhen(d.fetchedAt, new Date())} · tap to retry`, stale: true };
     const here = bulletinAt(lon, lat);
     const b = here?.bulletin;
     const now = new Date();
@@ -422,5 +449,8 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
     return { text: `${b.owner} · issued ${formatRelative(b.issued, now)}${expired ? ' · expired' : ''}`, stale: expired };
   }
 
-  return { addLayers, update, tapped, recolour, ageLine, refresh: () => { void loadForecasts(); void loadReports(); paint(); }, close: closePanel };
+  /** Ask again now (a tap on the top bar's line after a failure). */
+  const retry = () => { reports = null; void loadForecasts(true); void loadReports(); };
+  const needsRetry = () => !avalancheData() || showingKept;
+  return { addLayers, update, tapped, recolour, ageLine, retry, needsRetry, refresh: () => { void loadForecasts(); void loadReports(); paint(); }, close: closePanel };
 }

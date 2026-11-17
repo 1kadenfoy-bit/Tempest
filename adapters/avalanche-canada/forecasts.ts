@@ -31,7 +31,7 @@ export const source = {
   publisher: 'Avalanche Canada',
   provides: 'Avalanche forecast regions and danger ratings, shown as issued',
   baseUrl: 'https://api.avalanche.ca',
-  licence: 'No open licence stated; personal use pending Avalanche Canada’s confirmation',
+  licence: 'Public API (no licence stated); used for a personal, non-commercial app, politely (bulletins asked for at most every 30 minutes)',
   attribution: 'Avalanche forecasts by Avalanche Canada and its partners (Parks Canada, Kananaskis Country, Avalanche Québec)',
   link: 'https://avalanche.ca/api-docs',
   terms: 'A public API with no stated limits; the website’s Terms of Use (avalanche.ca/terms-of-use) say its material may not be reproduced without written consent. Shown as issued, online only.',
