@@ -119,3 +119,18 @@ The footer says so on every point: "At the terrain, from 10 m wind and pressure 
 2. **On a windy day:** do the ridge winds and gusts look right where you know them? A ridge station comparison is the next check I'd like to make.
 3. **The flow:** are the streaks the right density, length and speed? Each is one number to change.
 4. **Merge the pull request** for M7. Then, as you asked, I'll go through the layers and performance.
+
+## Follow-up: the flow is now a particle simulation
+
+You asked for particles that flow with the wind rather than short dashes.
+
+- **About 400 particles** are carried by the wind at the ground. Each one trails a tail fading over about half a second, so stronger wind draws longer tails:
+  - about 14 px at 13 km/h;
+  - about 65 px at 60 km/h.
+- **Each particle lives 3 to 6 seconds**, fading in and out, then starts again somewhere else.
+- **Kept light:**
+  - each particle remembers only its last 10 positions;
+  - all of them are drawn in five strokes, one per brightness;
+  - there is no full-screen fading layer, which is what usually makes these animations heavy and leaves smudges.
+- **The same pauses as before:** hidden while you drag the map, stopped when the app is hidden or another layer is shown, at most 60 frames a second.
+- **Measured in the test browser:** 57 frames a second. Please check with `?fps` on your phone.

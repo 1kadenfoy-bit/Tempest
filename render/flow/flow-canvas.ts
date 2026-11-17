@@ -1,12 +1,15 @@
-// The wind's flow on the map (v8 24-WindHome): short white streaks drifting
-// with the wind at the terrain, or still arrows when the animation is off.
+// The wind's flow on the map (v8 24-WindHome): particles carried by the wind
+// at the terrain, each trailing a short fading tail, or still arrows when the
+// animation is off.
 //
 // A plain 2D canvas over the map, in screen pixels. The wind arrives as a
-// coarse grid of east and north parts (km/h) over the screen; streaks move
-// through it, each living a few seconds. Kept cheap for phones: a fixed,
-// small number of streaks, one stroke per frame for each brightness, no
-// trail buffer to fade. The animation stops whenever the page is hidden, the
-// map is moving, or the layer is not shown, and draws nothing when still.
+// coarse grid of east and north parts (km/h) over the screen; particles move
+// through it and live a few seconds. Kept cheap for phones: a fixed number of
+// particles in typed arrays (nothing allocated per frame), each keeping only
+// its last few positions, all drawn in one stroke per brightness level. No
+// full-screen fading buffer, so nothing smears and nothing ghosts. The
+// animation stops whenever the page is hidden, the map is moving, or the
+// layer is not shown, and draws nothing when still.
 
 export interface FlowField {
   /** Screen size the grid covers (CSS pixels). */
@@ -23,19 +26,29 @@ export interface FlowField {
 
 export type FlowMode = 'flow' | 'arrows' | 'off';
 
-interface Streak { x: number; y: number; age: number; life: number }
-
 /** Screen pixels per second for each km/h. */
-const PX_PER_KMH = 0.9;
-/** One streak per this many square pixels. */
-const DENSITY = 1500;
-const BUCKETS = 4;
+const PX_PER_KMH = 2.2;
+/** One particle per this many square pixels (about 400 on a phone). */
+const DENSITY = 800;
+/** Positions kept per particle for its tail; one is kept every TRAIL_EVERY frames (about half a second). */
+const TRAIL = 10;
+const TRAIL_EVERY = 3;
+/** Brightness levels: tails fade towards their end, and particles fade in and out over their life. */
+const LEVELS = 5;
 
 export class FlowCanvas {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private field: FlowField | null = null;
-  private streaks: Streak[] = [];
+  /** Particles: tail positions (ring of TRAIL per particle), how many are filled, newest slot, age and life. */
+  private n = 0;
+  private xs = new Float32Array(0);
+  private ys = new Float32Array(0);
+  private filled = new Uint8Array(0);
+  private head = new Uint8Array(0);
+  private age = new Float32Array(0);
+  private life = new Float32Array(0);
+  private frameNo = 0;
   private frame = 0;
   private last = 0;
   private mode: FlowMode = 'off';
@@ -73,12 +86,12 @@ export class FlowCanvas {
   /** The map changed size. */
   resized() { this.resize(); this.sync(); }
   setMode(mode: FlowMode) { this.mode = mode; this.sync(); }
-  /** The map is being dragged or zoomed: the streaks would slide wrongly, so they wait. */
+  /** The map is being dragged or zoomed: the particles would slide wrongly, so they wait. */
   setMoving(moving: boolean) { this.moving = moving; this.sync(); }
 
   setField(f: FlowField | null) {
     this.field = f;
-    this.streaks = [];
+    this.n = 0;
     this.sync();
   }
 
@@ -90,7 +103,7 @@ export class FlowCanvas {
     this.clear();
     if (!this.shown || this.moving || !this.field) return;
     if (this.mode === 'arrows') { this.drawArrows(); return; }
-    if (this.running()) { this.last = performance.now(); this.frame = requestAnimationFrame((t) => this.tick(t)); }
+    if (this.running()) { this.last = -1; this.frame = requestAnimationFrame((t) => this.tick(t)); }
   }
 
   private clear() { this.ctx.setTransform(1, 0, 0, 1, 0, 0); this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
@@ -107,18 +120,34 @@ export class FlowCanvas {
     return Number.isFinite(u) && Number.isFinite(v) ? [u, v] : null;
   }
 
-  private spawn(s: Streak, f: FlowField, fresh: boolean) {
-    s.x = Math.random() * f.width;
-    s.y = Math.random() * f.height;
-    s.life = 2000 + Math.random() * 2500;
-    // At the start, ages are spread so streaks do not all appear at once.
-    s.age = fresh ? Math.random() * s.life : 0;
+  /** Start particle i at a random place; at the start ages are spread, so they don't all appear at once. */
+  private spawn(i: number, f: FlowField, fresh: boolean) {
+    this.head[i] = 0;
+    this.filled[i] = 1;
+    this.xs[i * TRAIL] = Math.random() * f.width;
+    this.ys[i * TRAIL] = Math.random() * f.height;
+    this.life[i] = 3000 + Math.random() * 3000;
+    this.age[i] = fresh ? Math.random() * this.life[i]! : 0;
+  }
+
+  private allocate(f: FlowField) {
+    const n = Math.round((f.width * f.height) / DENSITY);
+    this.n = n;
+    this.xs = new Float32Array(n * TRAIL);
+    this.ys = new Float32Array(n * TRAIL);
+    this.filled = new Uint8Array(n);
+    this.head = new Uint8Array(n);
+    this.age = new Float32Array(n);
+    this.life = new Float32Array(n);
+    for (let i = 0; i < n; i++) this.spawn(i, f, true);
   }
 
   private tick(now: number) {
     if (!this.running()) return;
     // At most about 60 a second: 120 Hz screens would double the work for no visible gain.
-    if (now - this.last < 15 && this.frameTimes.length) { this.frame = requestAnimationFrame((t) => this.tick(t)); return; }
+    // The first frame after a start draws at once, with no time step.
+    if (this.last < 0) this.last = now;
+    else if (now - this.last < 15) { this.frame = requestAnimationFrame((t) => this.tick(t)); return; }
     const f = this.field!;
     // The first frame's time can be a little before the start: never step backwards.
     const dt = Math.max(0, Math.min(100, now - this.last));
@@ -126,35 +155,53 @@ export class FlowCanvas {
     const began = performance.now();
     this.frameTimes.push(now);
     while (this.frameTimes.length && this.frameTimes[0]! < now - 5000) { this.frameTimes.shift(); this.workTimes.shift(); }
-    const want = Math.round((f.width * f.height) / DENSITY);
-    while (this.streaks.length < want) { const s = { x: 0, y: 0, age: 0, life: 1 }; this.spawn(s, f, true); this.streaks.push(s); }
-    this.streaks.length = want;
+    if (!this.n) this.allocate(f);
+    const keep = ++this.frameNo % TRAIL_EVERY === 0;
+    const step = (PX_PER_KMH * dt) / 1000;
+    const paths = Array.from({ length: LEVELS }, () => new Path2D());
+    for (let i = 0; i < this.n; i++) {
+      this.age[i]! += dt;
+      const base = i * TRAIL;
+      const h = this.head[i]!;
+      const x = this.xs[base + h]!, y = this.ys[base + h]!;
+      const w = this.age[i]! < this.life[i]! ? this.sample(x, y) : null;
+      if (!w || x < 0 || y < 0 || x > f.width || y > f.height) { this.spawn(i, f, false); continue; }
+      // Screen y grows downwards; north is up.
+      const nx = x + w[0] * step, ny = y - w[1] * step;
+      if (keep) {
+        // A new tail point; the oldest drops off.
+        const nh = (h + 1) % TRAIL;
+        this.head[i] = nh;
+        this.xs[base + nh] = nx; this.ys[base + nh] = ny;
+        if (this.filled[i]! < TRAIL) this.filled[i]! += 1;
+      } else {
+        // Between kept points the newest moves on, so motion stays smooth.
+        this.xs[base + h] = nx; this.ys[base + h] = ny;
+      }
+      // Fade in over the first fifth of life and out over the last fifth.
+      const phase = this.age[i]! / this.life[i]!;
+      const lifeLevel = Math.min(LEVELS - 1, Math.floor(Math.min(1, Math.min(phase, 1 - phase) * 5) * (LEVELS - 1)));
+      // The tail as connected lines, newest first, switching path only when the brightness drops.
+      const count = this.filled[i]!;
+      let level = -1;
+      let p: Path2D | null = null;
+      for (let k = 0; k < count - 1; k++) {
+        const a = (this.head[i]! - k + TRAIL) % TRAIL, b2 = (a - 1 + TRAIL) % TRAIL;
+        const tailLevel = LEVELS - 1 - Math.floor((k / (TRAIL - 1)) * LEVELS);
+        const l = Math.max(0, Math.min(lifeLevel, tailLevel));
+        if (l !== level) { level = l; p = paths[l]!; p.moveTo(this.xs[base + a]!, this.ys[base + a]!); }
+        p!.lineTo(this.xs[base + b2]!, this.ys[base + b2]!);
+      }
+    }
     const ctx = this.ctx;
     this.clear();
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.lineCap = 'round';
-    ctx.lineWidth = 1.6;
-    // Streaks grouped by brightness (fade in and out over their life): one stroke per group.
-    const paths = Array.from({ length: BUCKETS }, () => new Path2D());
-    for (const s of this.streaks) {
-      s.age += dt;
-      const w = s.age < s.life ? this.sample(s.x, s.y) : null;
-      if (!w || s.x < 0 || s.y < 0 || s.x > f.width || s.y > f.height) { this.spawn(s, f, false); continue; }
-      const [u, v] = w;
-      const speed = Math.hypot(u, v);
-      if (speed < 1) continue;
-      // Screen y grows downwards; north is up.
-      s.x += u * PX_PER_KMH * (dt / 1000);
-      s.y -= v * PX_PER_KMH * (dt / 1000);
-      const len = Math.min(22, 5 + speed * 0.3);
-      const dx = (u / speed) * len, dy = (-v / speed) * len;
-      const phase = s.age / s.life;
-      const b = Math.max(0, Math.min(BUCKETS - 1, Math.floor(Math.min(phase, 1 - phase) * 2 * BUCKETS)));
-      paths[b]!.moveTo(s.x - dx, s.y - dy);
-      paths[b]!.lineTo(s.x, s.y);
-    }
-    paths.forEach((p, b) => {
-      ctx.strokeStyle = `rgba(255,255,255,${(0.25 + 0.55 * ((b + 1) / BUCKETS)).toFixed(2)})`;
+    // Plain ends and joins: round ones on thousands of short lines cost the most to draw.
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+    ctx.lineWidth = 1.4;
+    paths.forEach((p, level) => {
+      ctx.strokeStyle = `rgba(255,255,255,${(0.08 + 0.8 * (level / (LEVELS - 1))).toFixed(2)})`;
       ctx.stroke(p);
     });
     this.workTimes.push(performance.now() - began);

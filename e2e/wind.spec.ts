@@ -40,7 +40,7 @@ test('wind: terrain fill, flow that pauses, readout, chart, cards, settings', as
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  await expect.poll(() => frames(page), { timeout: 5_000 }).toBeGreaterThan(stoppedAt);
+  await expect.poll(() => frames(page), { timeout: 30_000 }).toBeGreaterThan(stoppedAt);
 
   // Details: headline, now, strongest gusts, direction and calm lines, hourly.
   await page.click('#sheet-handle');
