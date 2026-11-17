@@ -6,6 +6,10 @@ const YOU = { latitude: 49.3895, longitude: -122.948 };
 const HOME = '/?insets=47,34';
 
 test.use({ geolocation: YOU, permissions: ['geolocation'] });
+// No live weather alerts: a real one would add the badge and change the pictures.
+test.beforeEach(async ({ context }) => {
+  await context.route('**/collections/weather-alerts/**', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ type: 'FeatureCollection', features: [], numberMatched: 0, numberReturned: 0 }) }));
+});
 
 type MapHandle = {
   getLayoutProperty(layer: string, prop: string): string;
