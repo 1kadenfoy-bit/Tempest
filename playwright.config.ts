@@ -5,7 +5,10 @@ const port = Number(process.env.PW_PORT ?? 4173);
 
 export default defineConfig({
   testDir: 'e2e',
-  timeout: 60_000,
+  // Longer than the longest wait inside a test (the pin's live forecast: up
+  // to 90 s on a slow runner), so a slow answer fails as a wait, not as a
+  // cut-off test.
+  timeout: 150_000,
   expect: { timeout: 30_000 },
   reporter: [['list']],
   use: {
@@ -21,6 +24,9 @@ export default defineConfig({
     command: `npx vite preview --port ${port} --strictPort`,
     url: `http://localhost:${port}`,
     reuseExistingServer: true,
-    timeout: 60_000,
+    // Longer than the longest wait inside a test (the pin's live forecast: up
+  // to 90 s on a slow runner), so a slow answer fails as a wait, not as a
+  // cut-off test.
+  timeout: 150_000,
   },
 });
