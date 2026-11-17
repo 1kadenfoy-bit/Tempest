@@ -28,6 +28,28 @@ export function coveringRanges(model: string, bbox: [number, number, number, num
   return GridFactory.create(domainFor(model).grid).getCoveringRanges(s - pad, w - pad, n + pad, e + pad);
 }
 
+/**
+ * Decimals the point API keeps for a variable (checked Nov 17, 2026):
+ * temperatures and wind speeds to 0.1, humidity, heights and directions whole.
+ * The map files keep more; rounding them the same way means the map files
+ * and the point API give the same numbers, so online, offline and fallback
+ * readings agree (a snow line once read 1,020 m from one and 1,030 m from the
+ * other).
+ */
+export function pointApiDecimals(variable: string): number | null {
+  if (/^(temperature|dew_point)_/.test(variable) || /^wind_(speed|gusts)_/.test(variable)) return 1;
+  if (/^(relative_humidity|geopotential_height|wind_direction)_/.test(variable)) return 0;
+  return null;
+}
+
+/** Round values in place as the point API does (unchanged for other variables). */
+export function roundLikePointApi(variable: string, values: Float32Array): void {
+  const d = pointApiDecimals(variable);
+  if (d === null) return;
+  const f = 10 ** d;
+  for (let i = 0; i < values.length; i++) values[i] = Math.round(values[i]! * f) / f;
+}
+
 /** Run tasks with at most `limit` in flight. */
 async function limited<T>(tasks: (() => Promise<T>)[], limit = PARALLEL): Promise<T[]> {
   const out = new Array<T>(tasks.length);
@@ -54,6 +76,7 @@ async function readOne(root: OmFileReader, variable: string, ranges: { start: nu
     // The files keep wind in m/s; the app's vocabulary is km/h (checked Nov 17
     // against the point service, which answers in km/h).
     if (/^wind_(speed|gusts)_/.test(variable)) for (let i = 0; i < out.length; i++) out[i]! *= 3.6;
+    roundLikePointApi(variable, out);
     return out;
   } finally {
     child.dispose();
