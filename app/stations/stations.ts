@@ -147,13 +147,20 @@ export function setupStations(map: MapLibreMap, opts: StationsOptions) {
     s.el.dataset.arrow = String(label?.arrow != null);
     const dot = s.el.querySelector<HTMLElement>('.station-dot')!;
     dot.innerHTML = label?.arrow != null ? ARROW : '';
-    const svg = dot.querySelector<SVGElement>('svg');
-    if (svg && label?.arrow != null) svg.style.transform = `rotate(${Math.round(label.arrow)}deg)`;
+    if (label?.arrow != null) dot.dataset.arrow = String(label.arrow);
+    else delete dot.dataset.arrow;
+    turnArrow(dot);
     const value = s.el.querySelector<HTMLElement>('.station-value')!;
     value.textContent = label?.text ?? '';
     value.hidden = !label;
     const elev = station.elevation !== null ? `, ${formatElevation(station.elevation)}` : '';
     s.el.setAttribute('aria-label', `Weather station ${station.name}${elev}${label ? `, ${label.spoken}` : ''}${stale && latest ? ', older reading' : ''}`);
+  }
+
+  /** Arrows point over the ground: a turned map turns them with it. */
+  function turnArrow(dot: HTMLElement) {
+    const svg = dot.querySelector<SVGElement>('svg');
+    if (svg && dot.dataset.arrow) svg.style.transform = `rotate(${Math.round(Number(dot.dataset.arrow) - map.getBearing())}deg)`;
   }
 
   function render(list: StationLatest[]) {
@@ -205,6 +212,7 @@ export function setupStations(map: MapLibreMap, opts: StationsOptions) {
   }
 
   map.on('moveend', () => { if (enabled) schedule(); });
+  map.on('rotate', () => { for (const s of shown.values()) turnArrow(s.el.querySelector<HTMLElement>('.station-dot')!); });
   window.addEventListener('online', () => schedule(0));
   window.addEventListener('offline', () => schedule(0));
   if (enabled) schedule(0);
