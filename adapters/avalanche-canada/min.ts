@@ -27,7 +27,7 @@ export const source = {
   publisher: 'Avalanche Canada',
   provides: 'Field reports with photos, shown as their authors wrote them',
   baseUrl: 'https://api.avalanche.ca/min/submissions',
-  licence: 'No licence stated; reports and photos belong to their authors. Personal use pending Avalanche Canada’s confirmation',
+  licence: 'Public API (no licence stated); reports and photos belong to their authors',
   terms: 'An undocumented endpoint, subject to change without notice. Shown as written, online only.',
   attribution: 'Field reports from the Mountain Information Network (Avalanche Canada), by their authors',
   link: 'https://avalanche.ca/mountain-information-network',

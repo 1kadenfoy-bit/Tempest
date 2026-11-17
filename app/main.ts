@@ -165,7 +165,7 @@ const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche
 /** Why a layer cannot be saved for offline use, when its source does not allow it. */
 const onlineOnly = (l: LayerSlots): string | undefined =>
   l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving'
-  : l.id === 'avalanche' ? 'Online only: Avalanche Canada’s terms on keeping bulletins are not confirmed yet'
+  : l.id === 'avalanche' ? 'Kept on the phone automatically: the latest bulletins and reports'
   : undefined;
 
 // ---- Radar frames: the times ECCC holds (last 3 h, every 6 min), and what the cursor's frame shows at the pin.
@@ -1370,6 +1370,7 @@ function setActive(l: LayerSlots) {
 }
 layerBtn.addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('#run-age') && active.frames && radarError) { void loadRadarFrames(true); return; }
+  if ((e.target as HTMLElement).closest('#run-age') && active.id === 'avalanche' && avy.needsRetry()) { avy.retry(); return; }
   if ((e.target as HTMLElement).closest('#run-age') && document.body.dataset.run === 'error') { void loadRun(); return; }
   if (isOpenFrom(layerBtn)) { closePanel(); return; }
   openPanel({

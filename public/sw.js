@@ -7,6 +7,8 @@
 const CACHE = 'tempest-app-v2';
 // Saved areas' terrain tiles, map fonts and icons (app/offline/saved-areas.ts).
 const SAVED = 'tempest-saved-v1';
+// Hosts whose files saved areas keep (app/map/terrain-source.ts, app/map/style.ts).
+const SAVED_HOSTS = new Set(['tiles.mapterhorn.com', 'protomaps.github.io']);
 
 self.addEventListener('install', (event) => {
   // Keep the page and every built file (listed by the build), so the app opens
@@ -38,9 +40,13 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (req.method !== 'GET') return;
 
-  // Other sites (terrain, fonts, icons): a saved area's copy first, so the map
-  // works without signal; otherwise the network as usual.
+  // Other sites: only the ones a saved area keeps copies from (terrain tiles,
+  // map fonts and icons) go through here, a saved copy first so the map works
+  // without signal. Every other site (weather, alerts, avalanche, stations,
+  // radar) is left to the browser: passing those requests through the worker
+  // adds a step that Safari has failed on.
   if (url.origin !== self.location.origin) {
+    if (!SAVED_HOSTS.has(url.host)) return;
     event.respondWith((async () => {
       const saved = await (await caches.open(SAVED)).match(req.url, { ignoreVary: true });
       return saved ?? fetch(req);
