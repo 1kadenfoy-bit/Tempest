@@ -14,7 +14,7 @@ Branch: `claude/tempest-m0-setup-930073` (the only branch Claude may push to). P
 | M9 app settings + light theme | Done, merged | |
 | 3D terrain + buildings | Done, merged | docs/reports/3d/report.md, docs/spikes/3d-terrain.md |
 | M9 report | Done | docs/reports/m9/report.md |
-| Full check (Nov 17, ~12:00 UTC) | 177 unit tests pass; 31 browser tests pass, 3 fail, 1 skipped | The 3 (offline "every layer", shell "window control", wind) failed while Open-Meteo refused the build machine ("Daily API request limit exceeded"). **Rerun them after 00:00 UTC Nov 18:** `PW_PORT=4190 npx playwright test e2e/offline.spec.ts e2e/wind.spec.ts e2e/shell.spec.ts -g "every layer|wind:|window control"` |
+| Full check | Done | Nov 17 ~12:00 UTC: 177 unit and 31 browser tests passed, 3 failed while Open-Meteo refused the build machine. Rerun at 13:15 UTC once it answered again: all 3 pass (offline numbers equal online, snow line 980 m both) |
 | PR #7 description covers M8, M9, 3D | Done | |
 
 ## How to resume

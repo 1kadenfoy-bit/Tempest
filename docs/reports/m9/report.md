@@ -98,3 +98,4 @@ To reach the place-names service, the search helper added two addresses to this 
   - search: type, pick, the pin moves and takes the name;
   - settings: imperial everywhere and remembered, light theme remembered, credits.
 - **Pictures:** the shell pictures were refreshed for the search button and the gear. The top bar now matches v8 01: alert badge on the left, the layer name and model, search on the right.
+- **Full run:** 177 unit tests and 34 browser tests pass, 1 skipped (a 3D timing test that runs on request). Three of them first failed while the forecast service refused the build machine for the day; rerun once it answered again, all three passed.
