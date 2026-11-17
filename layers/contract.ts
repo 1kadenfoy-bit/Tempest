@@ -17,7 +17,35 @@ export interface PinData {
    * above the model's ground reaches into the wind aloft.
    */
   ground?: Record<string, number> | undefined;
+  /** Radar at the pin (observed frames, online only); only while an image layer with frames is shown. */
+  radar?: RadarAtPin | undefined;
 }
+
+/** What one observed frame (radar) shows at the pin, as its source gives it. */
+export interface RadarPoint {
+  /** False outside the source's coverage; null when it could not say. */
+  covered: boolean | null;
+  detected: boolean;
+  /** The source's rate in `unit`, when the product is a rate. */
+  rate: number | null;
+  unit: 'mm/h' | 'cm/h' | null;
+  /** The source's own class in plain words ("Light rain"), when it has one. */
+  kind: string | null;
+}
+
+export interface RadarAtPin {
+  /** The frames the source holds now, oldest first. */
+  frames: Date[];
+  /** The frame the cursor is on. */
+  time: Date | null;
+  /** That frame at the pin: null while asking, 'error' when the source did not answer, 'offline' with no signal. */
+  point: RadarPoint | null | 'error' | 'offline';
+}
+
+/** A legend drawn by the image's source, in its own colours (an image layer never recolours). */
+export type ImageLegend =
+  | { kind: 'ramp'; colors: string[]; low: number; high: number; unit: 'mm/h' | 'cm/h' }
+  | { kind: 'classes'; groups: { label: string; colors: string[] }[] };
 
 /** The window summary: split at the needle, or one block for the whole window. */
 export type WindowSummary =
@@ -50,6 +78,12 @@ export interface LayerSlots extends DetailSlots {
   drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, pin: PinData, start: Date, end: Date): void;
   /** Small values under a week-strip day (temperature: high and low), or null. */
   weekDay?(pin: PinData, dayStart: Date, dayEnd: Date): string | null;
+  /**
+   * Time behaviour of an observed layer with its own frames (radar): the
+   * cursor steps through the frames instead of the forecast, the chart spans
+   * `windowHours`, and Play loops over the last `loopHours`.
+   */
+  frames?: { windowHours: number; loopHours: number; stepMinutes: number } | undefined;
 }
 
 // ---- Point details (M5): the standard cards, in the fixed order --------------

@@ -376,6 +376,9 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .toggle-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
 .toggle-tile svg { visibility: hidden; }
 .toggle-tile[aria-pressed='true'] svg { visibility: visible; }
+/* A note beside a switch that cannot work now (map panel: Weather stations offline). */
+.toggle-tile:disabled { opacity: 0.5; }
+.toggle-note { align-self: center; font: var(--type-caption); color: var(--ink-2); }
 /* Model menu (04-ModelMenu) and model info (05-ModelInfo) */
 .panel-letter { font: var(--type-panel-title); }
 .model-line { display: flex; align-items: center; gap: 8px; }
@@ -576,3 +579,12 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 }
 .search-row-elev { flex: 0 0 auto; font: var(--type-secondary); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .search-credit { color: var(--ink-3); }
+
+/* Radar (no v8 design): the shell's own parts. An observed layer has no model choice and no window choice. */
+.window-button[hidden], .model-pill[hidden] { display: none; }
+.legend-image { gap: 6px; }
+.legend-image .legend-item { gap: 4px; }
+.legend-bar-grow { flex: 1 1 auto; width: auto; }
+.legend-bar-steps { border-radius: 2px; }
+.check-row[data-disabled] .check-title, .check-row[data-disabled] .check-note { color: var(--ink-3); }
+.check-row[data-disabled] .check-box { opacity: 0.5; }

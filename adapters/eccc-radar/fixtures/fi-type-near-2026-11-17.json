@@ -1,0 +1,27 @@
+{
+
+  "type": "FeatureCollection",
+  "layer": "Radar_1km_SfcPrecipType",
+  "features": [
+    
+    {
+      "type": "Feature",
+      "id": "Radar_1km_SfcPrecipType(-123.27633,49.37978)",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -123.2763,49.3798
+        ]
+      },
+      "properties": {
+        "value": 310,
+        "class": "Light Rain",
+        "title_en": "Radar surface precipitation type",
+        "title_fr": "Type de précipitation à la surface du radar",
+        "time": "2026-11-17T13:48:00Z",
+        "dim_reference_time": "N/A"
+      }
+    }
+  ]
+
+}

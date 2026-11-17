@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   cToF, cmToIn, formatCm, formatCmNumber, formatDegrees, formatDistance, formatElevation, formatElevationNumber, formatMm, formatMmNumber,
   formatRate, formatRateNumber, formatRateRange, formatSpeed, formatTemp, formatTempNumber, formatTempSigned, kmhToMph, mToFt, mmToIn,
-  setUnitSystem, speedValue, tempValue, unitLabel, unitSystem,
+  formatMinutesAgo, formatSnowRate, formatSnowRateRange, setUnitSystem, speedValue, tempValue, unitLabel, unitSystem,
 } from './format';
 
 afterEach(() => setUnitSystem('metric'));
@@ -78,5 +78,19 @@ describe('imperial', () => {
     expect(formatTemp(20)).toBe('68 °F');
     setUnitSystem('metric');
     expect(formatTemp(20)).toBe('20 °C');
+  });
+});
+
+describe('radar formats', () => {
+  it('gives snow rates and minutes ago', () => {
+    expect(formatSnowRate(0.69, 'metric')).toBe('0.7 cm/h');
+    expect(formatSnowRate(2.54, 'imperial')).toBe('1.00 in/h');
+    expect(formatSnowRateRange(0.1, 20, 'metric')).toBe('0.1 to 20+ cm/h');
+    expect(formatSnowRateRange(0.1, 20, 'imperial')).toBe('0.04 to 7.9+ in/h');
+    const now = new Date('2026-11-17T14:00:00Z');
+    expect(formatMinutesAgo(new Date('2026-11-17T13:59:00Z'), now)).toBe('now');
+    expect(formatMinutesAgo(new Date('2026-11-17T13:42:00Z'), now)).toBe('18 min ago');
+    expect(formatMinutesAgo(new Date('2026-11-17T11:54:00Z'), now)).toBe('2 h 6 min ago');
+    expect(formatMinutesAgo(new Date('2026-11-17T12:00:00Z'), now)).toBe('2 h ago');
   });
 });

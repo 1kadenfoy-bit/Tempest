@@ -1,0 +1,27 @@
+{
+
+  "type": "FeatureCollection",
+  "layer": "RADAR_1KM_RSNO",
+  "features": [
+    
+    {
+      "type": "Feature",
+      "id": "RADAR_1KM_RSNO(-123.2742,49.38411)",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -123.2742,49.3841
+        ]
+      },
+      "properties": {
+        "value": 0.6937272,
+        "class": "0.5 - 0.75 (cm/h)",
+        "title_en": "Radar precipitation rate for snow [cm/h]",
+        "title_fr": "Taux de précipitation radar pour la neige [cm/h]",
+        "time": "2026-11-17T13:54:00Z",
+        "dim_reference_time": "N/A"
+      }
+    }
+  ]
+
+}

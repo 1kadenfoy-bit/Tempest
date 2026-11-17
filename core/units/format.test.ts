@@ -67,3 +67,10 @@ describe('when', () => {
     expect(formatWhen(new Date('2026-11-14T18:00:00Z'), ref, 'America/Vancouver')).toMatch(/^Sat \d+ AM$/);
   });
 });
+
+import { formatDateTime } from './format';
+describe('formatDateTime', () => {
+  it('names the date for times that may be weeks away', () => {
+    expect(formatDateTime(new Date('2026-10-01T23:00:00Z'), 'America/Vancouver')).toBe('Thu Oct 1, 4 PM');
+  });
+});
