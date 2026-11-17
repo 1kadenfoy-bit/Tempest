@@ -209,3 +209,13 @@ Your screenshot showed the map loaded but the chart empty after Thursday, where 
 **Checked:** after 15 seconds of rapid panning and layer switching, with a 7-day window, the pin's forecast was complete across every model 4.3 s later, as below.
 
 ![The 7-day chart filled through the RDPS stretch after fast switching](after-fast-switching.png)
+
+## Follow-up: scrubbing back into the past two days
+
+Kaden could not move the time back past the start of the newest forecast run (about 6 PM). The chart already held the past two days (earlier runs, and observed precipitation), but the time cursor only stopped on the forecast's own hours.
+
+Now the cursor also stops on each hour of the 48 hours before the forecast starts. The readout, chart, window summary and details all show that hour from the pin's data. The map holds the forecast's first hour, because it has no grids for the past, and the top line says so ("map from Mon 5 PM"). Play from the end starts again at now. With a saved area and no signal, there is no past data, so the cursor starts at the forecast as before.
+
+Not yet done: past maps, from earlier runs' grids. That needs a check of how long the map files keep earlier runs.
+
+![Dragged back two days](scrub-into-past.png)

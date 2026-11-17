@@ -74,6 +74,7 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Model menu order (M6) | HRDPS, RDPS; ECMWF IFS, GDPS (v8 04). "Compare two models" left out until designed | |
 | Observed precipitation (M6) | ECCC HRDPA 6-hour totals at the pin for the week's past, online only; final where it exists, else preliminary; spread evenly over the 6 hours in totals | GeoMet is not for bulk copying, so saved areas leave it out |
 | Temperature's past (M6) | Earlier model runs (point API past days), hatched; no gridded temperature analysis is used yet | |
+| Scrubbing the past (Nov 17, after M7) | The cursor reaches the 48 hours before the forecast, hour by hour, at the pin (readout, chart, summary, details). The map holds the forecast's first hour and says "map from …". Not with a saved area (no past is saved) | Past maps from earlier runs' grids not yet checked |
 | Run refresh (M6) | Look for new runs every 10 minutes while the app is on screen | Open-Meteo's 12Z HRDPS stalled on Nov 16 |
 | Renderer licence | Start with the GPL-2.0 library behind one seam; replace it with the app's own renderer by M3 | Keeps the choice open if the app is shared |
 

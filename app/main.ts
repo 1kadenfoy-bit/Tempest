@@ -6,7 +6,7 @@ import type { LngLatLike } from 'maplibre-gl';
 import { MemoryStore } from '../core/store/memory-store';
 import { TimeCursor } from '../core/time/cursor';
 import { formatRunAge, runAgeHours } from '../core/time/run-age';
-import { formatElevation } from '../core/units/format';
+import { formatCursorTime, formatElevation } from '../core/units/format';
 import type { PointSeries } from '../core/vocabulary';
 import { MODELS, fetchPointSeries } from '../adapters/openmeteo-maps/point-series';
 import { fetchRunMetadata, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
@@ -166,6 +166,16 @@ function runAt(t: Date, forProfile = usesProfile(active)): RunMetadata | null {
   return (forProfile ? profileRuns[m] : undefined) ?? runs[m] ?? null;
 }
 
+/** Hours of the week's past to show before the run (the strip starts two days back). */
+const PAST_HOURS = 48;
+/** The hours before the forecast the cursor can reach (pin only). */
+let pastSteps: Date[] = [];
+/** The time the map shows for cursor time t: before the forecast starts, its first hour. */
+function mapTime(t: Date): Date {
+  const first = timeline.steps[0];
+  return first && t < first ? first : t;
+}
+
 /** Join the models for the active layer into one time line, and set the cursor's steps to it. */
 function rebuildTimeline() {
   const layer = active;
@@ -181,7 +191,11 @@ function rebuildTimeline() {
   }));
   timeline = buildTimeline(order, modelRuns);
   run = timeline.segments[0] ? runs[timeline.segments[0].model as ModelId] ?? null : null;
-  cursor.setSteps(timeline.steps, cursor.time ?? new Date());
+  // The week's past, hour by hour, before the forecast's first step: the pin
+  // has it (earlier runs, observed precipitation), the map does not.
+  const firstStep = timeline.steps[0];
+  pastSteps = firstStep && !usingSaved ? Array.from({ length: PAST_HOURS }, (_, k) => new Date(firstStep.getTime() - (PAST_HOURS - k) * 3_600_000)) : [];
+  cursor.setSteps([...pastSteps, ...timeline.steps], cursor.time ?? new Date());
   scrubber.setTimeline({
     seams: timeline.seams.map((x) => ({ time: x.time, label: REGISTRY[x.to as ModelId]?.label ?? x.to })),
   });
@@ -255,12 +269,14 @@ showLayer();
 
 function renderRunAge() {
   // The run of the model under the cursor; a missing model is named (visible fallback).
-  const seg = cursor.time ? segmentAt(timeline, cursor.time) : timeline.segments[0];
+  const seg = cursor.time ? segmentAt(timeline, mapTime(cursor.time)) : timeline.segments[0];
   const r = seg ? runs[seg.model as ModelId] ?? run : run;
   if (!r) return;
   const el = $('run-age');
   const missing = timeline.missing.map((m) => REGISTRY[m as ModelId]?.label ?? m);
-  el.textContent = formatRunAge(r.referenceTime, new Date()) + (usingSaved ? ' · saved' : '') + (missing.length ? ` · ${missing.join(', ')} unavailable` : '');
+  el.textContent = formatRunAge(r.referenceTime, new Date()) + (usingSaved ? ' · saved' : '') + (missing.length ? ` · ${missing.join(', ')} unavailable` : '')
+    // Before the forecast the map holds its first hour; the pin has the past.
+    + (cursor.time && timeline.steps[0] && cursor.time < timeline.steps[0] ? ` · map from ${formatCursorTime(timeline.steps[0])}` : '');
   // Stale is shown, never hidden: a run over 12 h old turns the warning colour.
   el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
   $('model-pill-label').textContent = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
@@ -532,7 +548,8 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
  */
 async function updateFills(moving = false) {
   if (!cursor.time || !mapReady) return;
-  const at = runAt(cursor.time);
+  const when = mapTime(cursor.time);
+  const at = runAt(when);
   if (!at) return;
   flow.setShown(active.id === 'wind');
   windLayer.visible = active.id === 'wind';
@@ -541,14 +558,14 @@ async function updateFills(moving = false) {
     tempLayer.visible = false;
     setLine(null, null);
     flow.setMode(flowMode());
-    await updateWind(at, cursor.time, ++fillSeq, moving).catch((err) => console.error(err));
+    await updateWind(at, when, ++fillSeq, moving).catch((err) => console.error(err));
     return;
   }
   windLayer.setProfiles(null);
   if (active.id === 'temperature') {
     precipLayer.setFields([]);
     tempLayer.visible = true;
-    await updateTemperature(at, cursor.time, ++fillSeq, moving).catch((err) => console.error(err));
+    await updateTemperature(at, when, ++fillSeq, moving).catch((err) => console.error(err));
     return;
   }
   tempLayer.visible = false;
@@ -556,7 +573,7 @@ async function updateFills(moving = false) {
   const req = gridRequest([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], map.getZoom(), BC_BOX);
   if (!req) { precipLayer.setFields([]); return; }
   const r = at;
-  const t = cursor.time;
+  const t = when;
   const mine = ++fillSeq;
   try {
     const f = await getField(r, t, req);
@@ -702,8 +719,6 @@ function retrySeries(key: string) {
   const delay = Math.max(backoff, profiles.apiRetryAt - Date.now() + 500);
   seriesRetry.timer = window.setTimeout(() => void loadSeries(), delay);
 }
-/** Hours of the week's past to show before the run (the strip starts two days back). */
-const PAST_HOURS = 48;
 
 /** One model's part of the pin's series, for the active layer. */
 async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: number, lng: number, onPartial?: (s: PointSeries) => void, onLater?: (s: PointSeries) => void): Promise<PointSeries> {
