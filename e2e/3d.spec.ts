@@ -42,9 +42,11 @@ async function settle(page: Page) {
   }, null, { timeout: 60_000 });
   await page.waitForTimeout(800);
 }
+// The open map panel (a closing one can still be in the page for a moment).
+const mapPanel = (page: Page) => page.locator('.panel[data-open="true"][aria-label="Map"]');
 async function toggle(page: Page, name: string) {
   await page.click('#map-layers');
-  const panel = page.getByRole('dialog', { name: 'Map' });
+  const panel = mapPanel(page);
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name, exact: true }).click();
   await page.mouse.click(195, 100);
@@ -62,10 +64,11 @@ test('3D terrain: switch, tilt, back to flat, remembered', async ({ page }) => {
   expect(await onMap(page, (m) => m.getTerrain())).toBeNull();
   await expect(page.locator('#reset-view')).toBeHidden();
   await page.click('#map-layers');
-  const panel = page.getByRole('dialog', { name: 'Map' });
+  const panel = mapPanel(page);
   await expect(panel.getByRole('button', { name: '3D terrain' })).toHaveAttribute('aria-pressed', 'false');
   await expect(panel.getByRole('button', { name: '3D buildings' })).toHaveAttribute('aria-pressed', 'false');
   await page.mouse.click(195, 100);
+  await expect(panel).toBeHidden();
 
   await toggle(page, '3D terrain');
   await expect(page.locator('body')).toHaveAttribute('data-terrain3d', 'true');
