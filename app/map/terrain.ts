@@ -6,14 +6,8 @@ import { maplibregl } from './maplibre';
 import mlcontour from 'maplibre-contour';
 import { colorToken } from '../theme/tokens';
 
-export const terrainSource = {
-  id: 'mapterhorn',
-  name: 'Mapterhorn terrain',
-  url: 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp',
-  licence: 'Open data, various (in Canada: NRCan, Open Government Licence – Canada)',
-  attribution: '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>',
-  offline: true,
-} as const;
+export { terrainSource } from './terrain-source';
+import { terrainSource } from './terrain-source';
 
 // Above zoom 12 terrain files grow tenfold for little gain over BC's 30 m data
 // (docs/spikes/03-download-sizes.md), so the map overzooms from 12.
