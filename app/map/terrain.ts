@@ -19,6 +19,9 @@ export const terrainSource = {
 // (docs/spikes/03-download-sizes.md), so the map overzooms from 12.
 const TERRAIN_MAXZOOM = 12;
 
+/** The raster-dem source 3D terrain uses. */
+export const TERRAIN_3D_SOURCE = 'terrain-3d';
+
 export function addTerrain(map: MapLibreMap, beforeLayerId?: string): void {
   const dem = new mlcontour.DemSource({
     url: terrainSource.url,
@@ -29,6 +32,17 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string): void {
   dem.setupMaplibre(maplibregl);
 
   map.addSource('terrain-dem', {
+    type: 'raster-dem',
+    tiles: [dem.sharedDemProtocolUrl],
+    encoding: 'terrarium',
+    tileSize: 512,
+    maxzoom: TERRAIN_MAXZOOM,
+    attribution: terrainSource.attribution,
+  });
+  // 3D terrain reads the same tiles through its own source: MapLibre keeps
+  // terrain tiles apart from hillshade tiles and draws both better that way.
+  // Nothing loads until 3D terrain is turned on (app/map/three-d.ts).
+  map.addSource(TERRAIN_3D_SOURCE, {
     type: 'raster-dem',
     tiles: [dem.sharedDemProtocolUrl],
     encoding: 'terrarium',

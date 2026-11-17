@@ -53,6 +53,7 @@ import { loadBasemap } from './map/basemap-router';
 import { maplibregl } from './map/maplibre';
 import { topoStyle } from './map/style';
 import { addTerrain } from './map/terrain';
+import { hasBuildingHeights, setupThreeD } from './map/three-d';
 import { hydrateIcons, icons } from './shell/icons';
 import { applyInsetOverride } from './shell/insets';
 import { mapPanelBody } from './shell/map-panel';
@@ -318,6 +319,10 @@ if (new URLSearchParams(location.search).has('fps')) {
   }, 1000);
 }
 (window as unknown as { tempestFlow: FlowCanvas }).tempestFlow = flow;
+// 3D terrain and buildings. The flow is drawn in screen space for a flat,
+// north-up map, so it waits while the map is tilted or turned.
+const buildingsOk = hasBuildingHeights(basemap.manifest.vector_layers);
+const threeD = setupThreeD(map, document.querySelector<HTMLElement>('.thumbs')!, (flat) => flow.setShown(active.id === 'wind' && flat));
 /** The flow's mode from the wind settings: animated, still arrows, or nothing. */
 const flowMode = (): FlowMode => { const s = settingsFor(wind); return s.flow ? 'flow' : s.arrows ? 'arrows' : 'off'; };
 let mosaic: Mosaic | null = null;
@@ -565,7 +570,7 @@ async function updateFills(moving = false) {
   const when = mapTime(cursor.time);
   const at = runAt(when);
   if (!at) return;
-  flow.setShown(active.id === 'wind');
+  flow.setShown(active.id === 'wind' && threeD.flat());
   windLayer.visible = active.id === 'wind';
   if (active.id === 'wind') {
     precipLayer.setFields([]);
@@ -1205,11 +1210,14 @@ layersBtn.addEventListener('click', () => {
     icon: icons.layersPanel,
     title: 'Map',
     caption: 'Base map and terrain',
-    body: mapPanelBody({ hillshade: prefs.hillshade, contours: prefs.contours }, (s) => {
+    body: mapPanelBody({ hillshade: prefs.hillshade, contours: prefs.contours, terrain3d: prefs.terrain3d, buildings3d: buildingsOk ? prefs.buildings3d : undefined }, (s) => {
       prefs.hillshade = s.hillshade;
       prefs.contours = s.contours;
+      prefs.terrain3d = s.terrain3d ?? false;
+      prefs.buildings3d = s.buildings3d ?? false;
       savePrefs(prefs);
       applyTerrainPrefs();
+      threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, true);
     }, offlineGroup(savedAreas, {
       choose: () => {
         closePanel();
@@ -1337,6 +1345,7 @@ map.on('load', () => {
   map.addLayer(tempLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
+  threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
   mapReady = true;
   drawSavedOutlines();
   fitPadding();

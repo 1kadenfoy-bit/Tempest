@@ -6,6 +6,8 @@ export const icons = {
   locate: svg(24, '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2.5V6M12 18v3.5M2.5 12H6M18 12h3.5"/>'),
   layers: svg(24, '<path d="m12 3.5 8 4.5-8 4.5-8-4.5 8-4.5z"/><path d="m4 12 8 4.5 8-4.5"/><path d="m4 16 8 4.5 8-4.5"/>'),
   layersPanel: svg(22, '<path d="m12 3.5 8 4.5-8 4.5-8-4.5 8-4.5z"/><path d="m4 12 8 4.5 8-4.5"/><path d="m4 16 8 4.5 8-4.5"/>'),
+  // Reset to flat and north up: a compass needle, the north half filled.
+  compass: svg(24, '<path d="M12 3.5 15.5 12h-7L12 3.5z" fill="currentColor"/><path d="M8.5 12h7L12 20.5 8.5 12z"/>'),
   close: svg(22, '<path d="M6 6l12 12M18 6 6 18"/>'),
   check: svg(16, '<path d="m5 12.5 4.5 4.5L19 7.5"/>', 2.4),
   play: svg(20, '<path d="M8 5.5v13l11-6.5-11-6.5z"/>', 0, 'currentColor'),

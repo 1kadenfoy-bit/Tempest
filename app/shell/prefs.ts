@@ -5,6 +5,9 @@ export interface LastPin { lng: number; lat: number; label: string }
 export interface Prefs {
   hillshade: boolean;
   contours: boolean;
+  /** 3D terrain and 3D buildings (map panel), off by default. */
+  terrain3d: boolean;
+  buildings3d: boolean;
   lastPin: LastPin | null;
   windowHours: number;
   /** The condition layer shown. */
@@ -18,7 +21,7 @@ export interface Prefs {
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false };
+const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, buildings3d: false, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false };
 
 export function loadPrefs(): Prefs {
   try {
