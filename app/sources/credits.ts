@@ -7,6 +7,7 @@ import { source as openMeteoMaps } from '../../adapters/openmeteo-maps/run-metad
 import { source as openMeteoApi } from '../../adapters/openmeteo-api/point-series';
 import { source as ecccHrdpa } from '../../adapters/eccc-geomet/hrdpa';
 import { source as ecccAlerts } from '../../adapters/eccc-alerts/alerts';
+import { source as ecccRadar } from '../../adapters/eccc-radar/radar';
 import { source as bcGeonames } from '../../adapters/bc-geonames/geonames';
 import { originators } from '../../adapters/openmeteo-maps/models';
 import { terrainSource } from '../map/terrain-source';
@@ -52,6 +53,7 @@ export function credits(basemapAttribution: string = BASEMAP_ATTRIBUTION): Credi
     adapter(openMeteoApi),
     adapter(ecccHrdpa),
     adapter(ecccAlerts),
+    adapter(ecccRadar),
     ...Object.values(originators).map((o) => ({ ...o, group: 'Weather data' as const })),
     {
       id: 'basemap', group: 'Base map and terrain', name: 'Protomaps base map',
