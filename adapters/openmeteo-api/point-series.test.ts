@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apiUrl, parseApiSeries } from './point-series';
+import { ApiLimitError, apiUrl, fetchApiSeries, limitResets, parseApiSeries } from './point-series';
 
 const run = new Date('2026-11-16T06:00:00Z');
 const t0 = Date.parse('2026-11-16T06:00:00Z') / 1000;
@@ -31,5 +31,38 @@ describe('Open-Meteo point API adapter', () => {
 
   it('rejects an error answer', () => {
     expect(() => parseApiSeries({ error: true, reason: 'Daily API request limit exceeded.' }, 'cmc_gem_hrdps', run, ['temperature_2m'], [{ lat: 49, lon: -123 }], valid)).toThrow(/limit/);
+  });
+});
+
+describe('point API refusals and retries', () => {
+  const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+  const one = { latitude: 49, longitude: -123, hourly: { time: [1_763_337_600], temperature_850hPa: [-2] } };
+  const run = new Date(1_763_337_600_000);
+
+  it('knows when a limit resets', () => {
+    const now = new Date('2026-11-17T10:20:15Z');
+    expect(limitResets('Minutely API request limit exceeded. Please try again in one minute.', now).toISOString()).toBe('2026-11-17T10:21:00.000Z');
+    expect(limitResets('Hourly API request limit exceeded.', now).toISOString()).toBe('2026-11-17T11:00:30.000Z');
+    expect(limitResets('Daily API request limit exceeded.', now).toISOString()).toBe('2026-11-18T00:00:30.000Z');
+  });
+
+  it('tries a dropped connection again, and stops at once on a limit', async () => {
+    let calls = 0;
+    const flaky = (async () => { calls++; if (calls === 1) throw new TypeError('Failed to fetch'); return ok(one); }) as typeof fetch;
+    const got = await fetchApiSeries('cmc_gem_hrdps', run, ['temperature_850hPa'], [{ lat: 49, lon: -123 }], [run], flaky);
+    expect(calls).toBe(2);
+    expect(got[0]!.values.temperature_850hPa).toEqual([-2]);
+
+    let limited = 0;
+    const refuse = (async () => { limited++; return new Response(JSON.stringify({ error: true, reason: 'Minutely API request limit exceeded' }), { status: 429 }); }) as typeof fetch;
+    await expect(fetchApiSeries('cmc_gem_hrdps', run, ['temperature_850hPa'], [{ lat: 49, lon: -123 }], [run], refuse)).rejects.toBeInstanceOf(ApiLimitError);
+    expect(limited).toBe(1);
+  });
+
+  it('asks for a span of hours when given one', () => {
+    const u = new URL(apiUrl('cmc_gem_hrdps', [{ lat: 49, lon: -123 }], ['temperature_850hPa'], [new Date('2026-11-17T06:00Z'), new Date('2026-11-19T06:00Z')]));
+    expect(u.searchParams.get('start_hour')).toBe('2026-11-17T06:00');
+    expect(u.searchParams.get('end_hour')).toBe('2026-11-19T06:00');
+    expect(u.searchParams.get('past_days')).toBeNull();
   });
 });
