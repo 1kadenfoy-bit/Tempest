@@ -256,20 +256,25 @@ export class TypedRateLayer implements CustomLayerInterface {
   }
 
   render(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {
-    this.draw(gl as WebGL2RenderingContext, options.defaultProjectionData.mainMatrix as unknown as Float32Array);
+    this.draw(gl as WebGL2RenderingContext, options.defaultProjectionData.mainMatrix as unknown as Float32Array, true);
   }
 
-  /** With 3D terrain: the same picture into one terrain tile, which MapLibre drapes over the terrain. */
+  /**
+   * With 3D terrain: the same picture into one terrain tile, which MapLibre
+   * drapes over the terrain. No cross-fade here: MapLibre redraws changed
+   * tiles a few per frame, so a fade would cost a full redraw of every tile
+   * per frame and still arrive unevenly. Steps change at once instead.
+   */
   renderToTerrainTile(gl: WebGL2RenderingContext, input: CustomTerrainRenderInput): void {
-    this.draw(gl, tileMatrix(input.tileID));
+    this.draw(gl, tileMatrix(input.tileID), false);
   }
 
   get terrainTileRevision(): number { return this.drape.value; }
 
-  private draw(gl: WebGL2RenderingContext, matrix: Float32Array): void {
+  private draw(gl: WebGL2RenderingContext, matrix: Float32Array, fade: boolean): void {
     const g = gl as WebGL2RenderingContext;
     if (!this.program || !this.current.length) return;
-    const t = Math.min(1, (performance.now() - this.fadeStart) / this.fadeMs);
+    const t = fade ? Math.min(1, (performance.now() - this.fadeStart) / this.fadeMs) : 1;
     g.useProgram(this.program);
     // Projects 0..1 web-mercator coordinates (MapLibre 6: defaultProjectionData.mainMatrix).
     g.uniformMatrix4fv(this.loc.u_matrix!, false, matrix);
