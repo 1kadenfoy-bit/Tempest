@@ -16,6 +16,9 @@ import * as precip from '../layers/precipitation';
 import { precipitation } from '../layers/precipitation';
 import { temperature, temperatureRenderStyle } from '../layers/temperature';
 import { wind, windRenderStyle, WIND_NEEDS } from '../layers/wind';
+import { avalanche, setAvalancheCursor } from '../layers/avalanche';
+import { setAvalanchePin } from '../core/avalanche/danger';
+import { setupAvalanche } from './avalanche/avalanche';
 import { TerrainWindLayer } from '../render/grid-gl/terrain-wind-layer';
 import { FlowCanvas, type FlowMode } from '../render/flow/flow-canvas';
 import { modelGround, nodeProfiles, packWind, screenWind, windComplete } from './map/wind-field';
@@ -141,9 +144,9 @@ const scrubber = setupScrubber(cursor, prefs.windowHours, (h) => { prefs.windowH
 setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh(); }, 30_000);
 
 // The condition layers that work, in menu order. One is shown at a time.
-const LAYERS: LayerSlots[] = [precipitation, temperature, wind];
+const LAYERS: LayerSlots[] = [precipitation, temperature, wind, avalanche];
 /** Layers read from the pressure-level profile (GDPS's separate profile files, its 3-hourly steps). */
-const usesProfile = (l: LayerSlots) => l.id !== 'precipitation';
+const usesProfile = (l: LayerSlots) => l.id === 'temperature' || l.id === 'wind';
 /**
  * What the pin's series asks for beyond the profile, for every layer at once:
  * one request serves them all, so switching layers needs no new download.
@@ -283,6 +286,14 @@ function showLayer() {
 showLayer();
 
 function renderRunAge() {
+  // Avalanche: the pin's bulletin and its age, not a model run.
+  const pinNow = pin?.get();
+  if (active.id === 'avalanche' && pinNow) {
+    const a = avy.ageLine(pinNow.lng, pinNow.lat);
+    $('run-age').textContent = a.text;
+    $('run-age').dataset.stale = String(a.stale);
+    return;
+  }
   // The run of the model under the cursor; a missing model is named (visible fallback).
   const seg = cursor.time ? segmentAt(timeline, mapTime(cursor.time)) : timeline.segments[0];
   const r = seg ? runs[seg.model as ModelId] ?? run : run;
@@ -298,6 +309,8 @@ function renderRunAge() {
 }
 
 function renderReadout() {
+  // The avalanche layer needs no model run: until the time line is built, it reads now.
+  setAvalancheCursor(cursor.time ?? new Date());
   const i = seriesIndex();
   pin.setReadout(active.readout(pinData(), i, settingsFor(active)));
   scheduleDetails();
@@ -342,6 +355,12 @@ const PAN_MARGIN = 0.35;
 const fieldStore = new MemoryStore<GridField>(48);
 let fillTimer = 0;
 let mapReady = false;
+// The avalanche layer's regions, report pins and panels (online only).
+const avy = setupAvalanche(map, {
+  theme: () => appSettings.theme(),
+  settings: () => settingsFor(avalanche),
+  onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); },
+});
 let fillSeq = 0;
 
 function fieldKey(r: RunMetadata, t: Date, gridKey: string) {
@@ -577,7 +596,19 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
  * per-minute limit); the release fetches what is new.
  */
 async function updateFills(moving = false) {
-  if (!cursor.time || !mapReady) return;
+  if (!mapReady) return;
+  // Avalanche: issued bulletins, not model grids; the weather fills step aside.
+  avy.update(active.id === 'avalanche', cursor.time ?? new Date());
+  if (active.id === 'avalanche') {
+    flow.setShown(false);
+    windLayer.visible = false;
+    windLayer.setProfiles(null);
+    tempLayer.visible = false;
+    precipLayer.setFields([]);
+    setLine(null, null);
+    return;
+  }
+  if (!cursor.time) return;
   const when = mapTime(cursor.time);
   const at = runAt(when);
   if (!at) return;
@@ -946,6 +977,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { re
 
 // Pin
 const renderPlace = (p: PinState) => {
+  setAvalanchePin(p.lng, p.lat);
   const label = pinLabel(p).long;
   const text = p.elevation === null ? label : `${label} · ${formatElevation(p.elevation)}`;
   $('place-text').textContent = text;
@@ -1011,6 +1043,8 @@ map.on('click', (e) => {
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
+  // Avalanche: the tapped region's forecast opens, as on Avalanche Canada's map.
+  if (active.id === 'avalanche') avy.tapped(e.point, e.lngLat);
 });
 
 // Search: a chosen place moves the pin as a tap would, named, and the map flies there.
@@ -1066,7 +1100,9 @@ function renderDetails() {
   // A layer's own first line (precipitation: the snow ratio) sits above the model line.
   const own = active.id === 'precipitation' ? extra : [];
   const after = active.id === 'precipitation' ? [] : extra;
-  for (const text of [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`]) {
+  // An issued bulletin has no model, run or elevation bands of the app's.
+  const footLines = active.id === 'avalanche' ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
+  for (const text of footLines) {
     const l = document.createElement('span');
     l.textContent = text;
     lines.append(l);
@@ -1284,7 +1320,7 @@ function openSaveBox() {
   openSaveMode(map, {
     firstHours: hoursTo(first),
     endHours: Math.max(hoursTo(first), ...rest.map(hoursTo)),
-    layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: [...new Set(l.saveNeeds)] })),
+    layers: LAYERS.map((l) => ({ id: l.id, title: l.title, variables: [...new Set(l.saveNeeds)], ...(l.id === 'avalanche' ? { unavailable: 'Online only: Avalanche Canada’s terms on keeping bulletins are not confirmed yet' } : {}) })),
     initial: active.id,
     // Each model's cells over the box (as saved: 4 bytes a value), for its share of the hours.
     weatherBytes: (bb, hours, variables) => {
@@ -1367,6 +1403,7 @@ function recolourForTheme(t: Theme) {
     if (map.getLayer('freezing-line')) map.setPaintProperty('freezing-line', 'line-color', c.freezing);
     if (map.getLayer('freezing-line-label')) { map.setPaintProperty('freezing-line-label', 'text-color', c.label); map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
     if (map.getLayer('saved-areas')) map.setPaintProperty('saved-areas', 'line-color', c.saved);
+    avy.recolour(t);
   }
   // Canvases read the CSS variables when drawn.
   scrubber.refresh();
@@ -1408,6 +1445,8 @@ map.on('load', () => {
   map.addLayer(tempLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
+  avy.addLayers(map.getLayer('hillshade') ? 'hillshade' : firstLabel, firstLabel);
+  if (active.id === 'avalanche') void updateFills();
   threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
   mapReady = true;
   drawSavedOutlines();

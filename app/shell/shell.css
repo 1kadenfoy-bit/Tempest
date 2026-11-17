@@ -479,6 +479,8 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .check-box svg { visibility: hidden; }
 .check-row input:checked + .check-box svg { visibility: visible; }
 .check-row input:focus-visible + .check-box { outline: 2px solid var(--ink); outline-offset: 2px; }
+.check-row[data-unavailable='true'] { color: var(--ink-3); }
+.check-row[data-unavailable='true'] .check-box { border-style: dashed; }
 .check-text { flex: 1 1 0; display: flex; flex-direction: column; gap: 1px; }
 .check-title { font: var(--type-body); }
 .check-note { font: var(--type-caption); color: var(--ink-2); }
