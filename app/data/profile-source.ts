@@ -126,29 +126,41 @@ export class ProfileSource {
   /** Pin series already read, so switching layers does not ask again. */
   private pins = new MemoryStore<PointSeries>(8);
 
-  /** The pin's series: every hour, profile and surface values, from its nearest model cell. */
-  async pinSeries(run: RunMetadata, lat: number, lon: number, onPartial?: (s: PointSeries) => void): Promise<PointSeries> {
-    const key = `${run.model}|${run.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+  /**
+   * The pin's series: every hour, profile and surface values, from its
+   * nearest model cell. `amounts`: also precipitation and its snow part (for
+   * models whose amounts are not read from the map files). `profile`: false
+   * for a model without pressure levels. `pastHours`: also that many hours
+   * before the run's first hour, from earlier runs (the week's past).
+   */
+  async pinSeries(run: RunMetadata, lat: number, lon: number, onPartial?: (s: PointSeries) => void, opts: { amounts?: boolean; profile?: boolean; pastHours?: number; noFiles?: boolean } = {}): Promise<PointSeries> {
+    const o = { amounts: false, profile: true, pastHours: 0, noFiles: false, ...opts };
+    const key = `${run.model}|${run.referenceTime.toISOString()}|${lat.toFixed(4)}|${lon.toFixed(4)}|${o.amounts}|${o.profile}|${o.pastHours}`;
     const hit = this.pins.get(key);
     if (hit) return hit;
     // A second ask while the first is still reading (a layer switch) waits for it.
-    const s = await this.once(`pin|${key}`, () => this.readPin(run, lat, lon, onPartial));
+    const s = await this.once(`pin|${key}`, () => this.readPin(run, lat, lon, onPartial, o));
     this.pins.put(key, s);
     return s;
   }
 
-  private async readPin(run: RunMetadata, lat: number, lon: number, onPartial?: (s: PointSeries) => void): Promise<PointSeries> {
+  private async readPin(run: RunMetadata, lat: number, lon: number, onPartial: ((s: PointSeries) => void) | undefined, o: { amounts: boolean; profile: boolean; pastHours: number; noFiles: boolean }): Promise<PointSeries> {
     // Saved first when the run is a saved one (no signal), else the API.
     const fromSaved = await this.savedSeries(run, lat, lon);
     if (fromSaved) return fromSaved;
     if (Date.now() > this.apiDownUntil) {
       try {
-        const [s] = await fetchApiSeries(run.model, run.referenceTime, PIN_VARIABLES, [{ lat, lon }], run.validTimes);
+        const vars: VariableName[] = [...(o.profile ? PIN_VARIABLES : SURFACE_VARIABLES), ...(o.amounts ? (['precipitation', 'snowfall_water_equivalent'] as VariableName[]) : [])];
+        const first = run.validTimes[0]!.getTime();
+        const past = Array.from({ length: o.pastHours }, (_, k) => new Date(first - (o.pastHours - k) * 3_600_000));
+        const [s] = await fetchApiSeries(run.model, run.referenceTime, vars, [{ lat, lon }], [...past, ...run.validTimes]);
         return s!;
       } catch (err) {
         this.apiFailed(err);
       }
     }
+    // The caller reads what it needs from the map files itself (long models: hour by hour is too slow).
+    if (o.noFiles) throw new Error('point API unavailable');
     return this.fileSeries(run, lat, lon, onPartial);
   }
 

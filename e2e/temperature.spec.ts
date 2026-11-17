@@ -28,7 +28,7 @@ test('temperature: layer menu, terrain fill, readout, summary, week values', asy
   await expect(page.locator('#summary-before')).toHaveText(/^High [+−]?\d+° · Low [+−]?\d+°$/);
   await expect(page.locator('#legend-row')).toContainText('20 °C');
   // Daily high and low under at least one day the model covers.
-  await expect(page.locator('.week-day-extra').filter({ hasText: /\d+° (−)?\d+°/ }).first()).toBeVisible();
+  await expect(page.locator('.week-day-extra').filter({ hasText: /\d+°\s(−)?\d+°/ }).first()).toBeVisible();
   // The dashed 0 °C line source exists (empty when no slope in view crosses 0 °C).
   expect(await page.evaluate(() => Boolean((window as unknown as { tempestMap: { getLayer(id: string): unknown } }).tempestMap.getLayer('freezing-line')))).toBe(true);
   await page.screenshot({ path: 'test-results/screens/m4-temperature.png' });

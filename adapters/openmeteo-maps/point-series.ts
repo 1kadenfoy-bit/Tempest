@@ -1,6 +1,6 @@
 // The pin's series from the same map files the map draws, so map and tap
 // agree. Reads only the bytes around the point from each step's file.
-import type { PointSeries, VariableName } from '../../core/vocabulary';
+import { isAmount, type PointSeries, type VariableName } from '../../core/vocabulary';
 import { readPointSeries } from '../../render/openmeteo-starter';
 import { source, stepFileUrl, type RunMetadata } from './run-metadata';
 
@@ -16,6 +16,12 @@ export async function fetchPointSeries(run: RunMetadata, variables: VariableName
   // The library reads amounts as hourly rates; with hourly steps that equals
   // the amount per step, the vocabulary's unit.
   const values = await readPointSeries(run.model, urls, variables, lat, lon, 1);
+  // Rates back to amounts per step: a 3-hour step (longer models) holds three hours' worth.
+  const steps = times.map((t, i) => (t.getTime() - (i ? times[i - 1]! : run.validTimes[0]!).getTime()) / 3_600_000);
+  for (const v of variables) {
+    if (!isAmount(v) || !values[v]) continue;
+    values[v] = values[v]!.map((x, i) => x * (steps[i] ?? 1));
+  }
   return {
     label: {
       source: source.id,

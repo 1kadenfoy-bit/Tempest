@@ -63,6 +63,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
   new ResizeObserver(place).observe(scrubber);
 
   let startY = 0;
+  let startX = 0;
   let startOffset = 0;
   let lastY = 0;
   let lastT = 0;
@@ -75,9 +76,13 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     // When pulled up, only the handle drags; the details scroll.
     if (state === 'up' && !handle.contains(e.target as Node)) return;
     if ((e.target as HTMLElement).closest('button:not(.sheet-handle)')) return;
+    // A drag that starts on the chart or the week strip moves time, never the
+    // sheet, however the finger drifts (Kaden, Nov 16).
+    if ((e.target as HTMLElement).closest('.chart, .week')) return;
     dragging = true;
     moved = false;
     startY = lastY = e.clientY;
+    startX = e.clientX;
     lastT = e.timeStamp;
     startOffset = offsetFor(state);
     pointerId = e.pointerId;
@@ -86,6 +91,8 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     if (!dragging) return;
     const dy = e.clientY - startY;
     if (!moved && Math.abs(dy) < 6) return;
+    // Elsewhere on the sheet, only a clearly vertical drag moves it.
+    if (!moved && Math.abs(e.clientX - startX) > Math.abs(dy)) { dragging = false; return; }
     if (!moved) sheet.setPointerCapture(pointerId);
     moved = true;
     sheet.dataset.dragging = 'true';

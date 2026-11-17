@@ -13,6 +13,7 @@ const crossings = (...a: Parameters<typeof rawCrossings>): Crossing[] => rawCros
 import { formatElevation, formatOneDecimal, formatWhen, formatWhole } from '../../core/units/format';
 import type { BandsInfo, Card, DetailContext, Setting, ViewSample } from '../contract';
 import { precipRamp } from './fill';
+import { withObserved } from './observed';
 
 const H = 3_600_000;
 const accent = tokens.data.precipitation.textAccent;
@@ -86,7 +87,8 @@ function nowStats(ctx: DetailContext, snow: (number | null)[], freezing: (number
 }
 
 function totalsTable(ctx: DetailContext, bands: BandsInfo): Card {
-  const s = ctx.pin.series!;
+  // Past hours use what was observed where the analysis covers them.
+  const s = withObserved(ctx.pin.series, ctx.pin.observed)!;
   const ratio = ratioSetting(ctx);
   const you = Math.max(0, ctx.pin.elevation ?? 0);
   const youBand = you < bands.valleyTop ? 'Valley' : you >= bands.alpineBottom ? 'Alpine' : 'Mid';

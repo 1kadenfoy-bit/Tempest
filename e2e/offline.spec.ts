@@ -6,7 +6,14 @@ test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions:
 
 test('a saved area works in airplane mode with the same numbers', async ({ page, context }) => {
   test.setTimeout(600_000);
+  // Observed precipitation is online only (ECCC asks that it not be bulk-copied),
+  // so this compares forecast with forecast.
+  await context.route('**/geo.weather.gc.ca/**', (r) => r.abort());
+  // A 12-hour window, so the compared hours stay inside the saved run (the
+  // two days before it come from earlier runs online and are not saved).
   await page.goto('/?insets=47,34');
+  await page.evaluate(() => localStorage.setItem('tempest.prefs.v1', JSON.stringify({ windowHours: 12 })));
+  await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 90_000 });
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForTimeout(2000);
@@ -25,12 +32,24 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
   await page.screenshot({ path: 'test-results/screens/m3-saved.png' });
   await page.getByRole('button', { name: 'Close' }).click();
 
+  // Move the cursor 6 hours ahead (drag the chart left by half its width), so
+  // the half before the needle starts at now, inside the run.
+  const ahead = async () => {
+    const c = (await page.locator('#chart').boundingBox())!;
+    await page.mouse.move(c.x + c.width * 0.75, c.y + c.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(c.x + c.width * 0.25, c.y + c.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.locator('#cursor-note')).toHaveText(/in [5-7] h/);
+    await page.waitForTimeout(1500);
+  };
   const read = async () => ({
     run: (await page.textContent('#run-age'))?.replace(' · saved', ''),
     readout: await page.textContent('.pin-readout'),
     before: await page.textContent('#summary-before'),
     after: await page.textContent('#summary-after'),
   });
+  await ahead();
   const online = await read();
 
   await context.setOffline(true);
@@ -38,6 +57,7 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 60_000 });
   await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: 30_000 });
   await page.waitForTimeout(2000);
+  await ahead();
   const offline = await read();
   console.log('online :', JSON.stringify(online));
   console.log('offline:', JSON.stringify(offline));
@@ -48,6 +68,6 @@ test('a saved area works in airplane mode with the same numbers', async ({ page,
   await page.click('#play-button');
   await page.waitForTimeout(1600);
   await page.click('#play-button');
-  await expect(page.locator('#cursor-note')).toHaveText(/in \d+ h/);
+  await expect(page.locator('#cursor-note')).toHaveText(/in \d+ h|now/);
   await context.setOffline(false);
 });

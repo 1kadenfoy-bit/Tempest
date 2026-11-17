@@ -10,6 +10,7 @@ import { snowLines } from '../../core/temperature/profile';
 import { formatElevation } from '../../core/units/format';
 import { precipDetails, precipFooter, precipInView, settings, settingsNote } from './details';
 import type { LayerSlots } from '../contract';
+import { observedAt, withObserved, type Observed } from './observed';
 import { precipRamp, PRECIP_TYPES } from './fill';
 
 export { precipDrawField, precipRenderStyle } from './fill';
@@ -69,7 +70,7 @@ export function windowSummary(s: PointSeries | null, start: Date, cursor: Date, 
  * needle and now line on top. Observed hours (grey) arrive with observed
  * data in M6.
  */
-export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s: PointSeries | null, start: Date, end: Date, ground = 0): void {
+export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s: PointSeries | null, start: Date, end: Date, ground = 0, observed?: Observed): void {
   ctx.clearRect(0, 0, w, h);
   if (!s) return;
   const { p } = series(s);
@@ -79,13 +80,29 @@ export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s
   const gap = barW > 4 ? 1 : 0;
   const top = 4;
   let bars = 0;
-  let covered = false;
+  let covered = 0;
+  let hours = 0;
+  // Observed 6-hour totals: grey bars at their hourly rate, in place of the model's bars.
+  const ink3 = getComputedStyle(ctx.canvas).getPropertyValue('--ink-3').trim();
+  for (const o of observed ?? []) {
+    const right = x(o.end.getTime());
+    const left = x(o.end.getTime() - o.hours * 3_600_000);
+    if (right < 0 || left > w) continue;
+    const rate = o.mm / o.hours;
+    if (rate < PRECIP_CUTOFF) continue;
+    const bh = Math.max(2, Math.min(1, rate / 6) * (h - top));
+    ctx.fillStyle = ink3;
+    ctx.fillRect(left + 1, h - bh, Math.max(1, right - left - 2), bh);
+    bars++;
+  }
   s.times.forEach((time, i) => {
     const mm = p[i];
     const right = x(time.getTime());
     const left = right - barW;
     if (right < 0 || left > w) return;
-    if (mm !== undefined && Number.isFinite(mm)) covered = true;
+    hours++;
+    if (observedAt(time, observed)) { covered++; return; }
+    if (mm !== undefined && Number.isFinite(mm)) covered++;
     if (mm === undefined || !(mm >= PRECIP_CUTOFF)) return;
     bars++;
     const rate = mm / s.stepHours;
@@ -102,7 +119,9 @@ export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     // Left of the needle, which sits mid-chart.
-    ctx.fillText(covered ? 'Dry through this window' : 'Outside the model’s hours', w / 4, h / 2);
+    // Only "dry" when every hour in view has data; missing hours are not dry hours.
+    const text = !covered ? 'No forecast for these hours yet' : covered < hours ? 'Dry where the forecast has loaded' : 'Dry through this window';
+    ctx.fillText(text, w / 4, h / 2);
   }
 }
 
@@ -147,8 +166,14 @@ export const precipitation: LayerSlots = {
     const sl = pin.series && i >= 0 ? snowLines(pin.series)[i] : undefined;
     return { value: readoutValue(pin.series, i, Math.max(0, pin.elevation ?? 0)), extra: sl !== undefined && sl !== null ? `snow line ${formatElevation(Math.round(sl / 10) * 10)}` : undefined };
   },
-  summary: (pin, start, cursor, end, set) => ({ kind: 'split', ...windowSummary(pin.series, start, cursor, end, (set?.ratio as SnowRatio | undefined) ?? DEFAULT_RATIO, Math.max(0, pin.elevation ?? 0)) }),
-  drawChart: (ctx, w, h, pin, start, end) => drawChart(ctx, w, h, pin.series, start, end, Math.max(0, pin.elevation ?? 0)),
+  // Totals use what was observed where it covers the hours.
+  summary: (pin, start, cursor, end, set) => ({
+    kind: 'split',
+    ...windowSummary(withObserved(pin.series, pin.observed), start, cursor, end, (set?.ratio as SnowRatio | undefined) ?? DEFAULT_RATIO, Math.max(0, pin.elevation ?? 0)),
+    // Say when what fell is measured (analysis), not forecast.
+    beforeNote: pin.observed?.some((o) => o.end > start && o.end.getTime() - o.hours * 3_600_000 < cursor.getTime()) ? 'observed' : undefined,
+  }),
+  drawChart: (ctx, w, h, pin, start, end) => drawChart(ctx, w, h, pin.series, start, end, Math.max(0, pin.elevation ?? 0), pin.observed),
   details: (ctx) => precipDetails(ctx),
   inView: (view) => precipInView(view),
   footer: (ctx) => precipFooter(ctx),

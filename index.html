@@ -22,7 +22,7 @@
           <span class="layer-name-row"><span class="layer-name" id="layer-name">Precipitation</span><span class="layer-chevron" data-icon="chevron"></span></span>
           <span class="run-age" id="run-age">Finding the latest run…</span>
         </button>
-        <div class="model-pill" id="model-pill" aria-label="Model">HRDPS</div>
+        <button class="model-pill" id="model-pill" aria-haspopup="dialog" aria-expanded="false" aria-label="Model"><span id="model-pill-label">HRDPS</span><span class="model-chevron" data-icon="chevron"></span></button>
       </div>
     </header>
 
@@ -54,7 +54,9 @@
           </div>
           <div class="chart-block">
             <div class="chart" id="chart" aria-label="The layer’s chart across the window. Drag to move through time.">
+              <div class="chart-past" id="chart-past"></div>
               <canvas id="chart-canvas"></canvas>
+              <div class="chart-seams" id="chart-seams"></div>
               <div class="chart-now" id="chart-now"></div>
               <div class="chart-needle"></div>
               <div class="chart-status" id="chart-status"></div>
@@ -64,7 +66,9 @@
           <div class="week" id="week">
             <div class="week-days" id="week-days"></div>
             <div class="week-track" id="week-track">
+              <div class="week-past" id="week-past"></div>
               <div class="week-model" id="week-model"></div>
+              <div class="week-seams" id="week-seams"></div>
               <span class="week-beyond" id="week-beyond">Beyond model</span>
               <div class="week-dividers" id="week-dividers"></div>
             </div>

@@ -9,11 +9,13 @@ export interface PinData {
   series: PointSeries | null;
   /** Ground height at the pin (m), from the terrain; null until known. */
   elevation: number | null;
+  /** Observed precipitation at the pin (analysis totals), oldest first; online only. */
+  observed?: { end: Date; hours: number; mm: number; prelim: boolean }[] | undefined;
 }
 
 /** The window summary: split at the needle, or one block for the whole window. */
 export type WindowSummary =
-  | { kind: 'split'; before: string[]; after: string[] }
+  | { kind: 'split'; before: string[]; after: string[]; /** Shown after the first half's label, e.g. "observed". */ beforeNote?: string | undefined }
   | { kind: 'whole'; lines: string[]; label: string };
 
 export interface Readout {

@@ -3,13 +3,15 @@
 // time cursor drives the map, the chart, the summary and the readout together.
 import './shell/shell.css';
 import type { LngLatLike } from 'maplibre-gl';
-import { MemoryStore, pointKey } from '../core/store/memory-store';
+import { MemoryStore } from '../core/store/memory-store';
 import { TimeCursor } from '../core/time/cursor';
 import { formatRunAge, runAgeHours } from '../core/time/run-age';
 import { formatElevation } from '../core/units/format';
 import type { PointSeries } from '../core/vocabulary';
 import { MODELS, fetchPointSeries } from '../adapters/openmeteo-maps/point-series';
 import { fetchRunMetadata, type RunMetadata } from '../adapters/openmeteo-maps/run-metadata';
+import { CHAIN, MODELS as REGISTRY, type ModelId } from '../adapters/openmeteo-maps/models';
+import { buildTimeline, orderFor, segmentAt, type Timeline } from '../core/time/timeline';
 import * as precip from '../layers/precipitation';
 import { precipitation } from '../layers/precipitation';
 import { temperature, temperatureRenderStyle } from '../layers/temperature';
@@ -30,6 +32,8 @@ import { PROFILE_RH_VARIABLES } from '../core/vocabulary';
 import { SURFACE_VARIABLES, type NodeData } from './data/profile-source';
 import { windowRange } from '../core/time/window';
 import { layerMenuBody } from './shell/layer-menu';
+import { fetchObserved } from '../adapters/eccc-geomet/hrdpa';
+import { modelInfoBody, modelMenuBody } from './shell/model-menu';
 import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
 import { gridRequest } from '../core/geo/grid-request';
 import type { GridField } from '../core/vocabulary';
@@ -120,15 +124,79 @@ setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh
 const LAYERS: LayerSlots[] = [precipitation, temperature];
 let active: LayerSlots = LAYERS.find((l) => l.id === prefs.layer) ?? precipitation;
 
-// The layer's data: the run, and the pin's series.
-const MODEL = 'cmc_gem_hrdps';
+// The layer's data: each model's newest run, the time line joining them
+// (chosen model, then the chain), and the pin's series along it.
 const store = new MemoryStore<PointSeries>(32);
+/** The newest run of each model (surface files), and of GDPS's separate profile files. */
+let runs: Partial<Record<ModelId, RunMetadata>> = {};
+let profileRuns: Partial<Record<ModelId, RunMetadata>> = {};
+let timeline: Timeline = { segments: [], steps: [], seams: [], missing: [] };
+/** The first model's run on the time line (saving, offline). */
 let run: RunMetadata | null = null;
+
+/** The model chosen for a layer, remembered: a chain model starts the chain there; HRDPS by default. */
+const modelChoice = (l: LayerSlots): string => prefs.layerModels[l.id] ?? 'hrdps';
+/** Models that carry what a layer needs (temperature needs the height profile). */
+/** In the menu's order (v8 04): HRDPS, RDPS; then ECMWF IFS, GDPS. */
+const MENU_ORDER: ModelId[] = ['hrdps', 'rdps', 'ecmwf', 'gdps'];
+const modelsFor = (l: LayerSlots): ModelId[] => MENU_ORDER.filter((m) => l.id !== 'temperature' || REGISTRY[m].profile);
+
+/** The run covering time t on the time line; for temperature, GDPS's profile run (its own steps). */
+function runAt(t: Date, forProfile = active.id === 'temperature'): RunMetadata | null {
+  const seg = segmentAt(timeline, t);
+  if (!seg) return null;
+  const m = seg.model as ModelId;
+  return (forProfile ? profileRuns[m] : undefined) ?? runs[m] ?? null;
+}
+
+/** Join the models for the active layer into one time line, and set the cursor's steps to it. */
+function rebuildTimeline() {
+  const layer = active;
+  const offered = modelsFor(layer);
+  const forProfile = layer.id === 'temperature';
+  const runFor = (m: ModelId) => (forProfile ? profileRuns[m] ?? runs[m] : runs[m]);
+  const choice = offered.includes(modelChoice(layer) as ModelId) ? modelChoice(layer) : 'hrdps';
+  const chain = CHAIN.filter((m) => offered.includes(m));
+  const order = orderFor(choice, chain, (m) => !!runFor(m as ModelId));
+  const modelRuns = Object.fromEntries(order.map((m) => {
+    const r = runFor(m as ModelId);
+    return [m, r ? { model: m, run: r.referenceTime, times: r.validTimes } : null];
+  }));
+  timeline = buildTimeline(order, modelRuns);
+  run = timeline.segments[0] ? runs[timeline.segments[0].model as ModelId] ?? null : null;
+  cursor.setSteps(timeline.steps, cursor.time ?? new Date());
+  scrubber.setTimeline({
+    seams: timeline.seams.map((x) => ({ time: x.time, label: REGISTRY[x.to as ModelId]?.label ?? x.to })),
+  });
+}
 let series: PointSeries | null = null;
 /** True when the run comes from a saved area (no signal). */
 let usingSaved = false;
 
-const pinData = (): PinData => ({ series, elevation: pin?.get()?.elevation ?? null });
+/** Observed precipitation at the pin for the week's past (HRDPA), online only. */
+let observed: PinData['observed'] = undefined;
+let observedFor = '';
+const pinData = (): PinData => ({ series, elevation: pin?.get()?.elevation ?? null, observed });
+
+/** Fetch the past two days' observed 6-hour totals at the pin (once per place and 6 hours). */
+async function loadObserved() {
+  const p = pin?.get();
+  if (!p || usingSaved) return;
+  const now = new Date();
+  const key = `${p.lat.toFixed(3)},${p.lng.toFixed(3)}|${Math.floor(now.getTime() / 21_600_000)}`;
+  if (key === observedFor) return;
+  observedFor = key;
+  try {
+    const got = await fetchObserved(p.lat, p.lng, new Date(now.getTime() - PAST_HOURS * 3_600_000), now);
+    if (key !== observedFor) return;
+    observed = got.length ? got : undefined;
+    scrubber.refresh();
+    scheduleDetails();
+  } catch (err) {
+    observedFor = '';
+    console.warn('no observed precipitation', err);
+  }
+}
 
 /** A layer's settings: its defaults, overlaid with what was chosen (remembered between sessions). */
 function settingsFor(l: LayerSlots): Record<string, string | boolean> {
@@ -153,12 +221,16 @@ function showLayer() {
 showLayer();
 
 function renderRunAge() {
-  if (!run) return;
+  // The run of the model under the cursor; a missing model is named (visible fallback).
+  const seg = cursor.time ? segmentAt(timeline, cursor.time) : timeline.segments[0];
+  const r = seg ? runs[seg.model as ModelId] ?? run : run;
+  if (!r) return;
   const el = $('run-age');
-  el.textContent = formatRunAge(run.referenceTime, new Date()) + (usingSaved ? ' · saved' : '');
+  const missing = timeline.missing.map((m) => REGISTRY[m as ModelId]?.label ?? m);
+  el.textContent = formatRunAge(r.referenceTime, new Date()) + (usingSaved ? ' · saved' : '') + (missing.length ? ` · ${missing.join(', ')} unavailable` : '');
   // Stale is shown, never hidden: a run over 12 h old turns the warning colour.
-  el.dataset.stale = String(runAgeHours(run.referenceTime, new Date()) >= 12);
-  $('model-pill').textContent = MODELS[run.model]?.label ?? run.model;
+  el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
+  $('model-pill-label').textContent = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
 }
 
 function renderReadout() {
@@ -266,7 +338,8 @@ async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOn
   // The next hour ahead of time (instant when the point API answered).
   const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
   const next = cursor.allSteps[i + 1];
-  if (next) void profiles.nodeGrid(r, lattice, next, extra).catch(() => undefined);
+  const nextRun = next ? runAt(next, true) : null;
+  if (next && nextRun) void profiles.nodeGrid(nextRun, lattice, next, extra).catch(() => undefined);
 }
 
 /** The lattice of profile nodes over the screen plus the panning margin, and the box it covers. */
@@ -354,18 +427,20 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
  * per-minute limit); the release fetches what is new.
  */
 async function updateFills(moving = false) {
-  if (!run || !cursor.time || !mapReady) return;
+  if (!cursor.time || !mapReady) return;
+  const at = runAt(cursor.time);
+  if (!at) return;
   if (active.id === 'temperature') {
     precipLayer.setFields([]);
     tempLayer.visible = true;
-    await updateTemperature(run, cursor.time, ++fillSeq, moving).catch((err) => console.error(err));
+    await updateTemperature(at, cursor.time, ++fillSeq, moving).catch((err) => console.error(err));
     return;
   }
   tempLayer.visible = false;
   const b = map.getBounds();
   const req = gridRequest([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], map.getZoom(), BC_BOX);
   if (!req) { precipLayer.setFields([]); return; }
-  const r = run;
+  const r = at;
   const t = cursor.time;
   const mine = ++fillSeq;
   try {
@@ -392,7 +467,8 @@ async function updateFills(moving = false) {
     // Fetch the next step ahead of time, so playing and scrubbing stay smooth.
     const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
     const next = cursor.allSteps[i + 1];
-    if (next) void getField(r, next, req).catch(() => undefined);
+    const nextRun = next ? runAt(next, false) : null;
+    if (next && nextRun) void getField(nextRun, next, req).catch(() => undefined);
   } catch (err) {
     console.error(err);
   }
@@ -412,6 +488,7 @@ map.on('move', () => {
 
 cursor.subscribe(() => {
   renderReadout();
+  renderRunAge();
   scheduleFills(60);
   scheduleDetails();
 });
@@ -439,48 +516,155 @@ async function sharedRun(latest: RunMetadata): Promise<RunMetadata> {
   return { ...latest, referenceTime: api, validTimes: latest.validTimes.map((t) => new Date(t.getTime() - shift)) };
 }
 
+/** Every model's newest run, in parallel. HRDPS follows the point API's run (see sharedRun). */
+async function fetchAllRuns() {
+  const ids = Object.keys(REGISTRY) as ModelId[];
+  const got = await Promise.all(ids.map(async (m) => {
+    const spec = REGISTRY[m];
+    try {
+      const latest = await fetchRunMetadata(spec.mapModel);
+      const surface = m === 'hrdps' ? await sharedRun(latest) : latest;
+      const prof = spec.profileMapModel ? await fetchRunMetadata(spec.profileMapModel).catch(() => null) : null;
+      return [m, surface, prof] as const;
+    } catch {
+      return [m, null, null] as const;
+    }
+  }));
+  const surface: Partial<Record<ModelId, RunMetadata>> = {};
+  const profile: Partial<Record<ModelId, RunMetadata>> = {};
+  for (const [m, a, b] of got) { if (a) surface[m] = a; if (b) profile[m] = b; }
+  return { surface, profile };
+}
+
+const runsKey = (r: Partial<Record<ModelId, RunMetadata>>) => Object.entries(r).map(([k, v]) => `${k}:${v!.referenceTime.toISOString()}`).sort().join('|');
+
 async function loadRun() {
-  try {
-    const next = await sharedRun(await fetchRunMetadata(MODEL));
+  const next = await fetchAllRuns().catch(() => ({ surface: {}, profile: {} }));
+  if (Object.keys(next.surface).length) {
+    const changed = usingSaved || runsKey(next.surface) !== runsKey(runs) || runsKey(next.profile) !== runsKey(profileRuns);
     usingSaved = false;
-    const changed = !run || next.referenceTime.getTime() !== run.referenceTime.getTime();
-    run = next;
-    renderRunAge();
+    runs = next.surface;
+    profileRuns = next.profile;
     if (changed) {
-      // Amounts start at the run's second file (the first has none yet).
-      cursor.setSteps(run.validTimes.slice(1), cursor.time ?? new Date());
+      rebuildTimeline();
       void updateFills();
       void loadSeries();
     }
+    renderRunAge();
     document.body.dataset.run = 'ready';
-  } catch (err) {
-    const saved = savedRun();
-    if (saved) {
-      const changed = !run || saved.referenceTime.getTime() !== run.referenceTime.getTime();
-      run = saved;
-      usingSaved = true;
-      renderRunAge();
-      if (changed) {
-        cursor.setSteps(run.validTimes.slice(1), cursor.time ?? new Date());
-        void updateFills();
-        void loadSeries();
-      }
-      document.body.dataset.run = 'saved';
-      return;
-    }
-    $('run-age').textContent = 'Weather unavailable · tap to retry';
-    scrubber.setStatus('Could not reach the weather data');
-    document.body.dataset.run = 'error';
-    console.error(err);
+    return;
   }
+  // No signal: the newest saved area's run.
+  const saved = savedRun();
+  if (saved) {
+    const changed = !usingSaved || !run || saved.referenceTime.getTime() !== run.referenceTime.getTime();
+    runs = { hrdps: saved };
+    profileRuns = {};
+    usingSaved = true;
+    if (changed) {
+      rebuildTimeline();
+      void updateFills();
+      void loadSeries();
+    }
+    renderRunAge();
+    document.body.dataset.run = 'saved';
+    return;
+  }
+  $('run-age').textContent = 'Weather unavailable · tap to retry';
+  scrubber.setStatus('Could not reach the weather data');
+  document.body.dataset.run = 'error';
 }
 
 let seriesSeq = 0;
+/** Hours of the week's past to show before the run (the strip starts two days back). */
+const PAST_HOURS = 48;
+
+/** One model's part of the pin's series, for the active layer. */
+async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: number, lng: number, onPartial?: (s: PointSeries) => void, onLater?: (s: PointSeries) => void): Promise<PointSeries> {
+  const spec = REGISTRY[m];
+  const r = (layer.id === 'temperature' ? profileRuns[m] : undefined) ?? runs[m]!;
+  const amounts = layer.pinNeeds.some(isAmount);
+  const past = first && !usingSaved ? PAST_HOURS : 0;
+  if (m === 'hrdps' && amounts) {
+    // HRDPS amounts from the map files (as the map, and as saved offline);
+    // the profile, and the past hours' amounts, from the point API.
+    const own = (usingSaved ? await savedSeries(r, lat, lng) : null) ?? await fetchPointSeries(r, precip.needs, lat, lng);
+    const profP = profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past }).catch((err) => { console.warn('no profile for the pin', err); return null; });
+    // The amounts show at once; the profile (and past hours) join when they come,
+    // which can take minutes when the point API refuses and the files are read.
+    const quick = await Promise.race([profP, new Promise<null>((res) => setTimeout(() => res(null), 5000))]);
+    if (quick) return overlay(quick, own);
+    void profP.then((prof) => { if (prof) onLater?.(overlay(prof, own)); });
+    return own;
+  }
+  if (m === 'hrdps') return profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past });
+  // Longer models: the point API gives every hour in one request. Without it,
+  // precipitation reads its amounts from the model's map files (the profile,
+  // hour by hour over days, would be too slow; rain or snow then uses the
+  // model's own split).
+  try {
+    return await profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, noFiles: amounts });
+  } catch (err) {
+    if (!amounts) throw err;
+    return fetchPointSeries(runs[m]!, precip.needs, lat, lng);
+  }
+}
+
+/** `base` with `top`'s values wherever `top` has that time (same place). */
+function overlay(base: PointSeries, top: PointSeries): PointSeries {
+  const at = new Map(top.times.map((t, i) => [t.getTime(), i]));
+  const values: PointSeries['values'] = { ...base.values };
+  for (const [k, v] of Object.entries(top.values) as [keyof PointSeries['values'], number[]][]) {
+    const old = base.values[k];
+    values[k] = base.times.map((t, i) => { const j = at.get(t.getTime()); return j === undefined ? old?.[i] ?? NaN : v[j]!; });
+  }
+  return { ...base, values };
+}
+
+/**
+ * The pin's series along the time line: the past hours (earlier runs), then
+ * each model's hours up to its last step, hourly, so totals never skip
+ * hours. Each stretch names its model and run.
+ */
+function stitch(parts: (PointSeries | null)[]): PointSeries | null {
+  const firstPart = parts[0];
+  if (!firstPart || !timeline.segments.length) return firstPart ?? null;
+  const times: Date[] = [];
+  const pick: { part: PointSeries; i: number }[] = [];
+  const segments: NonNullable<PointSeries['segments']> = [];
+  let prev = -Infinity;
+  timeline.segments.forEach((seg, k) => {
+    const part = parts[k];
+    if (!part) return;
+    const end = seg.steps[seg.steps.length - 1]!.getTime();
+    const start = k === 0 ? -Infinity : prev;
+    const from = times.length;
+    part.times.forEach((t, i) => {
+      const x = t.getTime();
+      if (x > start && x <= end) { times.push(t); pick.push({ part, i }); }
+    });
+    if (times.length > from) {
+      const firstStep = seg.steps[0]!.getTime();
+      const pastEnd = times.findIndex((t) => t.getTime() >= firstStep);
+      if (k === 0 && pastEnd > 0) segments.push({ model: seg.model, run: seg.run, from: times[0]!, to: times[pastEnd - 1]!, kind: 'earlier' });
+      segments.push({ model: seg.model, run: seg.run, from: times[k === 0 ? Math.max(0, pastEnd) : from]!, to: times[times.length - 1]!, kind: 'forecast' });
+    }
+    prev = end;
+  });
+  const keys = new Set<keyof PointSeries['values']>();
+  for (const p of parts) if (p) for (const k of Object.keys(p.values) as (keyof PointSeries['values'])[]) keys.add(k);
+  const values: PointSeries['values'] = {};
+  for (const k of keys) values[k] = pick.map(({ part, i }) => part.values[k]?.[i] ?? NaN);
+  return { ...firstPart, times, values, segments };
+}
+
 async function loadSeries() {
   const p = pin.get();
-  if (!run || !p) return;
+  if (!run || !p || !timeline.segments.length) return;
+  void loadObserved();
   const layer = active;
-  const key = pointKey(layer.id, run.model, run.referenceTime, layer.pinNeeds, p.lat, p.lng);
+  const tlKey = timeline.segments.map((x) => `${x.model}@${x.run.toISOString()}`).join(',');
+  const key = `${layer.id}|${tlKey}|${p.lat.toFixed(4)},${p.lng.toFixed(4)}|${usingSaved}`;
   const cached = store.get(key);
   const mine = ++seriesSeq;
   if (cached) {
@@ -489,57 +673,42 @@ async function loadSeries() {
     series = null;
     scrubber.setStatus('Loading the pin’s forecast…');
     renderReadout();
+    const segs = timeline.segments;
+    const parts: (PointSeries | null)[] = segs.map(() => null);
+    // The first model first, so the readout comes quickly; the rest join it.
     try {
-      const r = run;
-      let s: PointSeries;
-      if (layer.pinNeeds.some(isAmount)) {
-        // Amounts from the map files (as the map), then the profile for the details.
-        s = (usingSaved ? await savedSeries(r, p.lat, p.lng) : null) ?? await fetchPointSeries(r, precip.needs, p.lat, p.lng);
-        store.put(key, s);
-        const amounts = s;
-        void profiles.pinSeries(r, p.lat, p.lng).then((prof) => {
-          if (mine !== seriesSeq) return;
-          series = mergeSeries(amounts, prof);
-          store.put(key, series);
-          renderReadout();
-          scrubber.refresh();
-        }).catch((err) => console.warn('no profile for the pin', err));
-      } else {
-        // Partial series arrive while the slow path (map files) reads hour by hour.
-        s = await profiles.pinSeries(r, p.lat, p.lng, (part) => { if (mine === seriesSeq) { series = part; renderReadout(); scrubber.refresh(); } });
-        store.put(key, s);
-      }
-      if (mine !== seriesSeq) return;
-      series = s;
-    } catch (err) {
-      const s = layer.id === 'precipitation' ? await savedSeries(run, p.lat, p.lng) : null;
-      if (mine !== seriesSeq) return;
-      if (s) {
-        series = s;
-        scrubber.setStatus('');
+      const update = (part: PointSeries) => {
+        if (mine !== seriesSeq) return;
+        parts[0] = part;
+        series = stitch(parts);
+        if (series) store.put(key, series);
         renderReadout();
-        document.body.dataset.series = 'ready';
-        return;
-      }
+        scrubber.refresh();
+      };
+      parts[0] = await modelSeries(layer, segs[0]!.model as ModelId, true, p.lat, p.lng, update, update);
+    } catch (err) {
+      if (mine !== seriesSeq) return;
       scrubber.setStatus(usingSaved ? 'The pin is outside the saved area' : 'Could not load the pin’s forecast');
       console.error(err);
       return;
     }
+    if (mine !== seriesSeq) return;
+    series = stitch(parts);
+    scrubber.setStatus('');
+    renderReadout();
+    scrubber.refresh();
+    document.body.dataset.series = 'ready';
+    await Promise.all(segs.slice(1).map(async (seg, k) => {
+      parts[k + 1] = await modelSeries(layer, seg.model as ModelId, false, p.lat, p.lng).catch((err) => { console.warn(`no ${seg.model} series for the pin`, err); return null; });
+    }));
+    if (mine !== seriesSeq) return;
+    series = stitch(parts);
+    if (series) store.put(key, series);
   }
   scrubber.setStatus('');
   renderReadout();
   scrubber.refresh();
   document.body.dataset.series = 'ready';
-}
-/** One series with the second's values added at the first's times (same place, same run). */
-function mergeSeries(a: PointSeries, b: PointSeries): PointSeries {
-  const at = new Map(b.times.map((t, i) => [t.getTime(), i]));
-  const values = { ...a.values };
-  for (const [k, v] of Object.entries(b.values) as [keyof PointSeries['values'], number[]][]) {
-    if (values[k]) continue;
-    values[k] = a.times.map((t) => { const i = at.get(t.getTime()); return i === undefined ? NaN : v[i]!; });
-  }
-  return { ...a, values };
 }
 
 /** The pin's series from a saved area's grids (same run), for use without signal. */
@@ -559,6 +728,8 @@ async function savedSeries(r: RunMetadata, lat: number, lng: number): Promise<Po
   return null;
 }
 setInterval(() => { if (document.visibilityState === 'visible') renderRunAge(); }, 60_000);
+// A new run can land while the app stays open: look every 10 minutes while it is on screen.
+setInterval(() => { if (document.visibilityState === 'visible' && !usingSaved) void loadRun(); }, 10 * 60_000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderRunAge(); void loadRun(); } });
 
 // Pin
@@ -762,6 +933,9 @@ function setActive(l: LayerSlots) {
   document.body.dataset.fill = '';
   document.body.dataset.series = '';
   showLayer();
+  // Each layer keeps its own model choice, and temperature its own steps (GDPS's profile every 3 h).
+  rebuildTimeline();
+  renderRunAge();
   renderReadout();
   renderDetails();
   void updateFills();
@@ -777,6 +951,51 @@ layerBtn.addEventListener('click', (e) => {
     title: 'Condition layer',
     caption: 'One condition layer at a time',
     body: layerMenuBody(LAYERS, active.id, (l) => { closePanel(); setActive(l); }),
+  });
+});
+
+// Model menu (04-ModelMenu) and model info (05-ModelInfo): grows from the model button.
+const modelBtn = $('model-pill');
+function modelAge(m: ModelId): string | null {
+  const r = runs[m];
+  return r ? formatRunAge(r.referenceTime, new Date()).split(' · ')[1] ?? null : null;
+}
+function modelFacts(m: ModelId) {
+  const r = runs[m];
+  if (!r) return { latest: 'unavailable', next: '–' };
+  const spec = REGISTRY[m];
+  const hour = r.referenceTime.toISOString().slice(11, 13);
+  const age = Math.round((Date.now() - r.referenceTime.getTime()) / 3_600_000);
+  // The next run should arrive one cycle after this one did.
+  const due = r.lastModified.getTime() + (24 / spec.runsPerDay) * 3_600_000;
+  const left = Math.round((due - Date.now()) / 3_600_000);
+  return { latest: `${hour}Z · ${age} h`, next: left >= 0 ? `≈ ${Math.max(1, left)} h` : `late ≈ ${-left} h` };
+}
+function openModelInfo(spec: (typeof REGISTRY)[ModelId]) {
+  openPanel({ origin: modelBtn, icon: icons.info, title: spec.label, caption: spec.fullName, body: modelInfoBody(spec, modelFacts(spec.id)) });
+}
+modelBtn.addEventListener('click', () => {
+  if (isOpenFrom(modelBtn)) { closePanel(); return; }
+  const layer = active;
+  const choice = modelChoice(layer);
+  const rows = modelsFor(layer).map((m) => ({ spec: REGISTRY[m], age: modelAge(m), current: m === choice }));
+  openPanel({
+    origin: modelBtn,
+    icon: '<span class="panel-letter">M</span>',
+    title: 'Model',
+    caption: `For this layer · ${layer.title}`,
+    body: modelMenuBody(rows, (spec) => {
+      closePanel();
+      prefs.layerModels[layer.id] = spec.id;
+      savePrefs(prefs);
+      rebuildTimeline();
+      renderRunAge();
+      series = null;
+      document.body.dataset.series = '';
+      renderReadout();
+      void updateFills();
+      void loadSeries();
+    }, openModelInfo),
   });
 });
 

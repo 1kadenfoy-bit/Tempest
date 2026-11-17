@@ -26,11 +26,16 @@ export function dayStart(t: Date, timeZone = 'America/Vancouver'): Date {
   return new Date(t.getTime() - sinceMidnight);
 }
 
-/** The week strip: 2 days back to 4 days ahead of today (7 days). */
-export function weekRange(now: Date, timeZone = 'America/Vancouver'): { start: Date; end: Date; days: Date[] } {
+/**
+ * The time strip: 2 days back, then ahead to the end of the forecast (the
+ * chosen model's last hour, `until`), never less than 4 days ahead (7 days in
+ * all). It grows with longer models (GDPS about 12 days, ECMWF about 17).
+ */
+export function weekRange(now: Date, timeZone = 'America/Vancouver', until?: Date | null): { start: Date; end: Date; days: Date[] } {
   const today = dayStart(now, timeZone);
+  const ahead = until ? Math.max(4, Math.ceil((until.getTime() - today.getTime()) / (24 * H)) - 1) : 4;
   const days: Date[] = [];
-  for (let d = -2; d <= 4; d++) days.push(dayStart(new Date(today.getTime() + d * 24 * H + 12 * H), timeZone));
-  const end = dayStart(new Date(today.getTime() + 5 * 24 * H + 12 * H), timeZone);
+  for (let d = -2; d <= ahead; d++) days.push(dayStart(new Date(today.getTime() + d * 24 * H + 12 * H), timeZone));
+  const end = dayStart(new Date(today.getTime() + (ahead + 1) * 24 * H + 12 * H), timeZone);
   return { start: days[0]!, end, days };
 }
