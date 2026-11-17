@@ -136,6 +136,12 @@ Stations give the ground truth models miss: ridge wind, valley cold pools, new s
 | ECCC observations | Real-time surface observations and hourly climate records | [OGC API collections](https://api.weather.gc.ca/collections) |
 | Open-Meteo Historical and Previous Runs APIs | What each model said, and reanalysis back decades | Free tier |
 
+Checked Nov 17, 2026 (after M7), for real measurements of the past at the pin:
+
+- **ECCC's own stations** (`swob-realtime` on the OGC API) answer from a browser (CORS open), every minute, with temperature, wind, gusts and precipitation. Near the North Shore and Sea to Sky they are low: Callaghan Valley 887 m, Whistler Nesters 662 m, Squamish, Pemberton, Point Atkinson.
+- **Partner stations** (BC highways' avalanche stations such as Blowdown Peak 2,320 m, BC snow pillows, BC Hydro, BC Wildfire) are listed with locations in `swob-partner-stations` (CORS open), but their readings are only on the Datamart (`dd.weather.gc.ca/…/swob-ml/partners/bc-tran/…`), which sends no CORS header: a web app cannot read them without a server of its own. Their notices say "All rights reserved" (BC government), so the terms need checking before any use.
+- Gridded analyses of temperature and wind (as HRDPA is for precipitation) were not found as open files.
+
 ### Stations and observation networks
 
 | Rank | Network | What it gives | Access |

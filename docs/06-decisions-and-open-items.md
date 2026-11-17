@@ -75,6 +75,12 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | Observed precipitation (M6) | ECCC HRDPA 6-hour totals at the pin for the week's past, online only; final where it exists, else preliminary; spread evenly over the 6 hours in totals | GeoMet is not for bulk copying, so saved areas leave it out |
 | Temperature's past (M6) | Earlier model runs (point API past days), hatched; no gridded temperature analysis is used yet | |
 | Scrubbing the past (Nov 17, after M7) | The cursor reaches the 48 hours before the forecast, hour by hour, at the pin (readout, chart, summary, details). The map holds the forecast's first hour and says "map from …". Not with a saved area (no past is saved) | Past maps from earlier runs' grids not yet checked |
+| Saved areas (M8) | Many side by side, newest first. Each is named after the map label nearest the box's centre (else "Area N") and remembers its box, layers and window, so Refresh saves the same again from the newest forecast and then removes the old copy | v8 has no list screen: built from the existing rows, switch and notes |
+| Save window (M8) | 24 h, 48 h, 3 days, Model end, counted from now. HRDPS up to its end, then RDPS for the hours after (the chain, as online). "Model end" is RDPS's end, about 3½ days. Default 48 h, as in v8 08 | GDPS is not saved: 10 days of a coarse model would mostly add size |
+| How a save reads profiles and wind (M8) | From the point API for every model cell in the box (a few requests, all hours each), when that fits in about five minutes of the free limit (about a 35 km box); else from the map files hour by hour. Amounts always from the map files | Map files: about 9 minutes for any box (about 80 small reads an hour of forecast, six at a time). Checked Nov 17: pressure-level values and 10 m wind are identical from both; 2 m temperature differs (the API adjusts it to the real ground height, as it does online) |
+| Offline fill (M8) | With saved data only, temperature and wind fill the saved area in view, not the screen | The fill's points are spaced to the view; over a small area none landed inside |
+| Saved data only (M8) | A switch in the saved areas list. While on and an area is saved, the app makes no network requests for weather; with nothing saved it is kept but has no effect | Weak signal hangs requests and drains the battery (architecture) |
+| Expired (M8) | An area is marked Expired when every hour it holds has passed | |
 | Run refresh (M6) | Look for new runs every 10 minutes while the app is on screen | Open-Meteo's 12Z HRDPS stalled on Nov 16 |
 | Renderer licence | Start with the GPL-2.0 library behind one seam; replace it with the app's own renderer by M3 | Keeps the choice open if the app is shared |
 
@@ -96,7 +102,7 @@ Do not build these, even where older text mentions them.
 ## 4. Open: Kaden decides later
 
 - Elevation band rule (valley, mid, alpine) per region. Proposed in M5 (section 2); Kaden to agree or adjust.
-- Designs for alerts, search, app settings, saved areas list, compare, full forecast, light theme, and every layer after wind.
+- Designs for alerts, search, app settings, saved areas list (plain version in M8), compare, full forecast, light theme, and every layer after wind.
 - Whether to keep the repo public (the simple answer to the GPL question) or private.
 - Whether any paid source is worth it after a season on the free ones.
 - Capacitor and the app stores.
@@ -107,10 +113,10 @@ These came from research and were not all confirmed. Check each at the milestone
 
 - Whether Open-Meteo's map files offer HRDPS as its own model, and whether partial reads work in an iPhone web view.
 - The starter library's current name and API. Last seen: npm package `@openmeteo/weather-map-layer`, an `om://` protocol registered with MapLibre's `addProtocol`, data under `openmeteo-data-spatial.b-cdn.net`. It is young and changes often; read its README first.
-- Real download sizes for a saved area.
+- Real download sizes for a saved area. M8, Nov 17: an 8 × 6 km box with all three layers for 3 days was 7.3 MB (weather 1.9, map 1.6, terrain 3.0, labels 0.9); the estimate said about 7.
 - Avalanche Canada's terms, including keeping bulletins offline. Kaden should email them before the avalanche layer.
 - Mapterhorn's coverage and resolution in BC.
-- How much storage iOS grants a home-screen web app, and when it evicts it.
+- How much storage iOS grants a home-screen web app, and when it evicts it. M8 asks for persistent storage on every save and the saved areas list says whether the phone agreed: Kaden to report what it says on the iPhone.
 - Every access detail marked "not confirmed" in `docs/05-data-sources.md`.
 - Current stable versions of every library. Do not trust version numbers written in these documents.
 - When ECCC shows wind chill and humidex (M4). The formulas are confirmed; the thresholds used (wind chill at 0 °C or below with wind of 5 km/h or more; humidex from 20 °C when it reaches 25) could not be read on canada.ca from the build machine.
