@@ -68,6 +68,14 @@ function glyphAndSpriteUrls(style: StyleSpecification): string[] {
  * as long for any box (thousands of small reads, six at a time).
  */
 const API_SAVE_MAX = 2200;
+/**
+ * How long a save waits for room under the API's limits before reading the
+ * map files instead. The API rounds its values (humidity to whole percent,
+ * temperature to a tenth) and the map files do not, so a save from the files
+ * can differ slightly from what the app shows online: waiting keeps them the
+ * same, and is still quicker than the files.
+ */
+const SAVE_MAX_WAIT = 300_000;
 /** Places per request: about 450 units each with a profile's 50 values, under the per-minute limit. */
 const API_CHUNK = 90;
 
@@ -90,7 +98,7 @@ async function plainFromApi(run: RunMetadata, times: Date[], vars: VariableName[
   const out: Record<string, Float32Array[]> = Object.fromEntries(vars.map((v) => [v, times.map(() => new Float32Array(cells.length))]));
   let at = 0;
   for (const c of chunks) {
-    const series = await fetchApiSeries(run.model, run.referenceTime, vars, c, times, cachedFetch(run.referenceTime), span);
+    const series = await fetchApiSeries(run.model, run.referenceTime, vars, c, times, cachedFetch(run.referenceTime, SAVE_MAX_WAIT), span);
     series.forEach((s, n) => {
       const idx = times.map((t) => s.times.findIndex((x) => x.getTime() === t.getTime()));
       for (const v of vars) {
