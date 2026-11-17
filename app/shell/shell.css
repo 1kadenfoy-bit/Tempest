@@ -510,3 +510,34 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   font: 500 11px/1.4 system-ui, sans-serif;
   pointer-events: none;
 }
+
+/* ── Weather alerts (M9): the badge in the top bar and the alerts panel. ──
+   No v8 design for the panel; built from the panel, group and row parts.
+   The alert colours are ECCC's own, set per row from the adapter's data. */
+.alert-badge {
+  position: relative; flex: 0 0 auto;
+  width: var(--touch-min); height: var(--touch-min); border-radius: var(--radius-icon-button);
+  background: var(--surface); border: 1px solid var(--stroke);
+  display: flex; align-items: center; justify-content: center; color: var(--warning);
+}
+.alert-badge[hidden] { display: none; }
+.alert-icon { display: flex; }
+.alert-count {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 10px; background: var(--warning); color: var(--surface);
+  font: var(--type-micro); font-weight: 600; line-height: 20px; text-align: center;
+}
+.alert-list { gap: 0; }
+.alert-row { display: flex; gap: 12px; padding: 10px 0; }
+.alert-row + .alert-row { border-top: 1px solid var(--stroke); }
+.alert-swatch { flex: 0 0 auto; width: 6px; border-radius: var(--radius-chip); }
+.alert-swatch[data-none='true'] { border: 1px dashed var(--stroke-strong); }
+.alert-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.alert-title { font: var(--type-body); font-weight: 600; }
+.alert-title::first-letter, .alert-level::first-letter { text-transform: uppercase; }
+.alert-level { font: var(--type-secondary); }
+.alert-area, .alert-times { font: var(--type-caption); color: var(--ink-2); line-height: 17px; }
+.alert-link {
+  align-self: flex-start; min-height: var(--touch-min); display: flex; align-items: center;
+  color: var(--ink); font: var(--type-secondary); text-decoration: underline; text-underline-offset: 3px;
+}

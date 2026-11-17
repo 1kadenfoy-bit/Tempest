@@ -63,6 +63,7 @@ import { setupScrubber } from './shell/scrubber';
 import { setupSheet } from './shell/sheet';
 import { setupViewport } from './shell/viewport';
 import { applyTokens, colorToken } from './theme/tokens';
+import { alertsAt } from './alerts/alerts';
 
 applyTokens(document);
 applyInsetOverride(document, location.search);
@@ -943,6 +944,7 @@ const renderPlace = (p: PinState) => {
   const where = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
   if (where !== lastPlace) {
     lastPlace = where;
+    alertsAt(p.lat, p.lng);
     clearTimeout(seriesTimer);
     seriesTimer = window.setTimeout(() => void loadSeries(), 250);
   }
