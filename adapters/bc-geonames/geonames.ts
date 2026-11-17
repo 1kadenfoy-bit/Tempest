@@ -104,7 +104,7 @@ export function parsePlaces(json: unknown): Place[] {
 
 /** Search BC's names. Throws on an error answer; abortable. */
 export async function fetchPlaces(query: string, signal?: AbortSignal, fetchImpl: typeof fetch = fetch): Promise<Place[]> {
-  const res = await fetchImpl(searchUrl(query), { signal });
+  const res = await fetchImpl(searchUrl(query), { signal: signal ?? null });
   if (!res.ok) throw new Error(`BC Geographical Names answered ${res.status}`);
   return parsePlaces(await res.json());
 }

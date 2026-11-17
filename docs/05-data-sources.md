@@ -122,6 +122,18 @@ Plan: keep Mapterhorn for hillshade and contours everywhere; for slope shading, 
 
 Animated wind options: [maplibre-gl-wind](https://github.com/geoql/maplibre-gl-wind) (MIT, deck.gl), mapbox-exif-layer, and WeatherLayers GL's particle layer.
 
+### Place names for search
+
+Checked Nov 17, 2026 (used by `adapters/bc-geonames/`, search panel in M9):
+
+- **Source.** BC Geographical Names Web Service (BCGNWS), the Province's official names: peaks, ranges, passes, glaciers, lakes, creeks, parks and communities, with feature type and position. OpenAPI spec `bcgov/api-specs` `bcgnws/bcgnws.json`, version 3.x.x.
+- **Request.** `GET https://apps.gov.bc.ca/pub/bcgnws/names/search?outputFormat=json&name=Seymour*&outputSRS=4326&outputStyle=detail&itemsPerPage=40`. `*` is the wildcard. Matching is by whole words of the name, so "Seymour" finds Mount Seymour, Seymour Lake and Seymour Creek; several words return names with any of them, relevance first, so the app filters again. Other parameters: `exactSpelling`, `featureClass`, `featureCategory`, `featureType`, `sortBy` (relevance, name, featureType, decisionDate), `startIndex`.
+- **Answer.** GeoJSON. Per name: `name`, `status` (adopted, recorded, rescinded), `isOfficial`, `featureType` ("Mount", "Creek (1)"), `featureCategory` (15 Elevated, 19 Depressed, 21 glaciers and névés, 10 lakes, 2 rural communities, 4 parks…), `feature.id`; with `outputStyle=detail` also `feature.relativeLocation` ("Between Seymour River and Indian Arm, S of Mount Elsay, NE corner of North Vancouver") and `feature.landDistrict`. `geometry.coordinates` is `[lon, lat]`. **No elevation.** Rescinded (former) names come back too; the app leaves them out.
+- **Browsers.** `Access-Control-Allow-Origin: *` on GET and OPTIONS, so the app calls it directly. 40 detailed names are about 80 kB in about 0.6 s.
+- **Licence.** The OpenAPI spec states "Crown Copyright" and links the B.C. copyright page. BC's data catalogue lists the service under the Open Government Licence – British Columbia, but the catalogue (catalogue.data.gov.bc.ca) and gov.bc.ca pages could not be opened from this session: confirm before publishing. No published rate limit; the app asks only while someone types (300 ms pause, one request at a time, answers kept for the session).
+- **Fallback not needed.** Open-Meteo's geocoding API (`geocoding-api.open-meteo.com/v1/search`) also answers browsers (`Access-Control-Allow-Origin: *`) and gives elevation (Mount Seymour, 1,449 m), but it is GeoNames-based and knows fewer BC peaks by official name.
+- Test answers saved in `adapters/bc-geonames/fixtures/` (Seymour*, Garibaldi*).
+
 ## Observations and Canadian models
 
 Stations give the ground truth models miss: ridge wind, valley cold pools, new snow. The ECCC partner feed is the single most useful find, because one adapter reaches most mountain stations in BC.
@@ -300,6 +312,7 @@ Most sources only ask for attribution. The ones below carry extra terms; record 
 | CWFIS | Cite NRCan |
 | SalishSeaCast | UBC copyright; read the licence text |
 | BC Wildfire perimeters, evacuation orders | Stated as reference only |
+| BC Geographical Names (place search) | Crown Copyright per its API spec; listed as Open Government Licence – BC (not confirmed this session) |
 | Federal and BC open data (HRDEM, LidarBC, roads, trails, DriveBC, HighwayCams) | Open government licences |
 | Trailforks | API by approval only |
 | AllTrails | No public API; terms restrict automated access |
