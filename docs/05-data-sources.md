@@ -197,6 +197,16 @@ Layer design: colour each forecast region by today's highest rating; tapping sho
 
 ECCC alerts come as GeoJSON from the [weather-alerts collection](https://api.weather.gc.ca/collections/weather-alerts) and as a map layer. The [GeoMet 3.0 release](https://comm.collab.science.gc.ca/mailman3/hyperkitty/list/dd_info@comm.collab.science.gc.ca/2026/2/) replaced the old `ALERTS` layer with `Current-Alerts`. Fetch on open, cache, show the fetch time.
 
+Checked Nov 17, 2026 (used by `adapters/eccc-alerts/`):
+
+- **Request.** `https://api.weather.gc.ca/collections/weather-alerts/items?f=json&skipGeometry=true&limit=100&bbox=w,s,e,n` (pygeoapi 0.20.0). A box 0.0002° wide around the pin works as a point query: it returns only the areas whose polygons contain the point (a point in the City of Lethbridge returned the city, not the county around it). Without `skipGeometry` the polygons make answers large; whole-country requests were cut off through this session's proxy. The answer is a few kB.
+- **CORS.** `Access-Control-Allow-Origin: *`, so the app asks directly. No key.
+- **Shape.** One GeoJSON feature per alert per area. `id` is `<alert>_<area>`. Fields used: `alert_type` (warning, watch, advisory, statement), `alert_name_en` ("snowfall warning"), `feature_name_en` (area name), `risk_colour_en` (yellow, orange, red; null for statements), `publication_datetime`, `expiration_datetime`, `status_en` (seen: issued, continued), `province`. Also present, not shown: `alert_text_en` (full text), `confidence_en`, `impact_en`, `validity_datetime`, `event_end_datetime`, French versions. Queryables include `province` and `alert_type`.
+- **No link field.** Each row links to ECCC's provincial alerts page, `https://weather.gc.ca/warnings/index_e.html?prov=bc` (the address BC government pages give; weather.gc.ca itself is blocked from this session, so not opened).
+- **Colours.** ECCC has colour-coded warnings, watches and advisories since Nov 26, 2025 (yellow, orange, red by impact and confidence); statements have no colour. The hex values come from the legend of ECCC's own `Current-Alerts` map layer (GeoMet GetLegendGraphic): warnings and advisories red `#DA3333`, orange `#FF9500`, yellow `#FFFF00`; watches the lighter `#EB9898`, `#FDC87F`, `#FDFD7F`; statements grey `#DBDBDB`. canada.ca's page on the colours could not be opened from this session.
+- **On Nov 17, 2026** there were 119 alert-areas in Canada (Alberta snowfall warnings and statements, a Yukon blizzard warning), none in BC. The test answers saved in `adapters/eccc-alerts/fixtures/` are real ones from Lethbridge, Calgary and the North Shore (empty).
+- **Licence.** Open Government Licence – Canada, attribution to ECCC.
+
 ### Water
 
 | Need | Source | Notes |
