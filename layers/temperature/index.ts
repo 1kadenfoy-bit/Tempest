@@ -5,7 +5,7 @@ import { rampColor } from '../../core/color/ramp';
 import { dewPoint, feelsLike } from '../../core/temperature/feels-like';
 import { freezingLevels, terrainTemperatures } from '../../core/temperature/profile';
 import { isDaylight } from '../../core/time/sun';
-import { formatDegrees, formatElevation, formatTemp, formatTimeRange } from '../../core/units/format';
+import { formatDegrees, formatElevation, formatTemp, formatTempNumber, formatTimeRange, unitLabel } from '../../core/units/format';
 import { PROFILE_RH_VARIABLES, PROFILE_VARIABLES, type PointSeries, type VariableName } from '../../core/vocabulary';
 import type { LayerSlots, PinData, WindowSummary } from '../contract';
 import { TEMP_RANGE, temperatureGradient, temperatureRamp } from './fill';
@@ -87,7 +87,7 @@ function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, pin: Pin
   const rgba = (c: number, a: number) => { const [r, g, b] = rampColor(ramp, c); return `rgba(${r},${g},${b},${a})`; };
 
   // Daylight bands, every 10 minutes across the window.
-  ctx.fillStyle = 'rgba(255,255,255,0.045)';
+  ctx.fillStyle = cssVar(ctx, '--card', 'transparent');
   const stepMs = 10 * 60_000;
   let bandStart: number | null = null;
   for (let t = start.getTime(); t <= end.getTime() + stepMs; t += stepMs) {
@@ -150,7 +150,7 @@ function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, pin: Pin
     ctx.font = '400 11px system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = y(0) < 14 ? 'top' : 'bottom';
-    ctx.fillText('0°', w - 4, y(0) + (y(0) < 14 ? 2 : -2));
+    ctx.fillText(formatDegrees(0, false), w - 4, y(0) + (y(0) < 14 ? 2 : -2));
   }
 
   // Feels-like: thin line
@@ -196,7 +196,7 @@ function legend(doc: Document): HTMLElement {
   el.className = 'legend legend-scale';
   const unit = doc.createElement('span');
   unit.className = 'legend-unit';
-  unit.textContent = '°C';
+  unit.textContent = unitLabel('temp');
   const scale = doc.createElement('span');
   scale.className = 'legend-track';
   const bar = doc.createElement('span');
@@ -208,7 +208,7 @@ function legend(doc: Document): HTMLElement {
   for (const v of [-20, -10, 0, 10, 20]) {
     const t = doc.createElement('span');
     t.style.left = `${((v - min) / (max - min)) * 100}%`;
-    t.textContent = v === 20 ? '20 °C' : formatDegrees(v, false).replace('°', '');
+    t.textContent = v === 20 ? formatTemp(v) : formatTempNumber(v);
     ticks.append(t);
   }
   scale.append(bar, ticks);
@@ -242,8 +242,8 @@ export const temperature: LayerSlots = {
     const fl = v.freezing[i];
     return {
       value: formatTemp(t),
-      note: Number.isFinite(f) ? `feels ${formatDegrees(f, false).replace('°', '')}` : undefined,
-      extra: fl !== null && fl !== undefined ? `0 °C at ${formatElevation(Math.max(0, Math.round(fl / 10) * 10))}` : undefined,
+      note: Number.isFinite(f) ? `feels ${formatTempNumber(f)}` : undefined,
+      extra: fl !== null && fl !== undefined ? `${formatTemp(0)} at ${formatElevation(Math.max(0, Math.round(fl / 10) * 10))}` : undefined,
     };
   },
   summary,

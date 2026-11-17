@@ -3,7 +3,7 @@
 import { rampColor } from '../../core/color/ramp';
 import { precipTotals } from '../../core/precip/totals';
 import { PRECIP_CUTOFF, snowShare, typeFromShare, type PrecipType } from '../../core/precip/type';
-import { formatCm, formatMm, formatRate } from '../../core/units/format';
+import { formatCm, formatMm, formatRate, formatRateRange } from '../../core/units/format';
 import { PROFILE_RH_VARIABLES, PROFILE_VARIABLES, type PointSeries, type VariableName } from '../../core/vocabulary';
 import { ratioFor, shareAtHeight, type SnowRatio } from '../../core/precip/by-elevation';
 import { snowLines } from '../../core/temperature/profile';
@@ -140,7 +140,7 @@ export function legend(doc: Document): HTMLElement {
   }
   const range = doc.createElement('span');
   range.className = 'legend-range';
-  range.textContent = '0.1 to 6+ mm/h';
+  range.textContent = formatRateRange(PRECIP_CUTOFF, 6);
   el.append(range);
   return el;
 }
@@ -177,6 +177,7 @@ export const precipitation: LayerSlots = {
   details: (ctx) => precipDetails(ctx),
   inView: (view) => precipInView(view),
   footer: (ctx) => precipFooter(ctx),
-  settings,
-  settingsNote,
+  // Read when the panel opens, so the labels follow the units setting.
+  get settings() { return settings(); },
+  get settingsNote() { return settingsNote(); },
 };

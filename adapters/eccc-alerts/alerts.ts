@@ -21,7 +21,10 @@ import type { IssuedAlert } from '../../core/alerts/alerts';
 
 export const source = {
   id: 'eccc-alerts',
-  name: 'Environment and Climate Change Canada',
+  name: 'ECCC weather alerts',
+  /** Who issues the alerts, as the panel names them. */
+  publisher: 'Environment and Climate Change Canada',
+  provides: 'Public weather alerts at the pin, shown as issued',
   baseUrl: 'https://api.weather.gc.ca/collections/weather-alerts/items',
   licence: 'Open Government Licence – Canada',
   attribution: 'Contains information from Environment and Climate Change Canada (public weather alerts)',

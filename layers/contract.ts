@@ -86,6 +86,8 @@ export type Card =
       points: { elevation: number; value: number; color: string }[];
       you: { elevation: number; value: number; label: string };
       zero: boolean; unit: string;
+      /** Where the guide line sits, in the shown unit (0 °C is 32 °F); 0 when absent. */
+      zeroAt?: number | undefined;
     }
   | { kind: 'status'; icon: 'snowflake' | 'info' | 'shift' | 'calm'; text: string; note?: string | undefined }
   | { kind: 'expandable'; title: string; caption: string; header: string[]; rows: string[][] }

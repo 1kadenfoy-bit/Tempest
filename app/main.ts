@@ -51,8 +51,8 @@ import { coveringRanges, regridNative, sampleNative } from '../render/openmeteo-
 import { readFile, storageState } from './offline/storage';
 import { loadBasemap } from './map/basemap-router';
 import { maplibregl } from './map/maplibre';
-import { topoStyle } from './map/style';
-import { addTerrain } from './map/terrain';
+import { applyBaseTheme, topoStyle } from './map/style';
+import { addTerrain, applyTerrainTheme } from './map/terrain';
 import { hydrateIcons, icons } from './shell/icons';
 import { applyInsetOverride } from './shell/insets';
 import { mapPanelBody } from './shell/map-panel';
@@ -62,16 +62,25 @@ import { loadPrefs, savePrefs } from './shell/prefs';
 import { setupScrubber } from './shell/scrubber';
 import { setupSheet } from './shell/sheet';
 import { setupViewport } from './shell/viewport';
-import { applyTokens, colorToken } from './theme/tokens';
+import { colorToken, type Theme } from './theme/tokens';
+import { startAppSettings } from './settings/app-settings';
 import { alertsAt } from './alerts/alerts';
 
-applyTokens(document);
+const prefs = loadPrefs();
+// App settings: units and theme apply before anything draws; the hooks redraw
+// what CSS cannot reach (defined further down, called only on a change).
+const appSettings = startAppSettings(prefs, {
+  savePrefs: () => savePrefs(prefs),
+  onUnits: () => redrawForUnits(),
+  onTheme: (t) => recolourForTheme(t),
+  onSavedOnly: (on) => setSavedOnly(on),
+  basemapAttribution: () => String(basemap.source.attribution ?? ''),
+});
 applyInsetOverride(document, location.search);
 setupViewport(document);
 hydrateIcons(document);
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
-const prefs = loadPrefs();
 
 // North Shore, the start region on every design screen.
 const NORTH_SHORE: [number, number] = [-123.02, 49.38];
@@ -95,7 +104,7 @@ async function registerSavedAreas() {
 await registerSavedAreas();
 const map = new maplibregl.Map({
   container: 'map',
-  style: topoStyle(basemap.source),
+  style: topoStyle(basemap.source, appSettings.theme()),
   center: prefs.lastPin ? [prefs.lastPin.lng, prefs.lastPin.lat] : NORTH_SHORE,
   zoom: 11,
   minZoom: 4,
@@ -1207,6 +1216,7 @@ layersBtn.addEventListener('click', () => {
     icon: icons.layersPanel,
     title: 'Map',
     caption: 'Base map and terrain',
+    headerAction: appSettings.gear(layersBtn),
     body: mapPanelBody({ hillshade: prefs.hillshade, contours: prefs.contours }, (s) => {
       prefs.hillshade = s.hillshade;
       prefs.contours = s.contours;
@@ -1295,23 +1305,60 @@ async function openSavedList() {
         await deleteArea(a);
         await afterSavedChange();
       },
-      setSavedOnly: (on) => {
-        prefs.savedOnly = on;
-        savePrefs(prefs);
-        document.body.dataset.savedOnly = String(on);
-        void loadRun();
-      },
+      setSavedOnly,
     }),
   });
 }
 
+/** "Saved data only", from the saved areas list or app settings: one pref, one effect. */
+function setSavedOnly(on: boolean) {
+  prefs.savedOnly = on;
+  savePrefs(prefs);
+  document.body.dataset.savedOnly = String(on);
+  void loadRun();
+}
+
+/** Units changed in app settings: every number on screen is formatted again. */
+function redrawForUnits() {
+  showLayer();
+  const p = pin.get();
+  if (p) renderPlace(p);
+  renderReadout();
+  renderRunAge();
+  scrubber.refresh();
+  renderDetails();
+  // The line on the map is labelled with its height.
+  void updateFills();
+}
+
+/** The colours of the map's own lines (freezing line, saved areas) for a theme. */
+const linePaint = (t: Theme) => ({
+  freezing: colorToken('ink', t), label: colorToken('ink', t), halo: colorToken('surface', t), saved: colorToken('ink-2', t),
+});
+
+/** Theme changed: CSS follows the tokens by itself; the map and canvases are recoloured here. */
+function recolourForTheme(t: Theme) {
+  if (mapReady) {
+    applyBaseTheme(map, t);
+    applyTerrainTheme(map, t);
+    const c = linePaint(t);
+    if (map.getLayer('freezing-line')) map.setPaintProperty('freezing-line', 'line-color', c.freezing);
+    if (map.getLayer('freezing-line-label')) { map.setPaintProperty('freezing-line-label', 'text-color', c.label); map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
+    if (map.getLayer('saved-areas')) map.setPaintProperty('saved-areas', 'line-color', c.saved);
+  }
+  // Canvases read the CSS variables when drawn.
+  scrubber.refresh();
+  renderDetails();
+}
+
 function addFreezingLineLayers(beforeId?: string) {
+  const c = linePaint(appSettings.theme());
   map.addSource('freezing-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-  map.addLayer({ id: 'freezing-line', type: 'line', source: 'freezing-line', paint: { 'line-color': colorToken('ink'), 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 2.5] } }, beforeId);
+  map.addLayer({ id: 'freezing-line', type: 'line', source: 'freezing-line', paint: { 'line-color': c.freezing, 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 2.5] } }, beforeId);
   map.addLayer({
     id: 'freezing-line-label', type: 'symbol', source: 'freezing-line',
     layout: { 'symbol-placement': 'line', 'text-field': ['get', 'label'], 'text-size': 12, 'symbol-spacing': 400, 'text-max-angle': 45, 'text-font': ['Noto Sans Regular'] },
-    paint: { 'text-color': colorToken('ink'), 'text-halo-color': colorToken('surface'), 'text-halo-width': 1.5 },
+    paint: { 'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.5 },
   });
 }
 
@@ -1327,12 +1374,12 @@ function drawSavedOutlines() {
   const src = map.getSource('saved-areas') as maplibregl.GeoJSONSource | undefined;
   if (src) { src.setData(data); return; }
   map.addSource('saved-areas', { type: 'geojson', data });
-  map.addLayer({ id: 'saved-areas', type: 'line', source: 'saved-areas', paint: { 'line-color': colorToken('ink-2'), 'line-width': 1.5, 'line-dasharray': [3, 2] } });
+  map.addLayer({ id: 'saved-areas', type: 'line', source: 'saved-areas', paint: { 'line-color': linePaint(appSettings.theme()).saved, 'line-width': 1.5, 'line-dasharray': [3, 2] } });
 }
 
 map.on('load', () => {
   const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  addTerrain(map, firstLabel);
+  addTerrain(map, firstLabel, appSettings.theme());
   applyTerrainPrefs();
   // Under the hillshade and contours, so the terrain reads through at any rate.
   map.addLayer(precipLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);

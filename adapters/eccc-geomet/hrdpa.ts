@@ -11,6 +11,7 @@
 export const source = {
   id: 'eccc-hrdpa',
   name: 'ECCC precipitation analysis (HRDPA)',
+  provides: 'Observed precipitation at the pin, past two days',
   baseUrl: 'https://geo.weather.gc.ca/geomet',
   licence: 'Open Government Licence – Canada',
   attribution: 'Contains information from Environment and Climate Change Canada (HRDPA)',

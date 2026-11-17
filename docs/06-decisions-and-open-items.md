@@ -43,7 +43,8 @@ Kaden asked not to be interrupted, so these were chosen for him. Each is easy to
 | --- | --- | --- |
 | Start region | North Shore and Sea to Sky | It is the area on every design screen |
 | First platform | iPhone, as a home-screen web app | Fastest route to a phone; no Mac needed |
-| Units | Metric, with a setting later | The screens are metric |
+| Units | Metric; Imperial (°F, in, mph, ft, mi) in app settings since M9. Only text changes: map colours, thresholds and stored data stay metric. Imperial rain rates show two decimals (three under 0.01 in/h); snow in whole inches | The screens are metric |
+| Theme (M9) | Dark; Light and Match phone in app settings. Light uses the light tokens for the shell, map ground, roads, labels and contours; hillshade shadows are the light ground darkened toward the ink. Weather ramps stay as they are. Rain and snow amounts written as text use the darkest stop of each light ramp in light, since the tokens give text accents for dark only | v8 has no light screens |
 | Sources | Free ones only | Budget is "free for now" |
 | Routes and trails | Not in the first build | The brief left it open; the design has no route screens |
 | Icon variant | The dark two-peak version | It was the lead option on the icon board |

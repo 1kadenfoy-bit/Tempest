@@ -12,12 +12,7 @@ import {
   type OmProtocolSettings,
 } from '@openmeteo/weather-map-layer';
 
-export const renderer = {
-  name: 'Open-Meteo weather-map-layer',
-  version: '0.3.2',
-  licence: 'GPL-2.0',
-  link: 'https://github.com/open-meteo/weather-map-layer',
-} as const;
+export { renderer } from './about';
 
 // Reader settings. Since M3 the app draws with its own renderer
 // (render/grid-gl); the starter library only reads the model files.

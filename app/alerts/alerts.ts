@@ -121,7 +121,7 @@ function openAlerts(): void {
   for (const a of s.list) list.append(row(a));
   const foot = document.createElement('p');
   foot.className = 'panel-note alert-source';
-  foot.textContent = `${source.name} · ${fetchedText(s.answer, now)}`;
+  foot.textContent = `${source.publisher} · ${fetchedText(s.answer, now)}`;
   if (s.answer.failed) foot.textContent += '. Could not reach ECCC just now; this is the last answer.';
   body.append(list, foot);
   openPanel({

@@ -8,6 +8,7 @@
 export const source = {
   id: 'openmeteo-maps',
   name: 'Open-Meteo gridded map files',
+  provides: 'The weather on the map and in saved areas',
   baseUrl: 'https://openmeteo.s3.amazonaws.com/data_spatial',
   licence: 'CC BY 4.0',
   attribution: 'Weather data by Open-Meteo.com (CC BY 4.0), from Environment and Climate Change Canada models',
