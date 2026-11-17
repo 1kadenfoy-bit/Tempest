@@ -44,6 +44,8 @@ export class FlowCanvas {
   private dpr = 1;
   /** Frame times (ms) of the last few seconds, for the frame rate check. */
   readonly frameTimes: number[] = [];
+  /** Time spent drawing each of those frames (ms). */
+  readonly workTimes: number[] = [];
 
   /** `container` holds the canvas; `sizeOf` gives its size (the map's own element). */
   constructor(container: HTMLElement, private sizeOf: HTMLElement = container) {
@@ -115,12 +117,15 @@ export class FlowCanvas {
 
   private tick(now: number) {
     if (!this.running()) return;
+    // At most about 60 a second: 120 Hz screens would double the work for no visible gain.
+    if (now - this.last < 15 && this.frameTimes.length) { this.frame = requestAnimationFrame((t) => this.tick(t)); return; }
     const f = this.field!;
     // The first frame's time can be a little before the start: never step backwards.
     const dt = Math.max(0, Math.min(100, now - this.last));
     this.last = now;
+    const began = performance.now();
     this.frameTimes.push(now);
-    while (this.frameTimes.length && this.frameTimes[0]! < now - 5000) this.frameTimes.shift();
+    while (this.frameTimes.length && this.frameTimes[0]! < now - 5000) { this.frameTimes.shift(); this.workTimes.shift(); }
     const want = Math.round((f.width * f.height) / DENSITY);
     while (this.streaks.length < want) { const s = { x: 0, y: 0, age: 0, life: 1 }; this.spawn(s, f, true); this.streaks.push(s); }
     this.streaks.length = want;
@@ -152,6 +157,7 @@ export class FlowCanvas {
       ctx.strokeStyle = `rgba(255,255,255,${(0.25 + 0.55 * ((b + 1) / BUCKETS)).toFixed(2)})`;
       ctx.stroke(p);
     });
+    this.workTimes.push(performance.now() - began);
     this.frame = requestAnimationFrame((t) => this.tick(t));
   }
 
@@ -183,6 +189,12 @@ export class FlowCanvas {
       }
     }
     ctx.stroke(p);
+  }
+
+  /** Average drawing time per frame over the last few seconds (ms). */
+  workMs(): number {
+    const w = this.workTimes;
+    return w.length ? w.reduce((a, b) => a + b, 0) / w.length : 0;
   }
 
   /** Frames a second over the last few seconds (0 when not animating). */

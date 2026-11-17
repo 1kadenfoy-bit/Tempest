@@ -278,6 +278,16 @@ const windLayer = new TerrainWindLayer('wind-grid', windRenderStyle(), PROFILE_L
 // Inside the map's canvas container, before the pin, so the pin stays on top.
 const flow = new FlowCanvas(map.getCanvasContainer(), map.getContainer());
 map.on('resize', () => flow.resized());
+// A frame-rate readout for checking the flow on a phone: add ?fps to the address.
+if (new URLSearchParams(location.search).has('fps')) {
+  const meter = document.createElement('div');
+  meter.className = 'fps-meter';
+  document.body.append(meter);
+  setInterval(() => {
+    const f = flow.fps();
+    meter.textContent = f ? `${Math.round(f)} fps · ${flow.workMs().toFixed(1)} ms a frame` : 'flow paused';
+  }, 1000);
+}
 (window as unknown as { tempestFlow: FlowCanvas }).tempestFlow = flow;
 /** The flow's mode from the wind settings: animated, still arrows, or nothing. */
 const flowMode = (): FlowMode => { const s = settingsFor(wind); return s.flow ? 'flow' : s.arrows ? 'arrows' : 'off'; };
