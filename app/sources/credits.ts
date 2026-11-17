@@ -10,6 +10,7 @@ import { source as ecccAlerts } from '../../adapters/eccc-alerts/alerts';
 import { source as ecccRadar } from '../../adapters/eccc-radar/radar';
 import { source as avalancheCanada } from '../../adapters/avalanche-canada/forecasts';
 import { source as avalancheMin } from '../../adapters/avalanche-canada/min';
+import { source as avalancheAtes } from '../../adapters/avalanche-canada/ates';
 import { source as bcGeonames } from '../../adapters/bc-geonames/geonames';
 import { source as ecccSwob } from '../../adapters/eccc-swob/swob';
 import { source as avcanWeather } from '../../adapters/avcan-weather/stations';
@@ -62,6 +63,7 @@ export function credits(basemapAttribution: string = BASEMAP_ATTRIBUTION): Credi
     adapter(avcanWeather),
     adapter(avalancheCanada),
     adapter(avalancheMin),
+    adapter(avalancheAtes),
     ...Object.values(originators).map((o) => ({ ...o, group: 'Weather data' as const })),
     {
       id: 'basemap', group: 'Base map and terrain', name: 'Protomaps base map',
