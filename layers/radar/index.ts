@@ -111,11 +111,12 @@ export function radarDetails(ctx: DetailContext): Card[] {
   }];
   if (r?.frames.length) {
     const first = r.frames[0]!, last = r.frames[r.frames.length - 1]!;
+    const minAgo = (t: Date) => String(Math.max(0, Math.round((ctx.now.getTime() - t.getTime()) / 60_000)));
     cards.push({
       kind: 'stats', title: 'Frames', meta: 'ECCC radar composite',
       stats: [
-        { label: 'This frame', value: time ? formatCursorTime(time) : '–' },
-        { label: 'Newest', value: formatMinutesAgo(last, ctx.now) },
+        { label: 'This frame', value: time ? minAgo(time) : '–', unit: time ? 'min ago' : undefined },
+        { label: 'Newest', value: minAgo(last), unit: 'min ago' },
         { label: 'Kept', value: String(r.frames.length), sub: `since ${formatCursorTime(first)}` },
       ],
     });

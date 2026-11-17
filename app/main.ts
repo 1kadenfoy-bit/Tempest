@@ -161,6 +161,7 @@ const RADAR_REFRESH_MS = 6 * 60_000;
 /** Values at the pin by product, place and frame (each frame is final once issued). */
 const radarPoints = new Map<string, RadarPoint | 'error'>();
 let radarPinTimer = 0;
+let radarRetried = '';
 /** Radar is online only: no signal, or saved data only, means none. */
 const radarOffline = () => usingSaved || (prefs.savedOnly && savedAreas.length > 0) || !navigator.onLine;
 const radarPointKey = (lat: number, lng: number, t: Date) => `${radarShown()}|${lat.toFixed(4)},${lng.toFixed(4)}|${t.toISOString()}`;
@@ -227,6 +228,8 @@ async function loadRadarPin() {
   const v = await radarAt(radarShown(), p.lat, p.lng, t).catch((err) => { console.warn('radar at the pin', err); return 'error' as const; });
   radarPoints.set(key, v);
   if (radarPoints.size > 300) radarPoints.delete(radarPoints.keys().next().value!);
+  // A dropped answer is asked for once more, a few seconds later.
+  if (v === 'error' && radarRetried !== key) { radarRetried = key; radarPinTimer = window.setTimeout(() => void loadRadarPin(), 3000); }
   renderReadout();
   scrubber.refresh();
 }

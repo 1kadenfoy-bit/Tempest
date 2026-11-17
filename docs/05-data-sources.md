@@ -134,6 +134,21 @@ Checked Nov 17, 2026 (used by `adapters/bc-geonames/`, search panel in M9):
 - **Fallback not needed.** Open-Meteo's geocoding API (`geocoding-api.open-meteo.com/v1/search`) also answers browsers (`Access-Control-Allow-Origin: *`) and gives elevation (Mount Seymour, 1,449 m), but it is GeoNames-based and knows fewer BC peaks by official name.
 - Test answers saved in `adapters/bc-geonames/fixtures/` (Seymour*, Garibaldi*).
 
+### Radar (GeoMet WMS)
+
+Checked Nov 17, 2026 (used by `adapters/eccc-radar/`, the Radar layer). Base address `https://geo.weather.gc.ca/geomet` (GeoMet-Weather 2.40.4), WMS 1.3.0.
+
+- **Layers used.** `RADAR_1KM_RRAI` (rain rate, mm/h; style `Radar-Rain_14colors`), `RADAR_1KM_RSNO` (snow rate, cm/h; style `Radar-Snow_14colors`), `Radar_1km_SfcPrecipType` (surface precipitation type: light, moderate, heavy snow, mixed and rain, light and moderate-to-heavy freezing rain, hail; style `SfcPrecipType_Dis`), and `RADAR_COVERAGE_RRAI.INV` (everything outside radar range; style `Radar-Coverage_Inv-DarkGray`, a half-transparent grey). All are the 1 km North American composite (Canadian and US radars, up to 180). `RADAR_COVERAGE_RRAI` (inside range) also exists. Not found under the names tried: `RADAR_1KM_RDBR`, `RADAR_1KM_RDPR`, extrapolation layers (`RADAR-EXTRAPOLATION_1KM_RRAI`, `RADAR_EXTRAPOLATION_1KM_RRAI`); the extrapolation product was not located and is not used.
+- **Time.** Each layer's `GetCapabilities&layer=NAME` (about 20 kB) gives `<Dimension name="time" … nearestValue="0">2026-11-17T10:54:00Z/2026-11-17T13:54:00Z/PT6M</Dimension>`: the last 3 hours every 6 minutes, 31 frames, newest a few minutes behind real time. The type product runs one frame (6 min) behind the rates. `nearestValue="0"`: a TIME must be one of the listed frames.
+- **Pictures.** `GetMap` with `crs=EPSG:3857`, `bbox` per tile, `format=image/png&transparent=true&time=…`. A 256 px tile took 0.2 to 1.3 s. ECCC's colours as drawn; the app does not recolour them (shown at 85% opacity over the map).
+- **Value at a point.** `GetFeatureInfo&info_format=application/json`. The rates answer for the exact 1 km pixel: `value` (mm/h or cm/h) and `class` ("0.1 - 1.0 (mm/h)"), or `value 0`, `class "Undetected"`; outside radar range the answer is `{}`. **The type product answers with the nearest precipitating pixel, which can be 20 km away** (asked at 49.38, −123.02, it answered for −123.28), and `{}` when none is near: the app uses its class only when its point is within 1.5 km of the pin, and uses the rain-rate pixel to tell "nothing seen" from "outside range".
+- **Legends.** `GetLegendGraphic` gives tall PNGs (124 × 413 for rates, 299 × 482 for type) with black text on white, which do not fit the 24 px legend row or the dark theme. The app copies their colours (15 key colours of the rate bar, 12 type classes) into the adapter; a unit test reads the saved legend images and checks every colour. `GetStyles` returns an empty SLD.
+- **Coverage.** The coverage layer shows radar range only (circles around each radar), not beams blocked by mountains, so valleys in a radar's shadow are inside the "covered" area. The app says so in the details.
+- **Browsers.** `Access-Control-Allow-Origin: *` on all four requests. `Cache-Control: max-age=360` (one frame).
+- **Terms.** Open Government Licence – Canada, attribution required; the usage policy prohibits bulk downloading of WMS tiles, so radar is online only and the save panel shows it greyed out. The app loads only the frame shown and the next two at the current view, with tiles at most zoom 10 (1 km data, overzoomed beyond), and keeps at most 12 frames.
+- **From this session.** GeoMet was reachable, but some requests were cut after 10 s by this session's network tunnel ("connection reset"); a retry worked. This is the session's network, not GeoMet.
+- Test answers saved in `adapters/eccc-radar/fixtures/` (capabilities, point answers, legends, two tiles).
+
 ## Observations and Canadian models
 
 Stations give the ground truth models miss: ridge wind, valley cold pools, new snow. The ECCC partner feed is the single most useful find, because one adapter reaches most mountain stations in BC.
