@@ -28,6 +28,13 @@ async function ready(page: Page) {
   await page.waitForFunction(() => document.body.dataset.idle === 'true');
 }
 
+/** For tests of the shell alone: the map and run are in, the pin's forecast need not be (the point service can be slow or refuse). */
+async function mapReady(page: Page) {
+  await expect(page.locator('body')).toHaveAttribute('data-pin', 'ready', { timeout: 45_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-run', 'ready', { timeout: 60_000 });
+  await page.waitForFunction(() => document.body.dataset.idle === 'true');
+}
+
 const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
 
 test('home: shell sits where the v8 template puts it', async ({ page }) => {
@@ -123,7 +130,7 @@ test('the map panel links to the phone tests and back', async ({ page }) => {
 
 test('map panel grows from its button, switches terrain, and remembers', async ({ page }) => {
   await page.goto(HOME);
-  await ready(page);
+  await mapReady(page);
   await page.click('#map-layers');
   const panel = page.getByRole('dialog', { name: 'Map' });
   await expect(panel).toBeVisible();
@@ -141,7 +148,7 @@ test('map panel grows from its button, switches terrain, and remembers', async (
 
   // Remembered after a reload.
   await page.reload();
-  await ready(page);
+  await mapReady(page);
   expect(await vis()).toBe('none');
   await page.click('#map-layers');
   await expect(page.getByRole('button', { name: 'Hillshade' })).toHaveAttribute('aria-pressed', 'false');
@@ -155,9 +162,8 @@ test('sheet pulls up under the top bar and back down', async ({ page }) => {
   await ready(page);
   await page.click('#sheet-handle');
   await expect(page.locator('#sheet')).toHaveAttribute('data-state', 'up');
-  await page.waitForTimeout(400);
-  // 16 below the top bar: 55 + 56 + 16 = 127 on the artboard.
-  expect((await box(page, '#sheet')).y).toBeCloseTo(127, 0);
+  // 16 below the top bar: 55 + 56 + 16 = 127 on the artboard (waits for the slide to finish).
+  await expect.poll(async () => Math.round((await box(page, '#sheet')).y), { timeout: 5_000 }).toBe(127);
   await expect(page.locator('#subject-place')).toContainText('Your location');
   await page.screenshot({ path: 'test-results/screens/m1-sheet-up.png' });
 
