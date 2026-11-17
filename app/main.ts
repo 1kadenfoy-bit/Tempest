@@ -22,7 +22,7 @@ import { modelGround, nodeProfiles, packWind, screenWind, windComplete } from '.
 import { groundNear } from './map/elevation';
 import type { LayerSlots, PinData } from '../layers/contract';
 import { fetchApiRun } from '../adapters/openmeteo-api/point-series';
-import { PROFILE_LEVELS, isAmount } from '../core/vocabulary';
+import { PROFILE_LEVELS, PROFILE_VARIABLES, isAmount, type VariableName } from '../core/vocabulary';
 import { latticeAxis } from '../core/temperature/toposcale';
 import { TerrainTemperatureLayer } from '../render/grid-gl/terrain-temperature-layer';
 import { MODEL_SPACING_DEG, ProfileSource } from './data/profile-source';
@@ -129,6 +129,16 @@ setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh
 const LAYERS: LayerSlots[] = [precipitation, temperature, wind];
 /** Layers read from the pressure-level profile (GDPS's separate profile files, its 3-hourly steps). */
 const usesProfile = (l: LayerSlots) => l.id !== 'precipitation';
+/**
+ * What the pin's series asks for beyond the profile, for every layer at once:
+ * one request serves them all, so switching layers needs no new download.
+ */
+const PIN_EXTRA = [...new Set(LAYERS.flatMap((l) => l.pinNeeds.filter((v) => !isAmount(v))))];
+/** What each layer's map nodes need beyond the levels' heights: only that, since the API's limits count variables. */
+const nodeNeeds = (l: LayerSlots, feels = false): VariableName[] =>
+  l.id === 'wind' ? WIND_NEEDS.filter((v) => !v.startsWith('temperature_'))
+  : l.id === 'temperature' ? [...PROFILE_VARIABLES.filter((v) => v.startsWith('temperature_')), ...(feels ? SURFACE_VARIABLES : [])]
+  : [...PROFILE_VARIABLES.filter((v) => v.startsWith('temperature_')), ...PROFILE_RH_VARIABLES];
 let active: LayerSlots = LAYERS.find((l) => l.id === prefs.layer) ?? precipitation;
 
 // The layer's data: each model's newest run, the time line joining them
@@ -359,7 +369,7 @@ async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOn
   const set = settingsFor(temperature);
   const feels = set.map === 'feels';
   // Feels-like on the map needs each node's 10 m wind, 2 m air and humidity (dew point).
-  const extra = feels ? SURFACE_VARIABLES : [];
+  const extra = nodeNeeds(temperature, feels);
   const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, extra, { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'temperature') return;
   // Mid-drag with nothing in memory: keep the picture; the release fetches.
@@ -368,7 +378,7 @@ async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOn
   if (!grid) {
     tempLayer.setProfiles(null);
     setLine(null, '0c');
-    scrubber.setStatus(usingSaved ? 'Temperature is not saved for this area' : 'Temperature for this view is not available');
+    unavailable('Temperature');
     return;
   }
   tempLayer.feels = feels;
@@ -382,6 +392,16 @@ async function updateTemperature(r: RunMetadata, t: Date, mine: number, cachedOn
   if (next && nextRun) void profiles.nodeGrid(nextRun, lattice, next, extra).catch(() => undefined);
 }
 
+/** Nothing for the view because the forecast service said no for now: say so, and ask again when it may be asked. */
+let apiRetryTimer = 0;
+function unavailable(what: string) {
+  const at = profiles.apiRetryAt;
+  if (!at || usingSaved) { scrubber.setStatus(usingSaved ? `${what} is not saved for this area` : `${what} for this view is not available`); return; }
+  scrubber.setStatus(`${what}: the forecast service is busy · trying again shortly`);
+  clearTimeout(apiRetryTimer);
+  apiRetryTimer = window.setTimeout(() => { scrubber.setStatus(''); void updateFills(); }, at - Date.now() + 500);
+}
+
 /** The model's ground under the mosaic, per mosaic and model grid (computed once each). */
 let windGround: { key: string; data: Float32Array } | null = null;
 
@@ -391,7 +411,7 @@ async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOnly = fa
   if (!view) { windLayer.setProfiles(null); flow.setField(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
-  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, WIND_NEEDS, { cachedOnly })]);
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, nodeNeeds(wind), { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'wind') return;
   if (!grid && cachedOnly) return;
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
@@ -399,7 +419,7 @@ async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOnly = fa
   if (!grid || !profilesAt || !windComplete(profilesAt)) {
     windLayer.setProfiles(null);
     flow.setField(null);
-    scrubber.setStatus(usingSaved ? 'Wind is not saved for this area' : 'Wind for this view is not available');
+    unavailable('Wind');
     return;
   }
   const seg = segmentAt(timeline, t);
@@ -422,7 +442,7 @@ async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOnly = fa
   const i = cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
   const next = cursor.allSteps[i + 1];
   const nextRun = next ? runAt(next, true) : null;
-  if (next && nextRun) void profiles.nodeGrid(nextRun, lattice, next, WIND_NEEDS).catch(() => undefined);
+  if (next && nextRun) void profiles.nodeGrid(nextRun, lattice, next, nodeNeeds(wind)).catch(() => undefined);
 }
 
 /** The lattice of profile nodes over the screen plus the panning margin, and the box it covers. */
@@ -446,9 +466,10 @@ async function updatePrecipLine(r: RunMetadata, t: Date, mine: number, cachedOnl
   if (!view) { setLine(null, null); precipLayer.setShare(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
-  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, PROFILE_RH_VARIABLES, { cachedOnly })]);
+  const [m, grid] = await Promise.all([elevationMosaic(view, map.getZoom(), mosaic), profiles.nodeGrid(r, lattice, t, nodeNeeds(precipitation), { cachedOnly })]);
   if (mine !== fillSeq || active.id !== 'precipitation') return;
   if (!grid && cachedOnly) return;
+  if (!grid && profiles.apiRetryAt) { clearTimeout(apiRetryTimer); apiRetryTimer = window.setTimeout(() => void updateFills(), profiles.apiRetryAt - Date.now() + 500); }
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
   const res = setLine(grid, kind === 'off' ? null : kind === 'wetbulb' ? 'wetbulb' : '0c');
   precipLayer.setShare(res?.share ?? null);
@@ -680,19 +701,29 @@ async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: n
   const r = (usesProfile(layer) ? profileRuns[m] : undefined) ?? runs[m]!;
   const amounts = layer.pinNeeds.some(isAmount);
   const past = first && !usingSaved ? PAST_HOURS : 0;
+  const extra = PIN_EXTRA;
+  if (m === 'hrdps' && !usingSaved) {
+    // One request for every layer: profile, wind, surface values and the
+    // amounts, past hours included. Its amounts are the map files' own
+    // numbers (the same model cell; checked hour by hour Nov 17), so the map,
+    // the pin and saved areas still agree.
+    try {
+      return await profiles.pinSeries(r, lat, lng, onPartial, { amounts: true, pastHours: past, extra, noFiles: true });
+    } catch (err) {
+      console.warn('point API unavailable for the pin; reading the map files', err);
+    }
+  }
   if (m === 'hrdps' && amounts) {
-    // HRDPS amounts from the map files (as the map, and as saved offline);
-    // the profile, and the past hours' amounts, from the point API.
+    // Without the point API (or offline): amounts from the map files or the
+    // saved area; the profile joins when it comes, which can take minutes
+    // read from the files hour by hour.
     const own = (usingSaved ? await savedSeries(r, lat, lng) : null) ?? await fetchPointSeries(r, precip.needs, lat, lng);
-    const profP = profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past }).catch((err) => { console.warn('no profile for the pin', err); return null; });
-    // The amounts show at once; the profile (and past hours) join when they come,
-    // which can take minutes when the point API refuses and the files are read.
+    const profP = profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past, extra }).catch((err) => { console.warn('no profile for the pin', err); return null; });
     const quick = await Promise.race([profP, new Promise<null>((res) => setTimeout(() => res(null), 5000))]);
     if (quick) return overlay(quick, own);
     void profP.then((prof) => { if (prof) onLater?.(overlay(prof, own)); });
     return own;
   }
-  const extra = layer.id === 'wind' ? WIND_NEEDS : [];
   if (m === 'hrdps') return profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, extra });
   // Longer models: the point API gives every hour in one request. Without it,
   // precipitation reads its amounts from the model's map files (the profile,

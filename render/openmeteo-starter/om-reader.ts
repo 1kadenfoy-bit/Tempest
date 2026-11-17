@@ -82,3 +82,23 @@ export async function readStepsFast(model: string, fileUrls: string[], variables
     return box;
   }), 2);
 }
+
+/**
+ * Values at one point from many steps' files: the nearest model cell, as the
+ * library's readPointSeries gives, but with small blocks and in parallel.
+ * The library's per-hour conversion divides by the step length, so with
+ * hourly files the stored values are the same (checked Nov 17).
+ */
+export async function readPointFast(model: string, fileUrls: string[], variables: string[], lat: number, lon: number): Promise<Record<string, number[]>> {
+  const ranges = coveringRanges(model, [lon, lat, lon, lat], 0.03);
+  const grid = GridFactory.create(domainFor(model).grid, ranges);
+  const out: Record<string, number[]> = Object.fromEntries(variables.map((v) => [v, new Array<number>(fileUrls.length).fill(NaN)]));
+  await limited(fileUrls.map((url, i) => async () => {
+    const box = await readBoxFast(model, url, variables, ranges);
+    for (const v of variables) {
+      const src = box.values[v];
+      out[v]![i] = src && src.length ? grid.getInterpolatedValue(src, lat, lon, 'nearest') : NaN;
+    }
+  }), 4);
+  return out;
+}
