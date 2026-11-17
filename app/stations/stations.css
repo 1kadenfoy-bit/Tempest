@@ -1,0 +1,37 @@
+/* Weather station markers: neutral (colour is for data), from tokens. The
+   button is a 44 px touch target centred on the station; the dot and value
+   are drawn inside it. MapLibre sets the button's own opacity (covered by 3D
+   terrain), so an older reading dims the dot and value instead. */
+.station-marker {
+  width: var(--touch-min); height: var(--touch-min);
+  padding: 0; border: 0; background: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.station-dot {
+  box-sizing: border-box; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--ink);
+  display: flex; align-items: center; justify-content: center; color: var(--ink);
+  box-shadow: 0 0 0 1px var(--surface);
+}
+.station-marker[data-arrow='true'] .station-dot { width: 18px; height: 18px; border-width: 1.5px; }
+.station-dot svg { display: block; }
+.station-value {
+  position: absolute; left: calc(50% + 11px); top: 50%; transform: translateY(-50%);
+  padding: 1px 4px; border-radius: var(--radius-chip);
+  background: var(--surface); color: var(--ink);
+  font: var(--type-micro); font-variant-numeric: tabular-nums; white-space: nowrap;
+  pointer-events: none;
+}
+.station-marker[data-arrow='true'] .station-value { left: calc(50% + 13px); }
+.station-marker[data-stale='true'] .station-dot,
+.station-marker[data-stale='true'] .station-value { opacity: 0.55; }
+.station-marker[data-stale='true'] .station-dot { border-style: dashed; }
+.station-marker:focus-visible { outline: 2px solid var(--ink); outline-offset: -6px; border-radius: 50%; }
+
+/* The station panel */
+.station-values { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.station-when[data-stale='true'] { color: var(--warning); }
+.station-chart { width: 100%; display: block; }
+.station-source a { color: var(--ink); }
+

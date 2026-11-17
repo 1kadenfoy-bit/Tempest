@@ -376,6 +376,9 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .toggle-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
 .toggle-tile svg { visibility: hidden; }
 .toggle-tile[aria-pressed='true'] svg { visibility: visible; }
+/* A note beside a switch that cannot work now (map panel: Weather stations offline). */
+.toggle-tile:disabled { opacity: 0.5; }
+.toggle-note { align-self: center; font: var(--type-caption); color: var(--ink-2); }
 /* Model menu (04-ModelMenu) and model info (05-ModelInfo) */
 .panel-letter { font: var(--type-panel-title); }
 .model-line { display: flex; align-items: center; gap: 8px; }
