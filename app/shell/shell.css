@@ -488,3 +488,11 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   font: 600 15px var(--font-body); padding: 0 12px;
 }
 .primary-button:disabled { opacity: 0.6; }
+
+/* Wind flow (M7): streaks over the map, never in the way of a tap. */
+.flow-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}

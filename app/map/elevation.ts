@@ -37,6 +37,31 @@ export async function elevationAt(lng: number, lat: number): Promise<number> {
 }
 
 /**
+ * The model's own ground near a point: the terrain averaged over a square one
+ * model cell wide (7 × 7 samples; sea and lakes count as sea level). Coarse
+ * cells read coarser tiles, so a 15 km cell costs a tile or two.
+ */
+export async function groundNear(lng: number, lat: number, cellKm: number): Promise<number> {
+  const z = cellKm <= 3 ? Z : 10;
+  const dLat = cellKm / 111.32;
+  const dLng = dLat / Math.cos((lat * Math.PI) / 180);
+  const samples: Promise<number>[] = [];
+  for (let a = 0; a < 7; a++) {
+    for (let b = 0; b < 7; b++) {
+      const x = lng + ((b + 0.5) / 7 - 0.5) * dLng, y = lat + ((a + 0.5) / 7 - 0.5) * dLat;
+      samples.push((async () => {
+        const t = pixelAt(x, y, z, SIZE);
+        const img = await tilePixels(t.z, t.x, t.y);
+        const i = (t.py * img.width + t.px) * 4;
+        return Math.max(0, terrariumElevation(img.data[i]!, img.data[i + 1]!, img.data[i + 2]!));
+      })());
+    }
+  }
+  const got = await Promise.all(samples);
+  return got.reduce((s, v) => s + v, 0) / got.length;
+}
+
+/**
  * Ground height over a box, from terrain tiles at a zoom that gives about one
  * value per screen point (at most zoom 12, at most 5 × 5 tiles: the screen plus a margin). Rows run
  * north to south, in Web Mercator like the tiles. Tiles that fail (no signal,
