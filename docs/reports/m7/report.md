@@ -147,3 +147,44 @@ You found the arrows along the top of the chart too crowded. A 48 h window had 1
 - **Calm hours (under 3 km/h) show a small dot** instead, since their direction means little.
 
 ![The 48 h chart with arrows every 6 hours](chart-arrows.png)
+
+## Follow-up: loading speed, and wind missing when zoomed out
+
+You found loading a layer or a model very slow, and wind sometimes missing when zoomed far out. Both came from the same place.
+
+**What was wrong**
+
+- **One failed request meant 2 minutes of slow loading.** Any single failed request to Open-Meteo's forecast service, whether a dropped connection or its per-minute limit, made the app stop asking for 2 minutes. It read the map files hour by hour instead:
+  - the pin's forecast took up to 6 minutes, about 6,000 small downloads (50 MB);
+  - wide, zoomed-out views have no such fallback, so they stayed empty.
+- **Each map load was heavy against the free limits.** It counted about 150 calls, against 600 a minute and 5,000 an hour, so a session of panning and switching could hit them.
+- **Nothing was kept between launches,** and the pin's forecast was downloaded again for each layer.
+- **Far out, one map sample point at sea emptied the view.** Zoomed out, a sample point could land outside HRDPS's area, out in the Pacific, and come back empty. One empty point blanked the whole view.
+
+**What changed**
+
+- **Failures:**
+  - a dropped connection is tried again twice at once, and gives up after 15 s if it hangs;
+  - a real limit waits only until that limit resets (usually the next minute);
+  - the map asks again by itself when the service is back, and says "the forecast service is busy · trying again shortly" meanwhile.
+- **Lighter requests:**
+  - each layer's map asks only for what it needs, and only for the run's own hours (wind about 45 values a point instead of 73);
+  - the pin's forecast is one request for all three layers.
+- **The pin's precipitation** now comes from that same request instead of 48 map-file reads. I checked the two sources hour by hour at four places, including 13.9 mm over 48 hours on Haida Gwaii: identical to the map files. Offline, saved areas still use their files with the same numbers.
+- **Answers are kept on the phone until the next model run.** Reopening the app, switching back, or panning back over the same place downloads nothing new.
+- **Empty map points far out at sea** borrow from their nearest neighbour, so zoomed-out views always fill.
+
+**Measured** in the test browser, from the start of each step until both the map and the pin were ready:
+
+| Step | Before | Now |
+| --- | --- | --- |
+| Open on precipitation | 17 s (or minutes after a failure) | 3.5 s |
+| Switch to temperature | under 1 s | instant |
+| Switch to wind | 3 s, or not ready in 2 minutes after a failure | 0.3 s |
+| Switch back to a layer already seen | another download | instant |
+| Switch model (RDPS) | not ready in 2 minutes after a failure | 0.4 s |
+| Zoom out to the whole province | empty after a failure | 1.1 s |
+| Map-file downloads for the pin's precipitation | 236 (15 MB) | none (a few to find the run) |
+
+- The "before" column comes from running the previous version side by side. After two dropped connections it never finished wind, the model switch or the zoom-out within 2 minutes.
+- Reopening the app took 3.8 s in one run and 13 s in another, where a connection was dropped and waited out the 15 s limit before retrying.
