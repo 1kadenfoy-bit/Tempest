@@ -4,6 +4,7 @@
 // box; the area saved is whatever the box covers.
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { estimateSaveBytes } from '../../core/offline/saved-area';
+import { formatDistance, formatDistanceNumber } from '../../core/units/format';
 
 export interface SaveChoice {
   bbox: [number, number, number, number];
@@ -100,7 +101,7 @@ export function openSaveMode(map: MapLibreMap, opts: {
     const bb = bbox();
     const kmW = (bb[2] - bb[0]) * 111.32 * Math.cos((((bb[1] + bb[3]) / 2) * Math.PI) / 180);
     const kmH = (bb[3] - bb[1]) * 110.57;
-    $('.save-area-size').textContent = `Area · ${Math.round(kmW)} × ${Math.round(kmH)} km`;
+    $('.save-area-size').textContent = `Area · ${formatDistanceNumber(kmW, undefined, true)} × ${formatDistance(kmH, undefined, true)}`;
     const h = Math.min(hours ?? opts.endHours, opts.endHours);
     // Layers share values (the profile): the total counts each once.
     const shared = new Set<string>();

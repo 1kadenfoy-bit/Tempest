@@ -11,7 +11,7 @@
 // the thumb buttons, shown only while the map is tilted or turned, points
 // north and brings the map back flat and north up.
 import type { Map as MapLibreMap } from 'maplibre-gl';
-import { colorToken } from '../theme/tokens';
+import { colorToken, type Theme } from '../theme/tokens';
 import { icons } from '../shell/icons';
 import { mix } from './style';
 import { TERRAIN_3D_SOURCE } from './terrain';
@@ -43,7 +43,10 @@ export function isFlat(map: MapLibreMap): boolean {
   return map.getPitch() < 0.5 && Math.abs(map.getBearing()) < 0.5;
 }
 
-export function setupThreeD(map: MapLibreMap, thumbs: HTMLElement, onFlatChange: (flat: boolean) => void) {
+/** Raised buildings: neutral, from the ground and ink tokens (colour is for data). */
+const buildingColour = (theme: Theme) => mix(colorToken('map-ground', theme), colorToken('ink', theme), theme === 'dark' ? 0.22 : 0.16);
+
+export function setupThreeD(map: MapLibreMap, thumbs: HTMLElement, theme: () => Theme, onFlatChange: (flat: boolean) => void) {
   const reset = document.createElement('button');
   reset.className = 'thumb';
   reset.id = 'reset-view';
@@ -77,7 +80,7 @@ export function setupThreeD(map: MapLibreMap, thumbs: HTMLElement, onFlatChange:
 
   const buildings = (on: boolean) => {
     if (on && !map.getLayer(BUILDINGS_LAYER)) {
-      // Under the labels; neutral, from the ground and ink tokens (colour is for data).
+      // Under the labels.
       const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
       map.addLayer({
         id: BUILDINGS_LAYER,
@@ -86,7 +89,7 @@ export function setupThreeD(map: MapLibreMap, thumbs: HTMLElement, onFlatChange:
         'source-layer': 'buildings',
         minzoom: BUILDINGS_MINZOOM,
         paint: {
-          'fill-extrusion-color': mix(colorToken('map-ground'), colorToken('ink'), 0.22),
+          'fill-extrusion-color': buildingColour(theme()),
           'fill-extrusion-height': ['coalesce', ['get', 'height'], DEFAULT_HEIGHT_M],
           'fill-extrusion-base': ['coalesce', ['get', 'min_height'], 0],
           'fill-extrusion-opacity': 0.9,
@@ -115,5 +118,9 @@ export function setupThreeD(map: MapLibreMap, thumbs: HTMLElement, onFlatChange:
       sync();
     },
     flat: () => flat,
+    /** Recolour the raised buildings for a theme. */
+    applyTheme(t: Theme) {
+      if (map.getLayer(BUILDINGS_LAYER)) map.setPaintProperty(BUILDINGS_LAYER, 'fill-extrusion-color', buildingColour(t));
+    },
   };
 }

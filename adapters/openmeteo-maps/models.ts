@@ -87,3 +87,27 @@ export const MODELS: Record<ModelId, ModelSpec> = {
 export const CHAIN: ModelId[] = ['hrdps', 'rdps', 'gdps'];
 
 export const modelForMapModel = (m: string): ModelSpec | undefined => Object.values(MODELS).find((x) => x.mapModel === m || x.profileMapModel === m);
+
+/**
+ * Who made the models Open-Meteo serves: their licence and the attribution
+ * they ask for, for the credits. ECCC's licence follows the HRDPA adapter
+ * (Open Government Licence – Canada); ECMWF's open data is CC BY 4.0.
+ */
+export const originators = {
+  eccc: {
+    id: 'eccc-models',
+    name: 'Environment and Climate Change Canada',
+    provides: 'HRDPS, RDPS and GDPS forecast models',
+    licence: 'Open Government Licence – Canada',
+    attribution: 'Contains information from Environment and Climate Change Canada',
+    link: 'https://eccc-msc.github.io/open-data/licence/readme_en/',
+  },
+  ecmwf: {
+    id: 'ecmwf-models',
+    name: 'European Centre for Medium-Range Weather Forecasts',
+    provides: 'ECMWF IFS forecast model (open data)',
+    licence: 'CC BY 4.0',
+    attribution: 'Copyright © ECMWF',
+    link: 'https://www.ecmwf.int/en/forecasts/datasets/open-data',
+  },
+} as const;

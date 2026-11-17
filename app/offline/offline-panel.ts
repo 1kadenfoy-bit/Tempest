@@ -68,6 +68,24 @@ export function areaNote(a: SavedArea, now: Date): string {
   return [mb(totalBytes(a)), `${[model, ...later].join(' + ')} ${formatRunAge(new Date(a.weather.run), now).replace(' · ', ', ')}`, reach].filter(Boolean).join(' · ');
 }
 
+/** The "Saved data only" switch and its note: in the saved areas list and in app settings, one pref. */
+export function savedOnlySwitch(on: boolean, onChange: (on: boolean) => void): [HTMLButtonElement, HTMLParagraphElement] {
+  const only = document.createElement('button');
+  only.className = 'switch-row';
+  only.setAttribute('role', 'switch');
+  only.setAttribute('aria-checked', String(on));
+  only.innerHTML = '<span class="switch-label">Saved data only</span><span class="switch" aria-hidden="true"><span></span></span>';
+  only.addEventListener('click', () => {
+    const next = only.getAttribute('aria-checked') !== 'true';
+    only.setAttribute('aria-checked', String(next));
+    onChange(next);
+  });
+  const note = document.createElement('p');
+  note.className = 'panel-note';
+  note.textContent = 'Uses only what is saved, never the network. For weak signal, which makes requests hang and drains the battery.';
+  return [only, note];
+}
+
 export function savedAreasBody(areas: SavedArea[], state: { savedOnly: boolean; online: boolean; kept: boolean | null; usedBytes: number | null }, h: SavedListHandlers): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
@@ -116,19 +134,7 @@ export function savedAreasBody(areas: SavedArea[], state: { savedOnly: boolean; 
   }
   wrap.append(list);
 
-  const only = document.createElement('button');
-  only.className = 'switch-row';
-  only.setAttribute('role', 'switch');
-  only.setAttribute('aria-checked', String(state.savedOnly));
-  only.innerHTML = '<span class="switch-label">Saved data only</span><span class="switch" aria-hidden="true"><span></span></span>';
-  only.addEventListener('click', () => {
-    const next = only.getAttribute('aria-checked') !== 'true';
-    only.setAttribute('aria-checked', String(next));
-    h.setSavedOnly(next);
-  });
-  const onlyNote = document.createElement('p');
-  onlyNote.className = 'panel-note';
-  onlyNote.textContent = 'Uses only what is saved, never the network. For weak signal, which makes requests hang and drains the battery.';
+  const [only, onlyNote] = savedOnlySwitch(state.savedOnly, h.setSavedOnly);
   const kept = document.createElement('p');
   kept.className = 'panel-note';
   kept.dataset.kept = String(state.kept);

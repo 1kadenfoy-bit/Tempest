@@ -13,6 +13,7 @@ import type { PointSeries, VariableName } from '../../core/vocabulary';
 export const source = {
   id: 'openmeteo-api',
   name: 'Open-Meteo forecast API',
+  provides: 'The forecast at the pin and the terrain profiles',
   baseUrl: 'https://api.open-meteo.com',
   licence: 'CC BY 4.0',
   attribution: 'Weather data by Open-Meteo.com (CC BY 4.0), from Environment and Climate Change Canada models',

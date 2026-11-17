@@ -7,7 +7,7 @@
 // Also returns the temperatures sampled over the screen, for In view.
 import { cellOf, freezingLevel, interpolateProfile, isothermSegments, joinSegments, newProfile, sampleProfile, smoothLine, type NodeGrid } from '../../core/temperature/toposcale';
 import { SNOW_WET_BULB, snowLine, wetBulb } from '../../core/temperature/wet-bulb';
-import { formatElevation } from '../../core/units/format';
+import { formatElevation, formatTemp } from '../../core/units/format';
 import { shareFromWetBulb } from '../../core/precip/type';
 import { PROFILE_LEVELS } from '../../core/vocabulary';
 import type { Mosaic } from './elevation';
@@ -90,7 +90,7 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
       const rr = Float32Array.from({ length: nl }, (_, k) => ns.reduce((a, n, j) => a + ws[j]! * rh[n]![k]!, 0));
       height = snowLine({ ...prof, rh: rr });
     } else height = freezingLevel(prof);
-    const name = kind === 'wetbulb' ? 'Snow line' : '0 °C';
+    const name = kind === 'wetbulb' ? 'Snow line' : formatTemp(0);
     features.push({ type: 'Feature', properties: { label: height === null ? name : `${name} · ${formatElevation(Math.round(height / 10) * 10)}` }, geometry: { type: 'LineString', coordinates: coords } });
   }
   const cells: LineResult['cells'] = [];

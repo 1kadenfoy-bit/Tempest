@@ -3,7 +3,7 @@
 // flow on top. Fills the template's slots; asks for data by variable name only.
 import { rampColor } from '../../core/color/ramp';
 import { compass, terrainWind, windProfileAt } from '../../core/wind/wind';
-import { formatBearing, formatCursorTime, formatSpeed, formatTimeRange } from '../../core/units/format';
+import { formatBearing, formatCursorTime, formatSpeed, formatTimeRange, unitLabel } from '../../core/units/format';
 import { PROFILE_LEVELS, PROFILE_VARIABLES, WIND_LEVEL_VARIABLES, WIND_SURFACE_VARIABLES, type PointSeries, type VariableName } from '../../core/vocabulary';
 import type { LayerSlots, PinData, WindowSummary } from '../contract';
 import { windDetails, windInView, settings, settingsNote, type PinWind } from './details';
@@ -162,7 +162,7 @@ function legend(doc: Document): HTMLElement {
   for (const v of [0, 10, 25, 40, 60]) {
     const t = doc.createElement('span');
     t.style.left = `${((v - min) / (max - min)) * 100}%`;
-    t.textContent = v === 60 ? '60+ km/h' : String(v);
+    t.textContent = v === 60 ? `${formatSpeed(v, false)}+ ${unitLabel('speed')}` : formatSpeed(v, false);
     ticks.append(t);
   }
   scale.append(bar, ticks);
@@ -190,6 +190,7 @@ export const wind: LayerSlots = {
   details: (ctx) => windDetails(pinWind(ctx.pin), ctx, ctx.pin.series && ctx.index >= 0 ? groundAt(ctx.pin, ctx.index) : 0),
   inView: (view) => windInView(view),
   footer: () => ['At the terrain, from 10 m wind and pressure levels'],
-  settings,
-  settingsNote,
+  // Read when the panel opens, so the labels follow the units setting.
+  get settings() { return settings(); },
+  get settingsNote() { return settingsNote(); },
 };

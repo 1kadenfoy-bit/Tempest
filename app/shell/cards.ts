@@ -147,7 +147,8 @@ function drawValueElevation(c: Extract<Card, { kind: 'value-elevation' }>, bands
     const left = 70, bottom = h - 20, top = 6, right = w - 10;
     const [lo, hi] = heightRange(bands, c.you.elevation, []);
     const pts = c.points.filter((p) => p.elevation >= lo - 200 && p.elevation <= hi + 200);
-    const vals = [...pts.map((p) => p.value), c.you.value, ...(c.zero ? [0] : [])];
+    const z0 = c.zeroAt ?? 0;
+    const vals = [...pts.map((p) => p.value), c.you.value, ...(c.zero ? [z0] : [])];
     let vmin = Math.floor(Math.min(...vals) / 5) * 5;
     let vmax = Math.ceil(Math.max(...vals) / 5) * 5;
     if (vmax - vmin < 10) { vmax += 5; vmin -= 5; }
@@ -170,9 +171,9 @@ function drawValueElevation(c: Extract<Card, { kind: 'value-elevation' }>, bands
     for (const z of [bands.valleyTop, bands.alpineBottom]) { ctx.beginPath(); ctx.moveTo(left, y(z) + 0.5); ctx.lineTo(right, y(z) + 0.5); ctx.stroke(); }
     ctx.globalAlpha = 1;
     void approx;
-    if (c.zero && vmin <= 0 && vmax >= 0) {
+    if (c.zero && vmin <= z0 && vmax >= z0) {
       ctx.setLineDash([3, 3]); ctx.strokeStyle = ink2;
-      ctx.beginPath(); ctx.moveTo(x(0) + 0.5, top); ctx.lineTo(x(0) + 0.5, bottom); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(x(z0) + 0.5, top); ctx.lineTo(x(z0) + 0.5, bottom); ctx.stroke(); ctx.setLineDash([]);
     }
     // The profile
     ctx.save(); ctx.beginPath(); ctx.rect(left, top, right - left, bottom - top); ctx.clip();
