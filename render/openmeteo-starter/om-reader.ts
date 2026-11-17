@@ -50,7 +50,11 @@ async function readOne(root: OmFileReader, variable: string, ranges: { start: nu
     // Map files hold [y, x], or [y, x, time] with one time.
     const r = dims.length === 3 ? [...ranges, { start: 0, end: 1 }] : ranges;
     const data = await child.read({ type: OmDataType.FloatArray, ranges: r });
-    return Float32Array.from(data as Float32Array);
+    const out = Float32Array.from(data as Float32Array);
+    // The files keep wind in m/s; the app's vocabulary is km/h (checked Nov 17
+    // against the point service, which answers in km/h).
+    if (/^wind_(speed|gusts)_/.test(variable)) for (let i = 0; i < out.length; i++) out[i]! *= 3.6;
+    return out;
   } finally {
     child.dispose();
   }
