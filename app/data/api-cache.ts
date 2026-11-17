@@ -79,7 +79,9 @@ export function cachedFetch(run: Date): typeof fetch {
     const hit = await cache?.match(key).catch(() => undefined);
     if (hit) return hit;
     await spend(apiWeight(url));
-    const res = await fetch(input, init);
+    // The time limit starts when the request goes, not while it waits for room
+    // under the limits (a wait could otherwise use it all up).
+    const res = await fetch(input, init?.signal ? { ...init, signal: AbortSignal.timeout(15_000) } : init);
     if (res.ok && cache) {
       void cache.put(key, res.clone()).then(() => prune(cache!, url, runKey)).catch(() => undefined);
     }

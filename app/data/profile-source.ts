@@ -72,7 +72,8 @@ export class ProfileSource {
   /** When the point API may be asked again (0: now). The map asks again then. */
   get apiRetryAt(): number { return this.apiDownUntil > Date.now() ? this.apiDownUntil : 0; }
 
-  constructor(private savedAreas: () => SavedArea[]) {}
+  /** `offline`: true when only saved data may be read (no signal, or the "saved data only" switch). */
+  constructor(private savedAreas: () => SavedArea[], private offline: () => boolean = () => false) {}
 
   /**
    * The nodes' profiles at one step, or null when no source has them.
@@ -124,6 +125,10 @@ export class ProfileSource {
     const saved = await this.savedBoxFor(run, t, (a) => points.every((p) => areaContains(a, p.lon, p.lat)), extra);
     const fromSaved = saved && fromBox(saved);
     if (fromSaved) return fromSaved;
+    if (this.offline()) {
+      const part = await this.savedBoxFor(run, t, (a) => points.some((p) => areaContains(a, p.lon, p.lat)), extra);
+      return part ? fromBox(part) : null;
+    }
     // 3. The point API: every hour for the missing nodes in one request
     if (Date.now() > this.apiDownUntil) {
       const missing = points.filter((p) => !has(this.nodes.get(nodeKey(run, p.lat, p.lon))));
@@ -179,8 +184,9 @@ export class ProfileSource {
   private async readPin(run: RunMetadata, lat: number, lon: number, onPartial: ((s: PointSeries) => void) | undefined, o: { amounts: boolean; profile: boolean; pastHours: number; noFiles: boolean; extra: readonly VariableName[] }): Promise<PointSeries> {
     const pinVars = [...new Set([...PIN_VARIABLES, ...o.extra])];
     // Saved first when the run is a saved one (no signal), else the API.
-    const fromSaved = await this.savedSeries(run, lat, lon, pinVars);
+    const fromSaved = await this.savedSeries(run, lat, lon, o.amounts ? [...pinVars, 'precipitation', 'snowfall_water_equivalent'] : pinVars);
     if (fromSaved) return fromSaved;
+    if (this.offline()) throw new Error('the pin is outside the saved areas');
     if (Date.now() > this.apiDownUntil) {
       try {
         const vars: VariableName[] = [...new Set([...(o.profile ? pinVars : SURFACE_VARIABLES), ...(o.amounts ? (['precipitation', 'snowfall_water_equivalent'] as VariableName[]) : [])])];
@@ -216,8 +222,9 @@ export class ProfileSource {
 
   private async savedSeries(run: RunMetadata, lat: number, lon: number, vars: readonly VariableName[]): Promise<PointSeries | null> {
     for (const a of this.savedAreas()) {
-      if (!areaContains(a, lon, lat) || new Date(a.weather.run).getTime() !== run.referenceTime.getTime()) continue;
-      if (!a.weather.files['temperature_850hPa']) continue;
+      if (a.weather.model !== run.model || !areaContains(a, lon, lat) || new Date(a.weather.run).getTime() !== run.referenceTime.getTime()) continue;
+      // Whatever the area kept of what is asked (a precipitation-only area still gives its amounts).
+      if (!vars.some((v) => a.weather.files[v])) continue;
       const w = await loadSavedWeather(a).catch(() => null);
       if (!w) continue;
       // Only what the area kept (a layer not saved reads as missing, never as zero).

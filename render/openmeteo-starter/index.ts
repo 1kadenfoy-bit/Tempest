@@ -141,3 +141,4 @@ export async function readRegularGrid(
   const box = await readNativeBox(model, fileUrl, variables, bbox, stepHours);
   return Object.fromEntries(variables.map((v) => [v, regridNative(box, v, bbox, nx, ny)]));
 }
+export { coveringRanges } from './om-reader';

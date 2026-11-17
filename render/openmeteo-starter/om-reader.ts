@@ -102,3 +102,15 @@ export async function readPointFast(model: string, fileUrls: string[], variables
   }), 4);
   return out;
 }
+
+/**
+ * The model cells a box's values hold, in the same order as readBoxFast's
+ * arrays: their centres, so a source that answers by place (the point API,
+ * nearest cell) can fill the same box.
+ */
+export function cellCentres(model: string, ranges: { start: number; end: number }[]): { lat: number; lon: number }[] {
+  const grid = GridFactory.create(domainFor(model).grid, ranges);
+  const out: { lat: number; lon: number }[] = [];
+  grid.forEachPoint((p) => { out[p.index] = { lat: p.lat, lon: p.lon }; });
+  return out;
+}
