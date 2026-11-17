@@ -8,7 +8,8 @@
 // height, and colours the result from a lookup strip. Changing hours blends
 // the two hours' profiles (never finished temperatures) over a fifth of a
 // second; readouts use the real hours.
-import type { CustomLayerInterface, CustomRenderMethodInput, Map as MapLibreMap } from 'maplibre-gl';
+import type { CustomLayerInterface, CustomRenderMethodInput, CustomTerrainRenderInput, Map as MapLibreMap } from 'maplibre-gl';
+import { DrapeRevision, tileMatrix } from './terrain-drape';
 
 export type RGBA = [number, number, number, number];
 
@@ -150,9 +151,14 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
   private fadeStart = 0;
   private readonly fadeMs = 200;
   private loc: Record<string, WebGLUniformLocation | null> = {};
-  visible = true;
+  private drape = new DrapeRevision();
+  private _visible = true;
+  get visible(): boolean { return this._visible; }
+  set visible(v: boolean) { if (v !== this._visible) { this._visible = v; this.drape.changed(this.map); } }
+  private _feels = false;
   /** Colour feels-like (wind chill, humidex) instead of air temperature. */
-  feels = false;
+  get feels(): boolean { return this._feels; }
+  set feels(v: boolean) { if (v !== this._feels) { this._feels = v; this.drape.changed(this.map); } }
 
   constructor(readonly id: string, private style: TemperatureStyle, private levels: number) {}
 
@@ -201,7 +207,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     g.pixelStorei(g.UNPACK_ALIGNMENT, 1);
     g.texImage2D(g.TEXTURE_2D, 0, g.R32F, m.width, m.height, 0, g.RED, g.FLOAT, m.data);
     this.nearest(g);
-    this.map?.triggerRepaint();
+    this.drape.changed(this.map);
   }
 
   get elevationKey(): string | null { return this.dem?.key ?? null; }
@@ -215,7 +221,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     if (!l) {
       if (this.profCur) g.deleteTexture(this.profCur.tex);
       this.profCur = null;
-      this.map?.triggerRepaint();
+      this.drape.changed(this.map);
       return;
     }
     const tex = g.createTexture()!;
@@ -228,7 +234,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     else if (this.profCur) g.deleteTexture(this.profCur.tex);
     this.profCur = { lattice: l, tex };
     this.fadeStart = performance.now();
-    this.map?.triggerRepaint();
+    this.drape.changed(this.map);
   }
 
   private nearest(g: WebGL2RenderingContext) {
@@ -255,6 +261,17 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
   }
 
   render(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {
+    this.draw(gl as WebGL2RenderingContext, options.defaultProjectionData.mainMatrix as unknown as Float32Array);
+  }
+
+  /** With 3D terrain: the same picture into one terrain tile, which MapLibre drapes over the terrain. */
+  renderToTerrainTile(gl: WebGL2RenderingContext, input: CustomTerrainRenderInput): void {
+    this.draw(gl, tileMatrix(input.tileID));
+  }
+
+  get terrainTileRevision(): number { return this.drape.value; }
+
+  private draw(gl: WebGL2RenderingContext, matrix: Float32Array): void {
     const g = gl as WebGL2RenderingContext;
     const cur = this.profCur;
     if (!this.visible || !this.program || !cur || !this.demTex || !this.dem) return;
@@ -262,7 +279,7 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     const prev = t < 1 ? this.profPrev : null;
     const l = cur.lattice;
     g.useProgram(this.program);
-    g.uniformMatrix4fv(this.loc.u_matrix!, false, options.defaultProjectionData.mainMatrix as unknown as Float32Array);
+    g.uniformMatrix4fv(this.loc.u_matrix!, false, matrix);
     g.uniform4f(this.loc.u_demBox!, ...this.dem.merc);
     g.uniform2f(this.loc.u_demSize!, this.dem.width, this.dem.height);
     g.uniform4f(this.loc.u_lattice!, l.lons[0]!, l.lats[0]!, l.lons[1]! - l.lons[0]!, l.lats[1]! - l.lats[0]!);
@@ -291,6 +308,6 @@ export class TerrainTemperatureLayer implements CustomLayerInterface {
     g.enableVertexAttribArray(aPos);
     g.vertexAttribPointer(aPos, 2, g.FLOAT, false, 0, 0);
     g.drawArrays(g.TRIANGLES, 0, 6);
-    if (t < 1) this.map?.triggerRepaint();
+    if (t < 1) this.drape.changed(this.map);
   }
 }
