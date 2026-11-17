@@ -111,3 +111,14 @@ export function formatOneDecimal(n: number): string {
 export function formatWhole(n: number): string {
   return intl.format(Math.round(n));
 }
+
+/** Wind speed: "28 km/h". Whole km/h; model wind is not finer than that. */
+export function formatSpeed(kmh: number, unit = true): string {
+  const v = String(Math.round(kmh));
+  return unit ? `${v} km/h` : v;
+}
+
+/** Where the wind blows from, with its bearing: "SW 230°". `name` is the compass name. */
+export function formatBearing(name: string, degrees: number): string {
+  return `${name} ${Math.round(degrees) % 360}°`;
+}
