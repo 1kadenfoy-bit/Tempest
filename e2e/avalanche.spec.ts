@@ -207,3 +207,18 @@ test('avalanche: light theme and 3D terrain', async ({ page, context }) => {
   expect(String(draped.casing)).toMatch(/255, 255, 255/);
   await page.screenshot({ path: `${SHOTS}/light-3d.png` });
 });
+
+// Kaden's phone (Nov 17): "Saved data only" was on with nothing saved, and the
+// avalanche layer never asked Avalanche Canada. With nothing saved the switch
+// has no effect anywhere (one rule, app/data/connection.ts).
+test('avalanche: loads with "saved data only" on and nothing saved', async ({ page, context }) => {
+  const asked = await stub(context);
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('avy-seeded')) return;
+    sessionStorage.setItem('avy-seeded', '1');
+    localStorage.setItem('tempest.prefs.v1', JSON.stringify({ savedOnly: true }));
+  });
+  await pickAvalanche(page);
+  expect(asked.some((a) => a.startsWith('/forecasts/en/products'))).toBe(true);
+  await expect(page.locator('#run-age')).toContainText('Avalanche Canada · issued');
+});

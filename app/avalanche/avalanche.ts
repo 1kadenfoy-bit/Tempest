@@ -18,8 +18,8 @@ import { formatDateTime, formatRelative, formatWhen } from '../../core/units/for
 import { areasUrl, parseAreas, parseProducts, productsUrl, source as forecastSource } from '../../adapters/avalanche-canada/forecasts';
 import { parseSubmissions, photoAt, source as minSource, submissionsUrl } from '../../adapters/avalanche-canada/min';
 import { failureReason, fetchKept, keptAnswer } from '../data/kept-fetch';
+import { savedOnlyActive } from '../data/connection';
 import { closePanel, openPanel } from '../shell/panel';
-import { loadPrefs } from '../shell/prefs';
 import { colorToken, type Theme } from '../theme/tokens';
 import { maplibregl } from '../map/maplibre';
 import { issuedHtml } from './html';
@@ -79,7 +79,7 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   let regionIds: string[] = [];
 
   /** "Saved data only" asks for no network at all; the kept copy is shown instead. */
-  const online = () => !loadPrefs().savedOnly;
+  const online = () => !savedOnlyActive();
   /** Why the last ask failed, for the top bar (null when it worked). */
   let lastFailure: string | null = null;
   /** True while showing the copy kept on the phone (no fresh answer this time). */
@@ -438,7 +438,11 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   /** The top bar's line while the layer is on: the pin's bulletin and its age. */
   function ageLine(lon: number, lat: number): { text: string; stale: boolean } {
     const d = avalancheData();
-    if (!d) return { text: loading ? 'Loading Avalanche Canada…' : `Avalanche Canada did not answer (${lastFailure ?? 'no answer'}) · tap to retry`, stale: !loading };
+    if (!d) {
+      if (loading) return { text: 'Loading Avalanche Canada…', stale: false };
+      if (!online()) return { text: 'Saved data only is on · no avalanche copy kept yet', stale: true };
+      return { text: `Avalanche Canada did not answer (${lastFailure ?? 'not asked yet'}) · tap to retry`, stale: true };
+    }
     // The copy kept on the phone: shown with when it was fetched, never hidden.
     if (showingKept) return { text: `Avalanche Canada · kept copy from ${formatWhen(d.fetchedAt, new Date())} · tap to retry`, stale: true };
     const here = bulletinAt(lon, lat);
