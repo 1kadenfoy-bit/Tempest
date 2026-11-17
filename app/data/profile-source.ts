@@ -2,7 +2,8 @@
 // read path: memory, then a saved area, then the point API (every hour at
 // once), then the map files (one hour at a time, slower). Layers never see
 // which one answered; every value keeps its label.
-import { fetchApiSeries } from '../../adapters/openmeteo-api/point-series';
+import { ApiLimitError, fetchApiSeries } from '../../adapters/openmeteo-api/point-series';
+import { cachedFetch } from './api-cache';
 import { stepFileUrl, type RunMetadata } from '../../adapters/openmeteo-maps/run-metadata';
 import { MODELS } from '../../adapters/openmeteo-maps/point-series';
 import { areaContains, type SavedArea } from '../../core/offline/saved-area';
@@ -55,28 +56,51 @@ export class ProfileSource {
     return p;
   }
 
-  /** After a refusal, wait before asking again: long enough to fall under the per-minute limit. */
+  /**
+   * After a failure, wait before asking again: until the limit resets when
+   * the API said its free limit was reached, else a quarter of a minute (a
+   * dropped connection, already tried three times).
+   */
   private apiFailed(err: unknown) {
-    this.apiDownUntil = Date.now() + 2 * 60_000;
-    console.warn('point API unavailable, reading the map files', err);
+    this.apiDownUntil = err instanceof ApiLimitError ? err.until.getTime() : Date.now() + 15_000;
+    console.warn('point API unavailable for now', err);
   }
+
+  /** When the point API may be asked again (0: now). The map asks again then. */
+  get apiRetryAt(): number { return this.apiDownUntil > Date.now() ? this.apiDownUntil : 0; }
 
   constructor(private savedAreas: () => SavedArea[]) {}
 
   /**
    * The nodes' profiles at one step, or null when no source has them.
-   * `extra`: more variables per node (humidity for the snow line, surface
-   * values for the feels-like map); asked for only when a setting needs them,
-   * to keep the point API's daily allowance.
+   * Every node has its levels' heights; `extra` is what the layer adds
+   * (temperature, humidity for the snow line, wind, surface values). Only
+   * what a layer needs is asked for: the API's free limits count variables.
    */
   async nodeGrid(run: RunMetadata, lattice: Lattice, t: Date, extra: readonly VariableName[] = [], opts: { cachedOnly?: boolean } = {}): Promise<NodeData | null> {
     const points = lattice.lats.flatMap((lat) => lattice.lons.map((lon) => ({ lat, lon })));
-    // Every node is asked for the profile with humidity, so both layers share
-    // one download per node; the feels-like map adds the surface values.
-    const vars = [...new Set<VariableName>([...PROFILE_VARIABLES, ...PROFILE_RH_VARIABLES, ...extra])];
+    const heights = PROFILE_VARIABLES.filter((v) => v.startsWith('geopotential_height_'));
+    const vars = [...new Set<VariableName>([...heights, ...extra])];
+    const needsTemp = vars.includes('temperature_850hPa');
     const has = (s: PointSeries | undefined) => !!s && vars.every((v) => s.values[v] !== undefined);
-    const done = (profiles: Profile[], values: Record<string, number>[]): NodeData | null =>
-      profiles.every(complete) && values.every((v) => extra.every((x) => Number.isFinite(v[x]))) ? { ...lattice, profiles, values } : null;
+    const usable = (p: Profile) => (needsTemp ? complete(p) : Array.from(p.gh).every(Number.isFinite));
+    const ok = (profiles: Profile[], values: Record<string, number>[], n: number) => usable(profiles[n]!) && extra.every((x) => Number.isFinite(values[n]![x]));
+    /**
+     * Nodes outside the model's area (far out at sea when zoomed out) come
+     * back empty: they take their nearest filled neighbour's values, so one
+     * empty corner never blanks the whole view. Null when none is filled.
+     */
+    const done = (profiles: Profile[], values: Record<string, number>[]): NodeData | null => {
+      const nx = lattice.lons.length;
+      const filled = profiles.map((_, n) => n).filter((n) => ok(profiles, values, n));
+      if (!filled.length) return null;
+      if (filled.length < profiles.length) {
+        const dist = (a: number, b: number) => Math.hypot((a % nx) - (b % nx), Math.floor(a / nx) - Math.floor(b / nx));
+        profiles = profiles.map((p, n) => (filled.includes(n) ? p : profiles[filled.reduce((a, b) => (dist(n, b) < dist(n, a) ? b : a))]!));
+        values = values.map((v, n) => (filled.includes(n) ? v : values[filled.reduce((a, b) => (dist(n, b) < dist(n, a) ? b : a))]!));
+      }
+      return { ...lattice, profiles, values };
+    };
     const fromSeries = () => {
       const profiles: Profile[] = [];
       const values: Record<string, number>[] = [];
@@ -105,7 +129,9 @@ export class ProfileSource {
       const lacking = vars.filter((v) => missing.some((p) => this.nodes.get(nodeKey(run, p.lat, p.lon))?.values[v] === undefined));
       try {
         const key = `nodes|${run.referenceTime.toISOString()}|${lacking.join(',')}|${missing.map((p) => `${p.lat},${p.lon}`).join(';')}`;
-        const got = await this.once(key, () => fetchApiSeries(run.model, run.referenceTime, lacking, missing, run.validTimes));
+        // The run's own hours only (the map never shows the past); kept on the phone until the next run.
+        const span: [Date, Date] = [run.validTimes[0]!, run.validTimes[run.validTimes.length - 1]!];
+        const got = await this.once(key, () => fetchApiSeries(run.model, run.referenceTime, lacking, missing, run.validTimes, cachedFetch(run.referenceTime), span));
         got.forEach((s, n) => {
           const k = nodeKey(run, missing[n]!.lat, missing[n]!.lon);
           const old = this.nodes.get(k);
@@ -157,10 +183,16 @@ export class ProfileSource {
         const vars: VariableName[] = [...new Set([...(o.profile ? pinVars : SURFACE_VARIABLES), ...(o.amounts ? (['precipitation', 'snowfall_water_equivalent'] as VariableName[]) : [])])];
         const first = run.validTimes[0]!.getTime();
         const past = Array.from({ length: o.pastHours }, (_, k) => new Date(first - (o.pastHours - k) * 3_600_000));
-        const [s] = await fetchApiSeries(run.model, run.referenceTime, vars, [{ lat, lon }], [...past, ...run.validTimes]);
+        const [s] = await fetchApiSeries(run.model, run.referenceTime, vars, [{ lat, lon }], [...past, ...run.validTimes], cachedFetch(run.referenceTime));
         return s!;
       } catch (err) {
         this.apiFailed(err);
+        // Over the per-minute limit: waiting for the next minute is far quicker
+        // than reading every hour from the map files (minutes, thousands of reads).
+        if (!o.noFiles && err instanceof ApiLimitError && err.until.getTime() - Date.now() < 75_000) {
+          await new Promise((res) => setTimeout(res, Math.max(0, err.until.getTime() - Date.now())));
+          return this.readPin(run, lat, lon, onPartial, o);
+        }
       }
     }
     // The caller reads what it needs from the map files itself (long models: hour by hour is too slow).
