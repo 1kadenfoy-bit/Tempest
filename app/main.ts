@@ -52,6 +52,7 @@ import { openSaveMode } from './offline/save-mode';
 import { deleteArea, listSavedAreas, loadSavedWeather, saveArea, savedStep } from './offline/saved-areas';
 import { coveringRanges, regridNative, sampleNative } from '../render/openmeteo-starter';
 import { readFile, storageState } from './offline/storage';
+import { savedOnlyActive, setSavedAreaCount } from './data/connection';
 import { loadBasemap } from './map/basemap-router';
 import { maplibregl } from './map/maplibre';
 import { applyBaseTheme, topoStyle } from './map/style';
@@ -105,6 +106,7 @@ async function registerSavedAreas() {
   try {
     savedAreas = await listSavedAreas();
     savedParts = savedAreas.flatMap(areaParts);
+    setSavedAreaCount(savedAreas.length);
     for (const a of savedAreas) {
       const file = await readFile(a.basemap.file);
       if (file) basemap.addSaved(a.id, file, a.bbox, a.basemap.minzoom, a.basemap.maxzoom);
@@ -135,7 +137,7 @@ const stations = setupStations(map, {
   layerId: prefs.layer,
   // Read only on a tap, after the pin exists (set up further down).
   pin: () => { const p = pin.get(); return p ? { lat: p.lat, lon: p.lng } : null; },
-  savedOnly: () => prefs.savedOnly,
+  savedOnly: () => savedOnlyActive(),
 });
 
 // Keep "centre" meaning the part of the map above the collapsed sheet. The
@@ -179,7 +181,7 @@ const radarPoints = new Map<string, RadarPoint | 'error'>();
 let radarPinTimer = 0;
 let radarRetried = '';
 /** Radar is online only: no signal, or saved data only, means none. */
-const radarOffline = () => usingSaved || (prefs.savedOnly && savedAreas.length > 0) || !navigator.onLine;
+const radarOffline = () => usingSaved || savedOnlyActive() || !navigator.onLine;
 const radarPointKey = (lat: number, lng: number, t: Date) => `${radarShown()}|${lat.toFixed(4)},${lng.toFixed(4)}|${t.toISOString()}`;
 // ECCC's pictures sit over the terrain and under the labels; ECCC's colours, a little see-through so the map reads.
 const radarImages = new ImageFrames(map, 'radar', { opacity: 0.85, keep: 12, attribution: 'Radar © Environment and Climate Change Canada', maxzoom: 10 });
@@ -899,7 +901,7 @@ const runsKey = (r: Partial<Record<ModelId, RunMetadata>>) => Object.entries(r).
 
 async function loadRun() {
   // "Saved data only": no network at all while a saved area exists.
-  const savedOnly = prefs.savedOnly && savedAreas.length > 0;
+  const savedOnly = savedOnlyActive();
   const next = savedOnly ? { surface: {}, profile: {} } : await fetchAllRuns().catch(() => ({ surface: {}, profile: {} }));
   if (Object.keys(next.surface).length) {
     const changed = usingSaved || runsKey(next.surface) !== runsKey(runs) || runsKey(next.profile) !== runsKey(profileRuns);
@@ -1440,7 +1442,7 @@ layersBtn.addEventListener('click', () => {
     headerAction: appSettings.gear(layersBtn),
     body: mapPanelBody({
       hillshade: prefs.hillshade, contours: prefs.contours, terrain3d: prefs.terrain3d, buildings3d: buildingsOk ? prefs.buildings3d : undefined,
-      stations: prefs.stations, stationsOffline: !navigator.onLine || prefs.savedOnly,
+      stations: prefs.stations, stationsOffline: !navigator.onLine || savedOnlyActive(),
     }, (s) => {
       if (s.stations !== prefs.stations) stations.setEnabled(s.stations);
       prefs.stations = s.stations;

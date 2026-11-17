@@ -8,10 +8,10 @@
 // data only") nothing is asked: the last answer for the place stays, with its
 // age; with no answer at all the badge stays hidden.
 import { currentAlerts, isFresh, placeFor, type IssuedAlert } from '../../core/alerts/alerts';
+import { savedOnlyActive } from '../data/connection';
 import { formatCursorTime, formatRelative, formatWhen } from '../../core/units/format';
 import { fetchAlerts, officialColour, source } from '../../adapters/eccc-alerts/alerts';
 import { isOpenFrom, openPanel } from '../shell/panel';
-import { loadPrefs } from '../shell/prefs';
 
 const svg = (size: number) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>`;
@@ -51,7 +51,7 @@ async function refresh(): Promise<void> {
   if (!p) return;
   const had = answers.get(p.key);
   if (had && !had.failed && isFresh(had.fetchedAt, new Date())) { render(); return; }
-  if (!navigator.onLine || loadPrefs().savedOnly) { render(); return; }
+  if (!navigator.onLine || savedOnlyActive()) { render(); return; }
   try {
     const alerts = await fetchAlerts(p.lat, p.lon);
     answers.set(p.key, { alerts, fetchedAt: new Date(), failed: false });

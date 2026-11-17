@@ -8,10 +8,10 @@
 // one). Answers are kept for the session, so typing back over a query asks
 // nothing.
 import { fetchPlaces, source } from '../../adapters/bc-geonames/geonames';
+import { savedOnlyActive } from '../data/connection';
 import { isSearchable, normaliseQuery, placeLine, rankPlaces, type Place } from '../../core/search/search';
 import { formatElevation } from '../../core/units/format';
 import { closePanel, isOpenFrom, openPanel } from '../shell/panel';
-import { loadPrefs } from '../shell/prefs';
 
 const glass = (size: number) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>`;
@@ -63,9 +63,9 @@ function open(button: HTMLButtonElement, opts: SearchOptions): void {
     const near = opts.near?.() ?? undefined;
     const have = answers.get(query.toLowerCase());
     if (have) { render(have, near); return; }
-    if (!navigator.onLine || loadPrefs().savedOnly) {
+    if (!navigator.onLine || savedOnlyActive()) {
       show([]);
-      say(loadPrefs().savedOnly ? 'Search needs a connection. Saved data only is on.' : 'Search needs a connection');
+      say(savedOnlyActive() ? 'Search needs a connection. Saved data only is on.' : 'Search needs a connection');
       body.dataset.state = 'offline';
       return;
     }
