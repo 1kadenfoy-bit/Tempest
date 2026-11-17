@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DANGER_COLOURS, LEVELS, dayAt, highest, inkOn, localDate, mapValue, rating, ratingFor, ratingLabel, regionContains, seasonal, shownAt, type Bulletin, type BulletinDay, type ForecastRegion } from './danger';
+import { DANGER_COLOURS, LEVELS, titleParts, dayAt, highest, inkOn, localDate, mapValue, rating, ratingFor, ratingLabel, regionContains, seasonal, shownAt, type Bulletin, type BulletinDay, type ForecastRegion } from './danger';
 
 const day = (date: string, label: string, alp: string, tln: string, btl: string): BulletinDay => ({
   date, label, ratings: { alp: rating(alp), tln: rating(tln), btl: rating(btl) },
@@ -95,5 +95,13 @@ describe('point in region', () => {
     expect(regionContains(square, 2, 2)).toBe(true);
     expect(regionContains(square, 5, 5)).toBe(false);
     expect(regionContains(square, 11, 5)).toBe(false);
+  });
+});
+
+describe('bulletin titles', () => {
+  it('names a many-region bulletin by its first two regions and a count, keeping the list', () => {
+    const t = titleParts('Akamina-Badshot-Battle-Birkenhead');
+    expect(t).toEqual({ short: 'Akamina, Badshot and 2 more regions', names: ['Akamina', 'Badshot', 'Battle', 'Birkenhead'] });
+    expect(titleParts('Glacier')).toEqual({ short: 'Glacier', names: [] });
   });
 });

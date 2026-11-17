@@ -31,10 +31,10 @@ export const source = {
   publisher: 'Avalanche Canada',
   provides: 'Avalanche forecast regions and danger ratings, shown as issued',
   baseUrl: 'https://api.avalanche.ca',
-  licence: 'No open licence stated. Avalanche Canada publishes a public API; its website terms say material may not be reproduced without written consent. Personal use pending Avalanche Canada’s confirmation',
+  licence: 'No open licence stated; personal use pending Avalanche Canada’s confirmation',
   attribution: 'Avalanche forecasts by Avalanche Canada and its partners (Parks Canada, Kananaskis Country, Avalanche Québec)',
   link: 'https://avalanche.ca/api-docs',
-  terms: 'https://avalanche.ca/terms-of-use',
+  terms: 'A public API with no stated limits; the website’s Terms of Use (avalanche.ca/terms-of-use) say its material may not be reproduced without written consent. Shown as issued, online only.',
   offline: false,
 } as const;
 

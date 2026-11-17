@@ -144,6 +144,17 @@ export interface FieldReport {
   link: string;
 }
 
+/**
+ * The issuer's title for a bulletin covering many regions is the list of their
+ * names joined by hyphens: shown as the first two and a count, with the full
+ * list kept. A title of up to three parts stays as issued.
+ */
+export function titleParts(title: string): { short: string; names: string[] } {
+  const names = title.split('-').map((n) => n.trim()).filter(Boolean);
+  if (names.length <= 3) return { short: title, names: [] };
+  return { short: `${names[0]}, ${names[1]} and ${names.length - 2} more regions`, names };
+}
+
 /** Calendar date of an instant in a time zone, "2026-11-17". */
 export function localDate(t: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(t);
