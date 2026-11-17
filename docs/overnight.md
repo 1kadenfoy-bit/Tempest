@@ -8,13 +8,14 @@ Branch: `claude/tempest-m0-setup-930073` (the only branch Claude may push to). P
 
 | Step | State | Notes |
 | --- | --- | --- |
-| M8 saved areas | Done, PR #7 | Rerun `e2e/shell.spec.ts` ("window control", "pulled up") after 00:00 UTC, when Open-Meteo's daily limit for the build machine resets |
-| M9 alerts panel | Done, merged (b3613d7) | ECCC weather-alerts, exactly as issued; shell pixel tests stub "no alerts" |
-| M9 place search | In progress (helper agent hit the usage limit at ~11:00 UTC; resume it, or finish in its worktree .claude/worktrees/agent-aade7b80dac9e91f9) | Adapter + ranking committed there; app/search UI uncommitted |
-| M9 app settings + light theme | Done, merged | Units, theme, saved-data-only, credits from source metadata |
-| 3D spike | Done, merged | Fills drape on terrain (MapLibre renderToTerrainTile); buildings from base map; switches in map panel; docs/spikes/3d-terrain.md |
-| M9 merge, tests, report | Waiting | `docs/reports/m9/report.md` |
-| 3D terrain + buildings | Waiting | Map panel switches; report `docs/reports/3d/report.md` |
+| M8 saved areas | Done, PR #7 | |
+| M9 alerts panel | Done, merged | |
+| M9 place search | Done, merged | BC Geographical Names; environment allowlist gained apps.gov.bc.ca and geocoding-api.open-meteo.com |
+| M9 app settings + light theme | Done, merged | |
+| 3D terrain + buildings | Done, merged | docs/reports/3d/report.md, docs/spikes/3d-terrain.md |
+| M9 report | Done | docs/reports/m9/report.md |
+| Full check (Nov 17, ~12:00 UTC) | 177 unit tests pass; 31 browser tests pass, 3 fail, 1 skipped | The 3 (offline "every layer", shell "window control", wind) failed while Open-Meteo refused the build machine ("Daily API request limit exceeded"). **Rerun them after 00:00 UTC Nov 18:** `PW_PORT=4190 npx playwright test e2e/offline.spec.ts e2e/wind.spec.ts e2e/shell.spec.ts -g "every layer|wind:|window control"` |
+| PR #7 description covers M8, M9, 3D | Done | |
 
 ## How to resume
 
