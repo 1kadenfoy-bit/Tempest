@@ -1,0 +1,27 @@
+{
+
+  "type": "FeatureCollection",
+  "layer": "RADAR_1KM_RRAI",
+  "features": [
+    
+    {
+      "type": "Feature",
+      "id": "RADAR_1KM_RRAI(-123.01604,49.38411)",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -123.0160,49.3841
+        ]
+      },
+      "properties": {
+        "value": 0,
+        "class": "Undetected",
+        "title_en": "Radar precipitation rate for rain [mm/h]",
+        "title_fr": "Taux de précipitation radar pour la pluie [mm/h]",
+        "time": "2026-11-17T13:54:00Z",
+        "dim_reference_time": "N/A"
+      }
+    }
+  ]
+
+}
