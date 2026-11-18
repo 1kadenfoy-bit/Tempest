@@ -44,6 +44,8 @@ describe('ATES geometry', () => {
     const area = (id: number, x: number): AtesIndexArea => ({ id, name: String(id), bbox: [x, 0, x + 1, 1], outline: [[square(x, 0, 1)]], zones: {}, points: 0, bytes: 0 });
     const list = [area(1, 0), area(2, 5), area(3, 2)];
     expect(areasInView(list, [1.5, 0, 6, 1]).map((a) => a.id)).toEqual([3, 2]);
+    // Tilted map: the view box reaches far past the point looked at; the map's centre decides.
+    expect(areasInView(list, [1.5, 0, 6, 1], [5.5, 0.5]).map((a) => a.id)).toEqual([2, 3]);
     expect(indexAreaAt(list, 2.5, 0.5)?.id).toBe(3);
     expect(indexAreaAt(list, 4, 0.5)).toBeNull();
   });

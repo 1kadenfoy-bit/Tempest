@@ -211,7 +211,8 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
   function want() {
     if (!opts.shown() || !index || map.getZoom() < FETCH_ZOOM) { queue = []; return; }
     const b = map.getBounds();
-    const inView = areasInView(index, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]).slice(0, MAX_AT_ONCE);
+    const c = map.getCenter();
+    const inView = areasInView(index, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], [c.lng, c.lat]).slice(0, MAX_AT_ONCE);
     for (const a of inView) if (areas.has(a.id)) { const v = areas.get(a.id)!; areas.delete(a.id); areas.set(a.id, v); }
     queue = inView.filter((a) => !areas.has(a.id) && !failed.has(a.id) && a.id !== loadingId);
     void pump();

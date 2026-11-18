@@ -125,8 +125,13 @@ export function bboxOfRings(polys: PolygonRings[]): [number, number, number, num
 const overlaps = (a: readonly number[], b: readonly number[]) => a[0]! <= b[2]! && a[2]! >= b[0]! && a[1]! <= b[3]! && a[3]! >= b[1]!;
 
 /** Areas whose box meets the view, nearest the view's centre first. */
-export function areasInView(index: AtesIndexArea[], view: [number, number, number, number]): AtesIndexArea[] {
-  const cx = (view[0] + view[2]) / 2, cy = (view[1] + view[3]) / 2;
+/**
+ * `centre`: the point the map is looking at. When the map is tilted the view's
+ * box reaches toward the horizon and its middle is far from that point, so
+ * the nearest areas are measured from the map's centre, not the box's.
+ */
+export function areasInView(index: AtesIndexArea[], view: [number, number, number, number], centre?: [number, number]): AtesIndexArea[] {
+  const [cx, cy] = centre ?? [(view[0] + view[2]) / 2, (view[1] + view[3]) / 2];
   const dist = (a: AtesIndexArea) => Math.hypot((a.bbox[0] + a.bbox[2]) / 2 - cx, (a.bbox[1] + a.bbox[3]) / 2 - cy);
   return index.filter((a) => overlaps(a.bbox, view)).sort((a, b) => dist(a) - dist(b));
 }
