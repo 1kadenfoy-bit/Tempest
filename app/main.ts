@@ -168,7 +168,7 @@ const air = setupAir(map, {
   sourceId: () => prefs.layerModels[airQuality.id] ?? 'eccc',
   pin: () => { const p = pin?.get(); return p ? { lat: p.lat, lon: p.lng } : null; },
   onSteps: () => { if (active.id === airQuality.id) rebuildTimeline(); },
-  onData: () => { if (active.id === airQuality.id) { renderReadout(); renderRunAge(); scrubber.refresh(); } },
+  onData: () => { if (active.id === airQuality.id) { renderReadout(); renderRunAge(); renderLegend(); scrubber.refresh(); } },
 });
 
 // The condition layers that work, in menu order. One is shown at a time.
@@ -1104,8 +1104,8 @@ function stitch(parts: (PointSeries | null)[]): PointSeries | null {
 }
 
 async function loadSeries() {
-  // Radar has no forecast at the pin: drop any series still on its way.
-  if (active.frames) { ++seriesSeq; scrubber.setStatus(''); return; }
+  // Radar has no forecast at the pin, and air quality reads its own: drop any series still on its way.
+  if (active.frames || active.id === airQuality.id) { ++seriesSeq; scrubber.setStatus(''); return; }
   const p = pin.get();
   if (!run || !p || !timeline.segments.length) return;
   void loadObserved();

@@ -3,8 +3,8 @@
 // own status colours were not found published, so the status is given in
 // words), their mapped perimeters as thin outlines, and a panel with the fire
 // as issued when a mark is tapped. Which fires show follows the time cursor:
-// from the present hour on, every fire not "Out"; before it, the fires whose
-// issued dates say they were burning that day (core/air/fires.ts).
+// the fires whose issued dates say they were burning that day, and from the
+// present hour on every fire not declared out (core/air/fires.ts).
 //
 // Kept on the phone (app/data/kept-fetch.ts): the latest list, so without
 // signal the fires still show, with the time they were fetched.
@@ -182,11 +182,12 @@ export function setupFires(map: MapLibreMap, opts: FiresOptions) {
   function open(f: Fire, origin: HTMLElement) {
     const now = new Date();
     const body = el('div', 'panel-groups air-fire');
-    if (cursor && cursor.getTime() < now.getTime() - 3_600_000) {
-      body.append(el('p', 'avy-flag', `By its issued dates this fire was burning on ${formatCursorTime(cursor).split(' ')[0]} ${dateText(bcDate(cursor)).replace(/, \d{4}$/, '')}, the day under the time cursor. The status below is today’s.`));
+    // Shown as burning on a past day, but declared out since: say so, so the status words are not misread.
+    if (cursor && f.out && f.out > bcDate(cursor)) {
+      body.append(el('p', 'avy-flag', `By its issued dates this fire was burning on ${formatCursorTime(cursor).split(' ')[0]} ${dateText(bcDate(cursor)).replace(/, \d{4}$/, '')}, the day under the time cursor. It has since been declared out; the status below is the latest issued.`));
     }
     const facts: [string, string][] = [
-      ['Status now', f.status || '–'],
+      ['Status (latest)', f.status || '–'],
       ['Fire number', f.id],
       ['Size', f.sizeHa === null ? '–' : formatHectares(f.sizeHa)],
       ['Discovered', dateText(f.ignition) || '–'],

@@ -51,17 +51,19 @@ export function bcDate(t: Date): string {
 const H = 3_600_000;
 
 /**
- * Was this fire burning at time t? From the present hour on, the status as
- * issued now decides (not "Out"). Before it, the issued dates do: discovered
- * on or before that BC day, and not yet declared out (the out day itself
- * counts as out). The dates are calendar days, so a fire counts for the whole
- * day it was discovered.
+ * Was this fire burning at time t, by what BC Wildfire Service issued? Its
+ * dates decide: discovered on or before that BC day, and not declared out by
+ * then (the out day itself counts as out). The dates are calendar days, so a
+ * fire counts for the whole day it was discovered. A fire with no out date
+ * is burning from the present hour on unless its status says "Out"; for the
+ * past it needs a discovery date.
  */
 export function burningAt(f: Fire, t: Date, now: Date): boolean {
-  if (t.getTime() >= now.getTime() - H) return f.status !== 'Out';
   const d = bcDate(t);
-  if (!f.ignition || f.ignition > d) return false;
-  return !f.out || f.out > d;
+  if (f.ignition && f.ignition > d) return false;
+  if (f.out) return f.out > d;
+  if (t.getTime() >= now.getTime() - H) return f.status !== 'Out';
+  return f.ignition !== null;
 }
 
 export function firesAt(list: readonly Fire[], t: Date, now: Date): Fire[] {

@@ -38,7 +38,7 @@ export function legend(doc: Document): HTMLElement {
   el.setAttribute('aria-label', 'PM2.5 in micrograms per cubic metre, ECCC’s scale from 1 to 500');
   const unit = doc.createElement('span');
   unit.className = 'legend-unit';
-  unit.textContent = airState().source?.variable === 'pm2_5' ? 'PM2.5' : 'Smoke';
+  unit.textContent = `${airState().source?.variable === 'pm2_5' ? 'PM2.5' : 'Smoke'} µg/m³`;
   const scale = doc.createElement('span');
   scale.className = 'legend-track';
   const bar = doc.createElement('span');
@@ -46,10 +46,11 @@ export function legend(doc: Document): HTMLElement {
   bar.style.background = airGradient();
   const ticks = doc.createElement('span');
   ticks.className = 'legend-ticks';
-  for (const v of [1, 30, 60, 100, 250, 500]) {
+  // The bar runs to ECCC's top step (500, where it saturates); the last label sits at 250.
+  for (const v of [1, 30, 60, 100, 250]) {
     const t = doc.createElement('span');
     t.style.left = `${pm25Position(v) * 100}%`;
-    t.textContent = v === 500 ? '500+ µg/m³' : String(v);
+    t.textContent = String(v);
     ticks.append(t);
   }
   scale.append(bar, ticks);
@@ -74,10 +75,13 @@ export function summary(start: Date, end: Date): WindowSummary {
   if (!idx.length) return { kind: 'whole', lines: ['–'], label: 'Outside the source’s hours' };
   const peak = idx.reduce((a, b) => (airValue(ser, b)! > airValue(ser, a)! ? b : a));
   const low = idx.reduce((a, b) => (airValue(ser, b)! < airValue(ser, a)! ? b : a));
+  const range = formatTimeRange(ser.times[idx[0]!]!, ser.times[idx[idx.length - 1]!]!);
+  // Under ECCC's lowest step the map draws nothing: say so in words.
+  if (airValue(ser, peak)! < PM25_STOPS[0]!.value) return { kind: 'whole', lines: [`No ${what(s)} above 1 µg/m³`], label: range };
   return {
     kind: 'whole',
     lines: [`${s.source?.variable === 'pm2_5_smoke' ? 'Smoke' : 'PM2.5'} up to ${formatConcentration(airValue(ser, peak)!)}`, `lowest ${formatConcentration(airValue(ser, low)!)}`],
-    label: `Peak ${formatCursorTime(ser.times[peak]!)} · ${formatTimeRange(ser.times[idx[0]!]!, ser.times[idx[idx.length - 1]!]!)}`,
+    label: `Peak ${formatCursorTime(ser.times[peak]!)} · ${range}`,
   };
 }
 
@@ -118,13 +122,23 @@ export function drawChart(ctx: CanvasRenderingContext2D, w: number, h: number, s
   ctx.textBaseline = 'bottom';
   ctx.setLineDash([3, 3]);
   ctx.lineWidth = 1;
+  let lastY = Infinity;
   for (const g of [30, 60, 100, 250]) {
     if (g > max) continue;
     const gy = Math.round(y(g)) + 0.5;
+    // Labels need room: a guide too close to the one below is left out.
+    if (lastY - gy < 16) continue;
+    lastY = gy;
     ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
     ctx.fillText(String(g), w - 4, gy - 1);
   }
   ctx.setLineDash([]);
+  if (Math.max(...idx.map((i) => airValue(ser, i)!)) < PM25_STOPS[0]!.value) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '400 12px Inter, system-ui, sans-serif';
+    ctx.fillText(`All under 1 µg/m³`, w / 4, h / 2);
+  }
 }
 
 function aqhiCards(s: AirState, t: Date): Card[] {
@@ -168,7 +182,7 @@ function fireCards(s: AirState, t: Date, now: Date): Card[] {
   return [{
     kind: 'status', icon: 'info',
     text: `${near.length} wildfire${near.length === 1 ? '' : 's'} burning within ${formatDistance(NEAR_KM, undefined, true)} ${when}`,
-    note: `Nearest: ${fireTitle(n.fire)}, ${formatDistance(n.km, undefined, true)} ${n.dir} · ${n.fire.status} now · tap a fire on the map · ${fetched}`,
+    note: `Nearest: ${fireTitle(n.fire)}, ${formatDistance(n.km, undefined, true)} ${n.dir} · ${n.fire.status} (latest) · tap a fire on the map · ${fetched}`,
   }];
 }
 

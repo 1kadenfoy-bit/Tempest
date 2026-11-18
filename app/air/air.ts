@@ -103,6 +103,8 @@ export function setupAir(map: MapLibreMap, opts: AirOptions) {
         if (!had) setSteps([]);
       } finally {
         timesLoading = null;
+        // The pin waits for the hours (a new setting or source asks for them first).
+        if (active) void loadPin();
         opts.onData();
       }
     })();
@@ -331,7 +333,7 @@ export function setupAir(map: MapLibreMap, opts: AirOptions) {
         return { text: formatRunAge(run, new Date()), stale: runAgeHours(run, new Date()) >= 24 };
       }
       const at = airState().fetchedAt;
-      return { text: at ? `Fetched ${formatWhen(at, new Date())} · 40 km` : 'Asking Open-Meteo…', stale: false };
+      return { text: at ? `Fetched ${formatWhen(at, new Date())}` : 'Asking Open-Meteo…', stale: false };
     },
     needsRetry: () => (src().id === 'eccc' && !timesNow()) || fires.failure !== null,
     retry() { void loadTimes(true); pinKey = ''; void loadPin(true); fires.retry(); },
