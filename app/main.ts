@@ -444,7 +444,8 @@ function renderRunAge() {
     // Avalanche: the pin's bulletin and its age, not a model run.
     const pinNow = pin!.get()!;
     const a = avy.ageLine(pinNow.lng, pinNow.lat);
-    $('run-age').textContent = a.text;
+    // The source button names Avalanche Canada, so the line keeps the age.
+    $('run-age').textContent = a.text.replace(`${AVALANCHE_SOURCES[0]!.label} · issued `, 'Issued ');
     $('run-age').dataset.stale = String(a.stale);
     return;
   }

@@ -86,7 +86,7 @@ test('avalanche: regions coloured as issued, region forecast, report with photos
   const expected = now < Date.parse('2026-11-26T00:00:00Z') ? 'earlyseason' : 'none';
   expect(await regionValue(page, -123.08, 49.6)).toBe(expected);
   await expect(page.locator('#legend-row')).toContainText('Early season');
-  await expect(page.locator('#run-age')).toContainText('Avalanche Canada · issued');
+  await expect(page.locator('#run-age')).toContainText(/^Issued /);
   // The model button names the source; its menu lists Avalanche Canada only.
   await expect(page.locator('#model-pill')).toHaveText('AvCan');
   await page.locator('#model-pill').click();
@@ -231,5 +231,5 @@ test('avalanche: loads with "saved data only" on and nothing saved', async ({ pa
   });
   await pickAvalanche(page);
   expect(asked.some((a) => a.startsWith('/forecasts/en/products'))).toBe(true);
-  await expect(page.locator('#run-age')).toContainText('Avalanche Canada · issued');
+  await expect(page.locator('#run-age')).toContainText(/^Issued /);
 });

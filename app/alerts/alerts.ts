@@ -71,9 +71,11 @@ function render(): void {
   if (!badge) return;
   const s = shown();
   const n = s?.list.length ?? 0;
-  badge.hidden = n === 0;
-  badge.querySelector('.alert-count')!.textContent = String(n);
-  badge.setAttribute('aria-label', `${n} weather ${n === 1 ? 'alert' : 'alerts'} at the pin`);
+  // Always in the top bar (v8 01); the count and the warning colour only when alerts are in force.
+  badge.hidden = false;
+  badge.dataset.count = String(n);
+  badge.querySelector('.alert-count')!.textContent = n ? String(n) : '';
+  badge.setAttribute('aria-label', n ? `${n} weather ${n === 1 ? 'alert' : 'alerts'} at the pin` : 'Weather alerts: none at the pin');
   // For tests: 'pending' until there is an answer for the place.
   document.body.dataset.alerts = s ? String(n) : 'pending';
 }
@@ -113,16 +115,24 @@ function row(a: IssuedAlert): HTMLElement {
 function openAlerts(): void {
   const now = new Date();
   const s = shown(now);
-  if (!badge || !s) return;
+  if (!badge) return;
   const body = document.createElement('div');
   body.className = 'panel-groups';
   const list = document.createElement('div');
   list.className = 'group alert-list';
-  for (const a of s.list) list.append(row(a));
+  if (s) for (const a of s.list) list.append(row(a));
+  if (!s?.list.length) {
+    const none = document.createElement('p');
+    none.className = 'alert-none';
+    none.textContent = s ? 'No alerts in force at the pin.'
+      : !navigator.onLine || savedOnlyActive() ? 'Alerts need a connection. None checked for this place yet.'
+      : 'Checking Environment Canada…';
+    list.append(none);
+  }
   const foot = document.createElement('p');
   foot.className = 'panel-note alert-source';
-  foot.textContent = `${source.publisher} · ${fetchedText(s.answer, now)}`;
-  if (s.answer.failed) foot.textContent += '. Could not reach ECCC just now; this is the last answer.';
+  foot.textContent = s ? `${source.publisher} · ${fetchedText(s.answer, now)}` : source.publisher;
+  if (s?.answer.failed) foot.textContent += '. Could not reach ECCC just now; this is the last answer.';
   body.append(list, foot);
   openPanel({
     origin: badge,
