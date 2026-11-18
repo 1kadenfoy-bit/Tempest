@@ -73,23 +73,32 @@ export function openSaveMode(map: MapLibreMap, opts: {
   const saveable = opts.layers.filter((l) => !l.onlineOnly);
   const ticked = new Set<string>(saveable.some((l) => l.id === opts.initial) ? [opts.initial] : saveable[0] ? [saveable[0].id] : []);
   const layerRows = new Map<string, HTMLElement>();
-  for (const l of opts.layers) {
+  // v8 08-SaveArea: online-only layers are listed, greyed out, with the reason.
+  // Several of them share one row, so the panel stays short and the area box keeps its room.
+  const online = opts.layers.filter((l) => l.onlineOnly);
+  const addRow = (title: string, note?: string) => {
     const row = document.createElement('label');
     row.className = 'check-row';
     row.innerHTML = `<input type="checkbox"><span class="check-box">${CHECK}</span><span class="check-text"><span class="check-title"></span><span class="check-note"></span></span>`;
-    row.querySelector('.check-title')!.textContent = l.title;
-    const input = row.querySelector('input')!;
+    row.querySelector('.check-title')!.textContent = title;
+    if (note !== undefined) row.querySelector('.check-note')!.textContent = note;
     root.querySelector('.save-layers')!.append(row);
-    if (l.onlineOnly) {
-      // v8 08-SaveArea: online-only layers are listed, greyed out, with the reason.
-      input.disabled = true;
-      row.dataset.disabled = 'true';
-      row.querySelector('.check-note')!.textContent = l.onlineOnly;
-      continue;
-    }
+    return row;
+  };
+  for (const l of saveable) {
+    const row = addRow(l.title);
+    const input = row.querySelector('input')!;
     input.checked = ticked.has(l.id);
     input.addEventListener('change', () => { if (input.checked) ticked.add(l.id); else ticked.delete(l.id); render(); });
     layerRows.set(l.id, row.querySelector<HTMLElement>('.check-note')!);
+  }
+  if (online.length) {
+    const row = online.length === 1
+      ? addRow(online[0]!.title, online[0]!.onlineOnly)
+      : addRow(`Online only: ${online.map((l) => l.title).join(', ')}`, online.map((l) => `${l.title}: ${l.onlineOnly!.charAt(0).toLowerCase()}${l.onlineOnly!.slice(1)}`).join(' · '));
+    row.querySelector('input')!.disabled = true;
+    row.dataset.disabled = 'true';
+    row.dataset.onlineOnly = online.map((l) => l.id).join(' ');
   }
   const box = root.querySelector<HTMLElement>('.save-box')!;
   const go = root.querySelector<HTMLButtonElement>('.save-go')!;

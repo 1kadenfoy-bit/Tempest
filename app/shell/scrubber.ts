@@ -301,5 +301,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     setTimeline(t: { seams: { time: Date; label: string }[] }) { seams = t.seams; schedule(); },
     refresh: schedule,
     get windowHours() { return chartHours(); },
+    /** The chosen window (12 h to 7 d), whatever an observed layer shows; set from elsewhere (the forecast summary window). */
+    get chosenHours() { return windowHours; },
+    setWindowHours(h: number) { if (h === windowHours) return; windowHours = h; onWindowChange?.(h); schedule(); },
   };
 }

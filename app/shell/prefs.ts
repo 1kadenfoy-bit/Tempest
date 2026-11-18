@@ -24,10 +24,12 @@ export interface Prefs {
   units: 'metric' | 'imperial';
   /** App settings: dark, light, or match the phone. */
   theme: 'dark' | 'light' | 'system';
+  /** Forecast summary window: each layer's strip on or off, by layer id; a layer not listed takes its default (app/summary/choice.ts). */
+  summaryLayers: Record<string, boolean>;
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, buildings3d: false, stations: false, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false, units: 'metric', theme: 'dark' };
+const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, buildings3d: false, stations: false, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false, units: 'metric', theme: 'dark', summaryLayers: {} };
 
 export function loadPrefs(): Prefs {
   try {

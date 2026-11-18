@@ -14,7 +14,7 @@ test('temperature: layer menu, terrain fill, readout, summary, week values', asy
   await page.click('#layer-button');
   const menu = page.getByRole('dialog', { name: 'Condition layer' });
   await expect(menu).toBeVisible();
-  await expect(menu.locator('.layer-tile')).toHaveText(['Precipitation', 'Temperature', 'Wind', 'Radar', 'Avalanche']);
+  await expect(menu.locator('.layer-tile')).toHaveText(['Precipitation', 'Temperature', 'Wind', 'Radar', 'Avalanche', 'Air quality']);
   await expect(menu.getByRole('button', { name: 'Precipitation' })).toHaveAttribute('aria-pressed', 'true');
   await menu.getByRole('button', { name: 'Temperature' }).click();
 

@@ -116,7 +116,7 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
   const box = page.getByRole('dialog', { name: 'Save for offline' });
   await expect(box).toBeVisible();
   const row = box.locator('.check-row', { hasText: 'Radar' });
-  await expect(row.locator('.check-note')).toHaveText('Its source does not allow saving');
+  await expect(row.locator('.check-note')).toContainText('Radar: its source does not allow saving');
   await expect(row.locator('input')).toBeDisabled();
   await expect(row.locator('input')).not.toBeChecked();
   // The layer on screen is radar, so the first layer that can be saved is ticked instead.

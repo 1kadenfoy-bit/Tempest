@@ -77,8 +77,18 @@ import { radarLayer, shownOf, type RadarShown } from '../layers/radar';
 import type { RadarAtPin, RadarPoint } from '../layers/contract';
 import { ImageFrames } from './map/image-frames';
 import { setupStations } from './stations/stations';
+import { includedLayers, needsSeries, unionNeeds } from './summary/choice';
+import { setupLongPress } from './summary/long-press';
+import { setupSummaryWindow } from './summary/summary-window';
+import { airQuality } from '../layers/air-quality';
+import { setupAir } from './air/air';
 
 const prefs = loadPrefs();
+// The forecast summary window is set up near the end of this file; the pin and
+// data code above can run before that (a saved pin with no signal), so they
+// refresh it through this guard.
+let summaryReady = false;
+const refreshSummary = () => { if (summaryReady) summaryWin.refresh(); };
 // App settings: units and theme apply before anything draws; the hooks redraw
 // what CSS cannot reach (defined further down, called only on a change).
 const appSettings = startAppSettings(prefs, {
@@ -159,16 +169,26 @@ const applyTerrainPrefs = () => {
 const cursor = new TimeCursor();
 const scrubber = setupScrubber(cursor, prefs.windowHours, (h) => { prefs.windowHours = h; savePrefs(prefs); scheduleDetails(); });
 setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh(); }, 30_000);
+// The air quality layer's fill, pin values, AQHI and fires (online only; fires kept on the phone).
+const air = setupAir(map, {
+  theme: () => appSettings.theme(),
+  settings: () => settingsFor(airQuality),
+  sourceId: () => prefs.layerModels[airQuality.id] ?? 'eccc',
+  pin: () => { const p = pin?.get(); return p ? { lat: p.lat, lon: p.lng } : null; },
+  onSteps: () => { if (active.id === airQuality.id) rebuildTimeline(); },
+  onData: () => { if (active.id === airQuality.id) { renderReadout(); renderRunAge(); renderLegend(); scrubber.refresh(); } refreshSummary(); },
+});
 
 // The condition layers that work, in menu order. One is shown at a time.
 // Radar (no v8 design yet): ECCC's pictures in ECCC's colours; the layer gets its legend from here, never from the source.
 const radarShown = (): RadarShown => shownOf(settingsFor(radar));
 const radar: LayerSlots = radarLayer((s) => PRODUCTS[s].legend, () => radarShown());
-const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche];
+const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche, airQuality];
 /** Why a layer cannot be saved for offline use, when its source does not allow it. */
 const onlineOnly = (l: LayerSlots): string | undefined =>
   l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving'
-  : l.id === 'avalanche' ? 'Kept on the phone automatically: the latest bulletins and reports'
+  : l.id === 'avalanche' ? 'The latest bulletins are kept automatically'
+  : l.id === airQuality.id ? 'Not to be copied in bulk; the latest fires are kept automatically'
   : undefined;
 
 // ---- Radar frames: the times ECCC holds (last 3 h, every 6 min), and what the cursor's frame shows at the pin.
@@ -340,6 +360,8 @@ function rebuildTimeline() {
   pastSteps = firstStep && !usingSaved ? Array.from({ length: PAST_HOURS }, (_, k) => new Date(firstStep.getTime() - (PAST_HOURS - k) * 3_600_000)) : [];
   // An observed layer (radar): the one cursor steps through its frames instead.
   if (active.frames) { setFrameSteps(); return; }
+  // Air quality: its source's own hours.
+  if (active.id === airQuality.id) { cursor.setSteps(air.steps(), cursor.time ?? new Date()); scrubber.setTimeline({ seams: [] }); return; }
   cursor.setSteps([...pastSteps, ...timeline.steps], cursor.time ?? new Date());
   scrubber.setTimeline({
     seams: timeline.seams.map((x) => ({ time: x.time, label: REGISTRY[x.to as ModelId]?.label ?? x.to })),
@@ -358,7 +380,8 @@ const pinData = (): PinData => ({ series, elevation: pin?.get()?.elevation ?? nu
 const pinGround: { key: string; values: Record<string, number> } = { key: '', values: {} };
 async function loadPinGround() {
   const p = pin?.get();
-  if (!p || active.id !== 'wind') return;
+  // Wind reads it: the layer on the map, or a strip in the forecast summary window.
+  if (!p || (active.id !== 'wind' && !summaryWants(wind))) return;
   const models = [...new Set(timeline.segments.map((x) => x.model as ModelId))];
   const key = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}|${models.join(',')}`;
   if (key === pinGround.key) return;
@@ -368,6 +391,7 @@ async function loadPinGround() {
   pinGround.values = Object.fromEntries(got.flatMap(([m, g]) => (g === null ? [] : [[m, g] as const])));
   renderReadout();
   scrubber.refresh();
+  refreshSummary();
 }
 
 /** Fetch the past two days' observed 6-hour totals at the pin (once per place and 6 hours). */
@@ -384,6 +408,7 @@ async function loadObserved() {
     observed = got.length ? got : undefined;
     scrubber.refresh();
     scheduleDetails();
+    refreshSummary();
   } catch (err) {
     observedFor = '';
     console.warn('no observed precipitation', err);
@@ -424,6 +449,7 @@ function showLayer() {
   $('model-pill').hidden = Boolean(active.frames);
   // An issued layer names its source instead of a model.
   if (active.id === 'avalanche') $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
+  if (active.id === airQuality.id) $('model-pill-label').textContent = air.short();
   document.body.dataset.layer = active.id;
 }
 showLayer();
@@ -449,6 +475,13 @@ function renderRunAge() {
     $('run-age').dataset.stale = String(a.stale);
     return;
   }
+  if (active.id === airQuality.id) {
+    const a = air.ageLine();
+    $('model-pill-label').textContent = air.short();
+    $('run-age').textContent = a.text;
+    $('run-age').dataset.stale = String(a.stale);
+    return;
+  }
   // The run of the model under the cursor; a missing model is named (visible fallback).
   const seg = cursor.time ? segmentAt(timeline, mapTime(cursor.time)) : timeline.segments[0];
   const r = seg ? runs[seg.model as ModelId] ?? run : run;
@@ -466,6 +499,7 @@ function renderRunAge() {
 function renderReadout() {
   // The avalanche layer needs no model run: until the time line is built, it reads now.
   setAvalancheCursor(cursor.time ?? new Date());
+  air.setCursor(cursor.time ?? null);
   const i = seriesIndex();
   pin.setReadout(active.readout(pinData(), i, settingsFor(active)));
   scheduleDetails();
@@ -518,7 +552,7 @@ let mapReady = false;
 const avy = setupAvalanche(map, {
   theme: () => appSettings.theme(),
   settings: () => settingsFor(avalanche),
-  onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); },
+  onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); refreshSummary(); },
   onLegend: () => { if (active.id === 'avalanche') renderLegend(); },
 });
 extraLegend = (doc) => avy.atesLegend(doc);
@@ -768,6 +802,7 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
  */
 async function updateFills(moving = false) {
   if (!mapReady) return;
+  air.update(active.id === airQuality.id, cursor.time ?? null, moving);
   if (active.frames) {
     // Radar alone fills the map: the forecast fills step aside (and any still on their way are dropped).
     ++fillSeq;
@@ -786,7 +821,7 @@ async function updateFills(moving = false) {
   radarImages.setCoverage(null);
   // Avalanche: issued bulletins, not model grids; the weather fills step aside.
   avy.update(active.id === 'avalanche', cursor.time ?? new Date());
-  if (active.id === 'avalanche') {
+  if (active.id === 'avalanche' || active.id === airQuality.id) {
     flow.setShown(false);
     windLayer.visible = false;
     windLayer.setProfiles(null);
@@ -945,6 +980,7 @@ async function loadRun() {
       rebuildTimeline();
       void updateFills();
       void loadSeries();
+      void loadSummarySeries();
     }
     renderRunAge();
     document.body.dataset.run = 'ready';
@@ -962,6 +998,7 @@ async function loadRun() {
       rebuildTimeline();
       void updateFills();
       void loadSeries();
+      void loadSummarySeries();
     }
     renderRunAge();
     document.body.dataset.run = 'saved';
@@ -1080,8 +1117,8 @@ function stitch(parts: (PointSeries | null)[]): PointSeries | null {
 }
 
 async function loadSeries() {
-  // Radar has no forecast at the pin: drop any series still on its way.
-  if (active.frames) { ++seriesSeq; scrubber.setStatus(''); return; }
+  // Radar has no forecast at the pin, and air quality reads its own: drop any series still on its way.
+  if (active.frames || active.id === airQuality.id) { ++seriesSeq; scrubber.setStatus(''); return; }
   const p = pin.get();
   if (!run || !p || !timeline.segments.length) return;
   void loadObserved();
@@ -1181,11 +1218,13 @@ const renderPlace = (p: PinState) => {
   // Temperature is read at the pin's ground height: refresh once it is known.
   renderReadout();
   scrubber.refresh();
+  refreshSummary();
   // A new place: fetch its series once the pin settles.
   const where = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
   if (where !== lastPlace) {
     lastPlace = where;
     alertsAt(p.lat, p.lng);
+    air.pinMoved();
     scheduleRadarPin();
     clearTimeout(seriesTimer);
     seriesTimer = window.setTimeout(() => void loadSeries(), 250);
@@ -1198,6 +1237,132 @@ const rememberPin = (p: { lng: number; lat: number; name: string | null }) => {
   prefs.lastPin = { lng: p.lng, lat: p.lat, label: p.name ?? '' };
   savePrefs(prefs);
 };
+
+// ---- Forecast summary window (app/summary; no v8 design) -------------------
+// Every chosen layer's chart for the pin, stacked on the app's one time line.
+// Opens with press-and-hold on the map (or a right click) and from the details.
+// Loads only while open, through the same read path as the sheet.
+let summarySeries: PointSeries | null = null;
+let summaryState: 'loading' | 'ready' | 'busy' | 'outside' = 'loading';
+let summaryFor = '';
+let summarySeq = 0;
+const summaryRetry = { timer: 0, tries: 0 };
+const summaryShown = () => includedLayers(LAYERS, prefs.summaryLayers);
+const summaryWants = (l: LayerSlots) => summaryReady && summaryWin.isOpen() && summaryShown().includes(l);
+
+/**
+ * The pin's series for every strip at once: one request a model carrying what
+ * they all need, read as the precipitation layer reads (surface runs, amounts
+ * included). The HRDPS part is the very request the sheet makes, so it comes
+ * from memory or the phone's cache, not the network.
+ */
+async function loadSummarySeries() {
+  if (!summaryReady || !summaryWin.isOpen()) return;
+  const shown = summaryShown();
+  if (shown.includes(avalanche)) avy.load();
+  if (shown.includes(airQuality) && active.id !== airQuality.id) void air.forSummary();
+  if (!needsSeries(shown)) { refreshSummary(); return; }
+  const p = pin.get();
+  if (!run || !p || !timeline.segments.length) return; // loadRun asks again once the run is in
+  void loadObserved();
+  void loadPinGround();
+  const union: LayerSlots = { ...precipitation, id: 'summary', pinNeeds: unionNeeds(shown).variables };
+  const tlKey = timeline.segments.map((x) => `${x.model}@${x.run.toISOString()}`).join(',');
+  const key = `summary|${union.pinNeeds.join(',')}|${tlKey}|${p.lat.toFixed(4)},${p.lng.toFixed(4)}|${usingSaved}`;
+  const mine = ++summarySeq;
+  clearTimeout(summaryRetry.timer);
+  const cached = store.get(key);
+  if (cached) { summarySeries = cached; summaryFor = key; summaryState = 'ready'; refreshSummary(); return; }
+  if (summaryFor !== key) { summarySeries = null; summaryFor = key; summaryState = 'loading'; refreshSummary(); }
+  const segs = timeline.segments;
+  const parts: (PointSeries | null)[] = segs.map(() => null);
+  const update = (part: PointSeries) => {
+    if (mine !== summarySeq) return;
+    parts[0] = part;
+    summarySeries = stitch(parts);
+    summaryState = 'ready';
+    refreshSummary();
+  };
+  try {
+    parts[0] = await modelSeries(union, segs[0]!.model as ModelId, true, p.lat, p.lng, update, update);
+  } catch (err) {
+    if (mine !== summarySeq) return;
+    console.warn('no series for the forecast summary', err);
+    summaryState = usingSaved ? 'outside' : 'busy';
+    refreshSummary();
+    if (!usingSaved) retrySummary();
+    return;
+  }
+  if (mine !== summarySeq) return;
+  summarySeries = stitch(parts);
+  summaryState = 'ready';
+  refreshSummary();
+  await Promise.all(segs.slice(1).map(async (seg, k) => {
+    parts[k + 1] = await modelSeries(union, seg.model as ModelId, false, p.lat, p.lng).catch((err) => { console.warn(`no ${seg.model} series for the summary`, err); return null; });
+  }));
+  if (mine !== summarySeq) return;
+  summarySeries = stitch(parts);
+  // Kept only when whole; a stretch that did not come is asked for again while the window is open.
+  if (parts.every(Boolean)) { if (summarySeries) store.put(key, summarySeries); summaryRetry.tries = 0; }
+  else if (!usingSaved) retrySummary();
+  refreshSummary();
+}
+function retrySummary() {
+  clearTimeout(summaryRetry.timer);
+  const delay = Math.max(Math.min(60_000, 3_000 * 2 ** summaryRetry.tries++), profiles.apiRetryAt - Date.now() + 500);
+  summaryRetry.timer = window.setTimeout(() => void loadSummarySeries(), delay);
+}
+
+const summaryWin = setupSummaryWindow({
+  cursor,
+  layers: () => LAYERS,
+  choice: () => prefs.summaryLayers,
+  setChoice: (c) => { prefs.summaryLayers = c; savePrefs(prefs); },
+  windowHours: () => scrubber.chosenHours,
+  setWindowHours: (h) => scrubber.setWindowHours(h),
+  pinData: () => ({ series: summarySeries, elevation: pin.get()?.elevation ?? null, observed, ground: pinGround.values }),
+  index: () => { const t = cursor.time; return summarySeries && t ? summarySeries.times.findIndex((x) => x.getTime() === t.getTime()) : -1; },
+  settingsFor,
+  status: (l) => {
+    if (!l.pinNeeds.length) return '';
+    if (!run && document.body.dataset.run === 'error') return 'Could not reach the weather data';
+    if (summaryState === 'outside') return 'The pin is outside the saved areas';
+    if (!summarySeries) return summaryState === 'busy' ? 'The forecast service is busy · trying again shortly' : 'Loading the pin’s forecast…';
+    const values = summarySeries.values;
+    if (l.pinNeeds.some((v) => values[v]?.some(Number.isFinite))) return '';
+    // Online, a part that has not come is still being asked for (the service busy: the map files, read hour by hour, are slow).
+    return usingSaved ? `${l.title} is not saved for this area` : `${l.title} still coming · the forecast service is slow or busy`;
+  },
+  place: () => $('place-text').textContent ?? '',
+  footer: () => {
+    const now = new Date();
+    const shown = summaryShown();
+    const lines: { text: string; stale: boolean }[] = [];
+    if (needsSeries(shown) && run) {
+      const labels = [...new Set(timeline.segments.map((x) => REGISTRY[x.model as ModelId]?.label ?? x.model))];
+      const later = labels.slice(1);
+      lines.push({
+        text: `${labels[0] ?? ''} · ${formatRunAge(run.referenceTime, now)}${usingSaved ? ' · saved' : ''}${later.length ? ` · then ${later.join(', ')}` : ''}`,
+        stale: runAgeHours(run.referenceTime, now) >= 12 || timeline.missing.length > 0,
+      });
+    }
+    const p = pin.get();
+    if (p && shown.includes(avalanche)) lines.push(avy.ageLine(p.lng, p.lat));
+    return lines;
+  },
+  note: () => (active.frames ? `Radar is on the map, so time moves only through its last ${active.frames.windowHours} hours. Choose another layer to move through the forecast.` : null),
+  load: () => void loadSummarySeries(),
+});
+summaryReady = true;
+// Press-and-hold (or a right click): the pin moves there, as a tap moves it, and the window grows from it.
+const longPress = setupLongPress(map, (pt) => {
+  const at = map.unproject([pt.x, pt.y]);
+  const name = nameNear(map, pt);
+  pin.set({ lng: at.lng, lat: at.lat, kind: 'dropped', name });
+  rememberPin({ lng: at.lng, lat: at.lat, name });
+  const r = map.getContainer().getBoundingClientRect();
+  summaryWin.openAt(r.left + pt.x, r.top + pt.y);
+});
 
 function startFromLastOrDefault() {
   if (prefs.lastPin) {
@@ -1235,8 +1400,12 @@ $('place-line').addEventListener('click', () => {
 });
 
 map.on('click', (e) => {
+  // The lift that ends a press-and-hold is not a tap (the summary window is opening).
+  if (longPress.consumeClick()) return;
   // A tap on a weather station opens it; the pin stays.
   if (stations.hit(e.originalEvent.target)) return;
+  // Air quality: a tap on a fire opens it; the pin stays.
+  if (active.id === airQuality.id && air.tapped(e.point)) return;
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
@@ -1298,7 +1467,7 @@ function renderDetails() {
   const own = active.id === 'precipitation' ? extra : [];
   const after = active.id === 'precipitation' ? [] : extra;
   // Radar is observed and an avalanche bulletin is issued: their own lines only (no model, run or bands of the app's).
-  const footLines = active.frames || active.id === 'avalanche' ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
+  const footLines = active.frames || active.id === 'avalanche' || active.id === airQuality.id ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
   for (const text of footLines) {
     const l = document.createElement('span');
     l.textContent = text;
@@ -1311,9 +1480,13 @@ function renderDetails() {
   btn.setAttribute('aria-haspopup', 'dialog');
   btn.addEventListener('click', () => openLayerSettings(btn));
   foot.append(lines, btn);
-  const full = document.createElement('div');
-  full.className = 'card card-later';
-  full.textContent = 'Full forecast for this point · coming later · also opens with press-and-hold on the map';
+  // The forecast summary window: every chosen layer at the pin (also press-and-hold on the map).
+  const full = document.createElement('button');
+  full.className = 'secondary-button summary-open';
+  full.id = 'summary-open';
+  full.setAttribute('aria-haspopup', 'dialog');
+  full.innerHTML = `${icons['pin-small']}<span>Forecast summary for this point</span>`;
+  full.addEventListener('click', () => summaryWin.openFrom(full));
   nodes.push(foot, full);
   box.replaceChildren(...nodes);
   document.body.dataset.details = 'ready';
@@ -1331,6 +1504,7 @@ function setLayerSetting(layer: LayerSlots, key: string, v: string | boolean) {
   renderDetails();
   void updateFills();
   if (layer.id === 'avalanche') { syncAtesThumb(); renderLegend(); }
+  if (layer.id === airQuality.id) { air.changed(); renderLegend(); }
 }
 
 /** The active layer's settings panel (v8 17-PrecipSettings, 22-TempSettings), remembered between sessions. */
@@ -1410,6 +1584,7 @@ function setActive(l: LayerSlots) {
 layerBtn.addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('#run-age') && active.frames && radarError) { void loadRadarFrames(true); return; }
   if ((e.target as HTMLElement).closest('#run-age') && active.id === 'avalanche' && avy.needsRetry()) { avy.retry(); return; }
+  if ((e.target as HTMLElement).closest('#run-age') && active.id === airQuality.id && air.needsRetry()) { air.retry(); return; }
   if ((e.target as HTMLElement).closest('#run-age') && document.body.dataset.run === 'error') { void loadRun(); return; }
   if (isOpenFrom(layerBtn)) { closePanel(); return; }
   openPanel({
@@ -1451,6 +1626,18 @@ modelBtn.addEventListener('click', () => {
     const line = at ? avy.ageLine(at.lng, at.lat).text : '';
     const rows = AVALANCHE_SOURCES.map((src, i) => ({ ...src, current: i === 0, age: line.startsWith(`${src.label} · issued `) ? line.slice(src.label.length + 10).replace(' · expired', ', expired') : 'as issued' }));
     openPanel({ origin: modelBtn, icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(rows, () => closePanel()) });
+    return;
+  }
+  if (layer.id === airQuality.id) {
+    openPanel({ origin: modelBtn, icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(air.sourceRows(), (id) => {
+      closePanel();
+      prefs.layerModels[layer.id] = id;
+      savePrefs(prefs);
+      air.changed();
+      showLayer();
+      renderRunAge();
+      void updateFills();
+    }) });
     return;
   }
   const choice = modelChoice(layer);
@@ -1627,6 +1814,7 @@ function recolourForTheme(t: Theme) {
     if (map.getLayer('freezing-line-label')) { map.setPaintProperty('freezing-line-label', 'text-color', c.label); map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
     if (map.getLayer('saved-areas')) map.setPaintProperty('saved-areas', 'line-color', c.saved);
     avy.recolour(t);
+    air.recolour(t);
   }
   // Canvases read the CSS variables when drawn.
   scrubber.refresh();
@@ -1669,7 +1857,8 @@ map.on('load', () => {
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
   avy.addLayers(map.getLayer('hillshade') ? 'hillshade' : firstLabel, firstLabel);
-  if (active.id === 'avalanche') void updateFills();
+  air.addLayers(map.getLayer('hillshade') ? 'hillshade' : firstLabel, firstLabel);
+  if (active.id === 'avalanche' || active.id === airQuality.id) void updateFills();
   threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
   radarImages.setBefore(firstLabel);
   mapReady = true;
