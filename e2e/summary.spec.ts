@@ -138,8 +138,8 @@ test('opens from the foot of the details too; light theme, imperial units', asyn
   await ready(page);
   await page.click('#sheet-handle');
   await expect(page.locator('body')).toHaveAttribute('data-details', 'ready');
-  await page.locator('#summary-open').scrollIntoViewIfNeeded();
-  await page.click('#summary-open');
+  // The details redraw as data comes in; the click finds the button as it is then (and scrolls to it).
+  await page.locator('#summary-open').click();
   await expect(win(page)).toBeVisible();
   await stripsReady(page);
   await expect(strips(page).nth(1).locator('.strip-value')).toHaveText(/°F/);

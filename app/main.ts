@@ -1299,7 +1299,8 @@ const summaryWin = setupSummaryWindow({
     if (!summarySeries) return summaryState === 'busy' ? 'The forecast service is busy · trying again shortly' : 'Loading the pin’s forecast…';
     const values = summarySeries.values;
     if (l.pinNeeds.some((v) => values[v]?.some(Number.isFinite))) return '';
-    return usingSaved ? `${l.title} is not saved for this area` : `No ${l.title.toLowerCase()} data at the pin`;
+    // Online, a part that has not come is still being asked for (the service busy: the map files, read hour by hour, are slow).
+    return usingSaved ? `${l.title} is not saved for this area` : `${l.title} still coming · the forecast service is slow or busy`;
   },
   place: () => $('place-text').textContent ?? '',
   footer: () => {
