@@ -1,0 +1,27 @@
+{
+
+  "type": "FeatureCollection",
+  "layer": "RAQDPS.SFC_PM2.5",
+  "features": [
+    
+    {
+      "type": "Feature",
+      "id": "RAQDPS.SFC_PM2.5(-120.75577,49.07162)",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -120.7558,49.0716
+        ]
+      },
+      "properties": {
+        "value": 2.418e-09,
+        "class": "1 - 10 [ug/m3]",
+        "title_en": "Concentration: surface PM2.5 [kg/m³]",
+        "title_fr": "Concentration : surface PM2.5 [kg/m³]",
+        "time": "2026-11-18T12:00:00Z",
+        "dim_reference_time": "2026-11-18T00:00:00Z"
+      }
+    }
+  ]
+
+}
