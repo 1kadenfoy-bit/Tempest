@@ -42,7 +42,7 @@ import { SURFACE_VARIABLES, type NodeData } from './data/profile-source';
 import { windowRange } from '../core/time/window';
 import { layerMenuBody } from './shell/layer-menu';
 import { fetchObserved } from '../adapters/eccc-geomet/hrdpa';
-import { modelInfoBody, modelMenuBody } from './shell/model-menu';
+import { modelInfoBody, modelMenuBody, sourceMenuBody } from './shell/model-menu';
 import { fetchGridField } from '../adapters/openmeteo-maps/grid-field';
 import { gridRequest } from '../core/geo/grid-request';
 import type { GridField } from '../core/vocabulary';
@@ -399,6 +399,8 @@ const profiles = new ProfileSource(() => savedParts, () => usingSaved);
 
 /** A second legend line some layers add (the avalanche layer's terrain ratings); set once the layer's map wiring exists. */
 const atesThumb = document.createElement('button');
+/** The avalanche layer's sources, listed in its source menu. Only Avalanche Canada so far. */
+const AVALANCHE_SOURCES = [{ id: 'avalanche-canada', label: 'Avalanche Canada', short: 'AvCan', detail: 'Forecasts · reports · terrain' }] as const;
 let extraLegend: (doc: Document) => HTMLElement | null = () => null;
 function renderLegend() {
   const more = active.id === 'avalanche' ? extraLegend(document) : null;
@@ -420,6 +422,8 @@ function showLayer() {
   });
   // An observed layer has no model to choose.
   $('model-pill').hidden = Boolean(active.frames);
+  // An issued layer names its source instead of a model.
+  if (active.id === 'avalanche') $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
   document.body.dataset.layer = active.id;
 }
 showLayer();
@@ -434,11 +438,14 @@ function renderRunAge() {
       : radarError ? 'Radar not reachable · tap to retry' : 'Finding the radar frames…';
     el.dataset.stale = String(!newest || radarOffline() || Date.now() - newest.getTime() > 30 * 60_000);
     return;
-  } else if (active.id === 'avalanche' && pin?.get()) {
+  } else if (active.id === 'avalanche') {
+    $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
+    if (!pin?.get()) return;
     // Avalanche: the pin's bulletin and its age, not a model run.
     const pinNow = pin!.get()!;
     const a = avy.ageLine(pinNow.lng, pinNow.lat);
-    $('run-age').textContent = a.text;
+    // The source button names Avalanche Canada, so the line keeps the age.
+    $('run-age').textContent = a.text.replace(`${AVALANCHE_SOURCES[0]!.label} · issued `, 'Issued ');
     $('run-age').dataset.stale = String(a.stale);
     return;
   }
@@ -1438,6 +1445,14 @@ function openModelInfo(spec: (typeof REGISTRY)[ModelId]) {
 modelBtn.addEventListener('click', () => {
   if (isOpenFrom(modelBtn)) { closePanel(); return; }
   const layer = active;
+  if (layer.id === 'avalanche') {
+    // Issued data: the source menu, with Avalanche Canada as the one source.
+    const at = pin?.get();
+    const line = at ? avy.ageLine(at.lng, at.lat).text : '';
+    const rows = AVALANCHE_SOURCES.map((src, i) => ({ ...src, current: i === 0, age: line.startsWith(`${src.label} · issued `) ? line.slice(src.label.length + 10).replace(' · expired', ', expired') : 'as issued' }));
+    openPanel({ origin: modelBtn, icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(rows, () => closePanel()) });
+    return;
+  }
   const choice = modelChoice(layer);
   const rows = modelsFor(layer).map((m) => ({ spec: REGISTRY[m], age: modelAge(m), current: m === choice }));
   openPanel({

@@ -69,7 +69,7 @@ button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .layer-chevron { flex: 0 0 auto; display: flex; color: var(--ink); }
 .model-chevron { display: flex; margin-left: 2px; }
 .layer-name { font: var(--type-panel-title); line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.run-age { font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.run-age { max-width: 100%; font: var(--type-caption); line-height: 16px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .run-age[data-stale='true'] { color: var(--warning); }
 .model-pill {
   flex: 0 0 auto; height: var(--touch-min); padding: 0 12px;
@@ -524,6 +524,9 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   display: flex; align-items: center; justify-content: center; color: var(--warning);
 }
 .alert-badge[hidden] { display: none; }
+.alert-badge[data-count='0'] { color: var(--ink-2); }
+.alert-count:empty { display: none; }
+.alert-none { font: var(--type-body); color: var(--ink-2); padding: 4px 0; }
 .alert-icon { display: flex; }
 .alert-count {
   position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;

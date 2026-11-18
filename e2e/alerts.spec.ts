@@ -72,10 +72,19 @@ test('alerts at the pin: badge with the count, panel with one row per alert as i
   await page.screenshot({ path: 'test-results/screens/m9-alerts.png' });
 });
 
-test('no alerts at the pin: no badge', async ({ page, context }) => {
+test('no alerts at the pin: a plain badge with no count, and a panel that says so', async ({ page, context }) => {
   const asked = await stub(context, fixture('north-shore-2026-11-17.json'));
   await page.goto('/?insets=47,34');
   await expect(page.locator('body')).toHaveAttribute('data-alerts', '0', { timeout: 45_000 });
   await expect.poll(() => asked.length).toBeGreaterThan(0);
-  await expect(page.locator('#alert-badge')).toBeHidden();
+  const badge = page.locator('#alert-badge');
+  await expect(badge).toBeVisible();
+  await expect(badge).toHaveAttribute('data-count', '0');
+  await expect(badge.locator('.alert-count')).toBeHidden();
+  await badge.click();
+  const panel = page.getByRole('dialog', { name: 'Weather alerts' });
+  await expect(panel.locator('.alert-none')).toHaveText('No alerts in force at the pin.');
+  await expect(panel.locator('.alert-source')).toContainText('Environment and Climate Change Canada');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: 'test-results/screens/m9-alerts-none.png' });
 });

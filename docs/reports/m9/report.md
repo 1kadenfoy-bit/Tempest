@@ -16,7 +16,7 @@ I checked each one's work, combined them, fixed where they met, and reran the te
 
 ### Weather alerts
 
-- **Where:** a round warning button at the left end of the top bar, with a count, where v8 01 puts it. It appears only when Environment Canada has an alert in force at the pin.
+- **Where:** a round warning button at the left end of the top bar, where v8 01 puts it. It is always there (changed Nov 18 at Kaden's request): plain grey with no count when nothing is in force, the warning colour with a count when alerts are. With none, its panel says "No alerts in force at the pin." with the source and fetch time.
 - **Tapping it** opens one row per alert, exactly as Environment Canada issued it:
   - its title;
   - its colour and type ("Yellow warning");

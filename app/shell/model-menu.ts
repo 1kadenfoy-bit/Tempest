@@ -104,3 +104,50 @@ export function modelInfoBody(spec: ModelSpec, facts: ModelFacts): HTMLElement {
   wrap.append(note);
   return wrap;
 }
+
+/** A data source for a layer that has no model to choose (the avalanche layer). */
+export interface SourceRow {
+  id: string;
+  label: string;
+  /** What it gives, e.g. "Forecasts · field reports · terrain ratings". */
+  detail: string;
+  /** The bulletin's age or state, shown at the right. */
+  age: string;
+  current: boolean;
+}
+
+/**
+ * The source menu: the model menu's rows for a layer whose data is issued,
+ * not modelled. One group; more sources join the list as they are added.
+ */
+export function sourceMenuBody(rows: SourceRow[], onPick: (id: string) => void): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'panel-groups';
+  const g = document.createElement('div');
+  g.className = 'group';
+  const t = document.createElement('span');
+  t.className = 'group-title';
+  t.textContent = 'SOURCES';
+  g.append(t);
+  for (const r of rows) {
+    const line = document.createElement('div');
+    line.className = 'model-line';
+    const row = document.createElement('button');
+    row.className = 'model-row';
+    row.dataset.source = r.id;
+    row.setAttribute('aria-pressed', String(r.current));
+    row.innerHTML = `<span class="model-names"><span class="model-name"></span><span class="model-grid"></span></span><span class="model-age"></span><span class="model-check">${icons.check}</span>`;
+    row.querySelector('.model-name')!.textContent = r.label;
+    row.querySelector('.model-grid')!.textContent = r.detail;
+    row.querySelector('.model-age')!.textContent = r.age;
+    row.addEventListener('click', () => onPick(r.id));
+    line.append(row);
+    g.append(line);
+  }
+  wrap.append(g);
+  const note = document.createElement('p');
+  note.className = 'panel-note';
+  note.textContent = 'Shown exactly as each source issues it. More sources can be added here later.';
+  wrap.append(note);
+  return wrap;
+}
