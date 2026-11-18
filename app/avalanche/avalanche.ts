@@ -457,5 +457,5 @@ export function setupAvalanche(map: MapLibreMap, opts: AvalancheOptions) {
   /** Ask again now (a tap on the top bar's line after a failure). */
   const retry = () => { reports = null; void loadForecasts(true); void loadReports(); ates.retry(); };
   const needsRetry = () => !avalancheData() || showingKept;
-  return { addLayers, update, tapped, recolour, ageLine, retry, needsRetry, atesLegend: (doc: Document) => (atesOn() ? ates.legend(doc) : null), refresh: () => { void loadForecasts(); void loadReports(); paint(); }, close: closePanel };
+  return { addLayers, update, tapped, recolour, ageLine, retry, needsRetry, /** The bulletins only (the forecast summary window's strip), without showing the layer. */ load: () => void loadForecasts(), atesLegend: (doc: Document) => (atesOn() ? ates.legend(doc) : null), refresh: () => { void loadForecasts(); void loadReports(); paint(); }, close: closePanel };
 }

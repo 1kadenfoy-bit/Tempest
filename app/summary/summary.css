@@ -1,0 +1,25 @@
+/* The forecast summary window. No v8 design: the grow panel with the sheet's
+   own parts (time row, segmented control, chart frame, window summary, footer
+   lines). Tokens only. */
+.summary-anchor { position: fixed; width: 1px; height: 1px; pointer-events: none; }
+.summary { display: flex; flex-direction: column; gap: 10px; }
+.summary-note[hidden], .summary-empty[hidden], .summary-axis[hidden] { display: none; }
+.summary-time-row { flex: 0 0 auto; }
+.summary-strips { display: flex; flex-direction: column; }
+.summary-strip { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; border-top: 1px solid var(--stroke); }
+.summary-strip:last-child { padding-bottom: 2px; }
+.strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-height: 18px; }
+.strip-head .card-title { flex: 0 0 auto; }
+.strip-readout { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: var(--type-secondary); }
+.strip-value { font-weight: 600; color: var(--ink); }
+.strip-note { margin-left: 6px; color: var(--ink-2); }
+.strip-note:empty { display: none; }
+.strip-summary:empty { display: none; }
+.summary-chart { flex: 0 0 auto; }
+.summary-footer span[data-stale='true'] { color: var(--warning); }
+
+/* A hold on the map is not a text selection or the phone's own menu. */
+.maplibregl-canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* Its entry at the foot of the details (where the dashed "coming later" card was). */
+.summary-open { justify-content: center; }
