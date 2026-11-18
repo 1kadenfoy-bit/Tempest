@@ -264,3 +264,18 @@ export function formatAgo(t: Date, now: Date): string {
   const h = Math.round(min / 60);
   return h >= 48 ? `${Math.round(h / 24)} d ago` : `${h} h ago`;
 }
+
+/**
+ * A concentration of fine particles: "38 µg/m³", "4.2 µg/m³" (one decimal
+ * under 10). The same in both unit systems: µg/m³ is what every source and
+ * health guide uses.
+ */
+export function formatConcentration(ug: number, unit = true): string {
+  const v = ug < 10 ? upToOne.format(Math.max(0, ug)) : intl.format(Math.round(ug));
+  return unit ? `${v} µg/m³` : v;
+}
+
+/** A fire's size as issued, in hectares: "500 ha", "3.5 ha", "0.009 ha". */
+export function formatHectares(ha: number): string {
+  return `${ha >= 1 ? upToOne.format(ha) : upToThree.format(ha)} ha`;
+}
