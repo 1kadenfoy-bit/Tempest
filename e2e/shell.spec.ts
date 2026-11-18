@@ -303,8 +303,13 @@ test.describe('shell pixels (map hidden)', () => {
     // The pulled-up sheet scrolls, and text in a scrolling layer is smoothed a
     // little differently on each machine (about 1.4% of pixels, all along text
     // edges, seen in CI). A layout change moves far more than 3%.
-    // The detail cards hold live weather: compare their place, not their content.
+    // The detail cards hold live weather, and their heights follow it (a dry
+    // day's cards are shorter), so no fixed picture of them holds from one day
+    // to the next. The picture covers the shell down to where the cards begin;
+    // the cards' order and content are checked by details.spec.ts.
     const l = live(page);
-    await expect(page).toHaveScreenshot('shell-up.png', { ...l, mask: [...l.mask, page.locator('.details > :not(.subject)')], maxDiffPixelRatio: 0.03 });
+    const firstCard = await page.locator('.details > :not(.subject)').first().boundingBox();
+    const clip = { x: 0, y: 0, width: 390, height: Math.round(firstCard?.y ?? 844) };
+    await expect(page).toHaveScreenshot('shell-up.png', { ...l, clip, maxDiffPixelRatio: 0.03 });
   });
 });

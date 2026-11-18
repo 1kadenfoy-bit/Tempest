@@ -76,3 +76,17 @@
 
 /* The model choice does not apply to an issued bulletin. */
 body[data-layer='avalanche'] #model-pill { display: none; }
+
+/* Terrain complexity (ATES): the second legend line, the quick switch and the panels.
+   Colour only on the swatches (the publisher's class colours). */
+.legend-row:has(.legend-ates) { height: auto; flex-direction: column; align-items: stretch; gap: 4px; }
+.legend-ates { justify-content: flex-start; gap: 10px; min-height: 20px; }
+.legend-ates .legend-item { gap: 4px; }
+.ates-status { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.ates-swatch { flex: 0 0 auto; width: 12px; height: 12px; border-radius: var(--radius-chip); box-shadow: 0 0 0 1px var(--stroke-strong); }
+#ates-toggle[aria-pressed='true'] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.ates-counts { display: flex; flex-direction: column; gap: 6px; font: var(--type-secondary); color: var(--ink); }
+.ates-count { display: flex; align-items: center; gap: 8px; }
+.ates-rating { display: flex; align-items: center; gap: 10px; font: var(--type-body); font-weight: 600; color: var(--ink); }
+.ates-rating .ates-swatch { width: 20px; height: 20px; }
+.ates-zoom { align-self: flex-start; }
