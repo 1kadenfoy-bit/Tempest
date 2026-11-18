@@ -84,6 +84,11 @@ import { airQuality } from '../layers/air-quality';
 import { setupAir } from './air/air';
 
 const prefs = loadPrefs();
+// The forecast summary window is set up near the end of this file; the pin and
+// data code above can run before that (a saved pin with no signal), so they
+// refresh it through this guard.
+let summaryReady = false;
+const refreshSummary = () => { if (summaryReady) summaryWin.refresh(); };
 // App settings: units and theme apply before anything draws; the hooks redraw
 // what CSS cannot reach (defined further down, called only on a change).
 const appSettings = startAppSettings(prefs, {
@@ -171,7 +176,7 @@ const air = setupAir(map, {
   sourceId: () => prefs.layerModels[airQuality.id] ?? 'eccc',
   pin: () => { const p = pin?.get(); return p ? { lat: p.lat, lon: p.lng } : null; },
   onSteps: () => { if (active.id === airQuality.id) rebuildTimeline(); },
-  onData: () => { if (active.id === airQuality.id) { renderReadout(); renderRunAge(); renderLegend(); scrubber.refresh(); } summaryWin?.refresh(); },
+  onData: () => { if (active.id === airQuality.id) { renderReadout(); renderRunAge(); renderLegend(); scrubber.refresh(); } refreshSummary(); },
 });
 
 // The condition layers that work, in menu order. One is shown at a time.
@@ -182,8 +187,8 @@ const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche
 /** Why a layer cannot be saved for offline use, when its source does not allow it. */
 const onlineOnly = (l: LayerSlots): string | undefined =>
   l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving'
-  : l.id === 'avalanche' ? 'Kept on the phone automatically: the latest bulletins and reports'
-  : l.id === airQuality.id ? 'Its sources ask not to be copied in bulk; the latest fires are kept on the phone automatically'
+  : l.id === 'avalanche' ? 'The latest bulletins are kept automatically'
+  : l.id === airQuality.id ? 'Not to be copied in bulk; the latest fires are kept automatically'
   : undefined;
 
 // ---- Radar frames: the times ECCC holds (last 3 h, every 6 min), and what the cursor's frame shows at the pin.
@@ -386,7 +391,7 @@ async function loadPinGround() {
   pinGround.values = Object.fromEntries(got.flatMap(([m, g]) => (g === null ? [] : [[m, g] as const])));
   renderReadout();
   scrubber.refresh();
-  summaryWin.refresh();
+  refreshSummary();
 }
 
 /** Fetch the past two days' observed 6-hour totals at the pin (once per place and 6 hours). */
@@ -403,7 +408,7 @@ async function loadObserved() {
     observed = got.length ? got : undefined;
     scrubber.refresh();
     scheduleDetails();
-    summaryWin.refresh();
+    refreshSummary();
   } catch (err) {
     observedFor = '';
     console.warn('no observed precipitation', err);
@@ -547,7 +552,7 @@ let mapReady = false;
 const avy = setupAvalanche(map, {
   theme: () => appSettings.theme(),
   settings: () => settingsFor(avalanche),
-  onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); summaryWin.refresh(); },
+  onData: () => { renderReadout(); renderRunAge(); scrubber.refresh(); refreshSummary(); },
   onLegend: () => { if (active.id === 'avalanche') renderLegend(); },
 });
 extraLegend = (doc) => avy.atesLegend(doc);
@@ -1213,7 +1218,7 @@ const renderPlace = (p: PinState) => {
   // Temperature is read at the pin's ground height: refresh once it is known.
   renderReadout();
   scrubber.refresh();
-  summaryWin.refresh();
+  refreshSummary();
   // A new place: fetch its series once the pin settles.
   const where = `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
   if (where !== lastPlace) {
@@ -1243,7 +1248,7 @@ let summaryFor = '';
 let summarySeq = 0;
 const summaryRetry = { timer: 0, tries: 0 };
 const summaryShown = () => includedLayers(LAYERS, prefs.summaryLayers);
-const summaryWants = (l: LayerSlots) => summaryWin.isOpen() && summaryShown().includes(l);
+const summaryWants = (l: LayerSlots) => summaryReady && summaryWin.isOpen() && summaryShown().includes(l);
 
 /**
  * The pin's series for every strip at once: one request a model carrying what
@@ -1252,11 +1257,11 @@ const summaryWants = (l: LayerSlots) => summaryWin.isOpen() && summaryShown().in
  * from memory or the phone's cache, not the network.
  */
 async function loadSummarySeries() {
-  if (!summaryWin.isOpen()) return;
+  if (!summaryReady || !summaryWin.isOpen()) return;
   const shown = summaryShown();
   if (shown.includes(avalanche)) avy.load();
   if (shown.includes(airQuality) && active.id !== airQuality.id) void air.forSummary();
-  if (!needsSeries(shown)) { summaryWin.refresh(); return; }
+  if (!needsSeries(shown)) { refreshSummary(); return; }
   const p = pin.get();
   if (!run || !p || !timeline.segments.length) return; // loadRun asks again once the run is in
   void loadObserved();
@@ -1267,8 +1272,8 @@ async function loadSummarySeries() {
   const mine = ++summarySeq;
   clearTimeout(summaryRetry.timer);
   const cached = store.get(key);
-  if (cached) { summarySeries = cached; summaryFor = key; summaryState = 'ready'; summaryWin.refresh(); return; }
-  if (summaryFor !== key) { summarySeries = null; summaryFor = key; summaryState = 'loading'; summaryWin.refresh(); }
+  if (cached) { summarySeries = cached; summaryFor = key; summaryState = 'ready'; refreshSummary(); return; }
+  if (summaryFor !== key) { summarySeries = null; summaryFor = key; summaryState = 'loading'; refreshSummary(); }
   const segs = timeline.segments;
   const parts: (PointSeries | null)[] = segs.map(() => null);
   const update = (part: PointSeries) => {
@@ -1276,7 +1281,7 @@ async function loadSummarySeries() {
     parts[0] = part;
     summarySeries = stitch(parts);
     summaryState = 'ready';
-    summaryWin.refresh();
+    refreshSummary();
   };
   try {
     parts[0] = await modelSeries(union, segs[0]!.model as ModelId, true, p.lat, p.lng, update, update);
@@ -1284,14 +1289,14 @@ async function loadSummarySeries() {
     if (mine !== summarySeq) return;
     console.warn('no series for the forecast summary', err);
     summaryState = usingSaved ? 'outside' : 'busy';
-    summaryWin.refresh();
+    refreshSummary();
     if (!usingSaved) retrySummary();
     return;
   }
   if (mine !== summarySeq) return;
   summarySeries = stitch(parts);
   summaryState = 'ready';
-  summaryWin.refresh();
+  refreshSummary();
   await Promise.all(segs.slice(1).map(async (seg, k) => {
     parts[k + 1] = await modelSeries(union, seg.model as ModelId, false, p.lat, p.lng).catch((err) => { console.warn(`no ${seg.model} series for the summary`, err); return null; });
   }));
@@ -1300,7 +1305,7 @@ async function loadSummarySeries() {
   // Kept only when whole; a stretch that did not come is asked for again while the window is open.
   if (parts.every(Boolean)) { if (summarySeries) store.put(key, summarySeries); summaryRetry.tries = 0; }
   else if (!usingSaved) retrySummary();
-  summaryWin.refresh();
+  refreshSummary();
 }
 function retrySummary() {
   clearTimeout(summaryRetry.timer);
@@ -1348,6 +1353,7 @@ const summaryWin = setupSummaryWindow({
   note: () => (active.frames ? `Radar is on the map, so time moves only through its last ${active.frames.windowHours} hours. Choose another layer to move through the forecast.` : null),
   load: () => void loadSummarySeries(),
 });
+summaryReady = true;
 // Press-and-hold (or a right click): the pin moves there, as a tap moves it, and the window grows from it.
 const longPress = setupLongPress(map, (pt) => {
   const at = map.unproject([pt.x, pt.y]);
