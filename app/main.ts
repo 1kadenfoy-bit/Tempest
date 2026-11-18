@@ -77,6 +77,8 @@ import { radarLayer, shownOf, type RadarShown } from '../layers/radar';
 import type { RadarAtPin, RadarPoint } from '../layers/contract';
 import { ImageFrames } from './map/image-frames';
 import { setupStations } from './stations/stations';
+import { airQuality } from '../layers/air-quality';
+import { setupAir } from './air/air';
 
 const prefs = loadPrefs();
 // App settings: units and theme apply before anything draws; the hooks redraw
@@ -159,16 +161,26 @@ const applyTerrainPrefs = () => {
 const cursor = new TimeCursor();
 const scrubber = setupScrubber(cursor, prefs.windowHours, (h) => { prefs.windowHours = h; savePrefs(prefs); scheduleDetails(); });
 setInterval(() => { if (document.visibilityState === 'visible') scrubber.refresh(); }, 30_000);
+// The air quality layer's fill, pin values, AQHI and fires (online only; fires kept on the phone).
+const air = setupAir(map, {
+  theme: () => appSettings.theme(),
+  settings: () => settingsFor(airQuality),
+  sourceId: () => prefs.layerModels[airQuality.id] ?? 'eccc',
+  pin: () => { const p = pin?.get(); return p ? { lat: p.lat, lon: p.lng } : null; },
+  onSteps: () => { if (active.id === airQuality.id) rebuildTimeline(); },
+  onData: () => { if (active.id === airQuality.id) { renderReadout(); renderRunAge(); scrubber.refresh(); } },
+});
 
 // The condition layers that work, in menu order. One is shown at a time.
 // Radar (no v8 design yet): ECCC's pictures in ECCC's colours; the layer gets its legend from here, never from the source.
 const radarShown = (): RadarShown => shownOf(settingsFor(radar));
 const radar: LayerSlots = radarLayer((s) => PRODUCTS[s].legend, () => radarShown());
-const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche];
+const LAYERS: LayerSlots[] = [precipitation, temperature, wind, radar, avalanche, airQuality];
 /** Why a layer cannot be saved for offline use, when its source does not allow it. */
 const onlineOnly = (l: LayerSlots): string | undefined =>
   l.id === radar.id && !radarSource.offline ? 'Its source does not allow saving'
   : l.id === 'avalanche' ? 'Kept on the phone automatically: the latest bulletins and reports'
+  : l.id === airQuality.id ? 'Its sources ask not to be copied in bulk; the latest fires are kept on the phone automatically'
   : undefined;
 
 // ---- Radar frames: the times ECCC holds (last 3 h, every 6 min), and what the cursor's frame shows at the pin.
@@ -340,6 +352,8 @@ function rebuildTimeline() {
   pastSteps = firstStep && !usingSaved ? Array.from({ length: PAST_HOURS }, (_, k) => new Date(firstStep.getTime() - (PAST_HOURS - k) * 3_600_000)) : [];
   // An observed layer (radar): the one cursor steps through its frames instead.
   if (active.frames) { setFrameSteps(); return; }
+  // Air quality: its source's own hours.
+  if (active.id === airQuality.id) { cursor.setSteps(air.steps(), cursor.time ?? new Date()); scrubber.setTimeline({ seams: [] }); return; }
   cursor.setSteps([...pastSteps, ...timeline.steps], cursor.time ?? new Date());
   scrubber.setTimeline({
     seams: timeline.seams.map((x) => ({ time: x.time, label: REGISTRY[x.to as ModelId]?.label ?? x.to })),
@@ -424,6 +438,7 @@ function showLayer() {
   $('model-pill').hidden = Boolean(active.frames);
   // An issued layer names its source instead of a model.
   if (active.id === 'avalanche') $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
+  if (active.id === airQuality.id) $('model-pill-label').textContent = air.short();
   document.body.dataset.layer = active.id;
 }
 showLayer();
@@ -449,6 +464,13 @@ function renderRunAge() {
     $('run-age').dataset.stale = String(a.stale);
     return;
   }
+  if (active.id === airQuality.id) {
+    const a = air.ageLine();
+    $('model-pill-label').textContent = air.short();
+    $('run-age').textContent = a.text;
+    $('run-age').dataset.stale = String(a.stale);
+    return;
+  }
   // The run of the model under the cursor; a missing model is named (visible fallback).
   const seg = cursor.time ? segmentAt(timeline, mapTime(cursor.time)) : timeline.segments[0];
   const r = seg ? runs[seg.model as ModelId] ?? run : run;
@@ -466,6 +488,7 @@ function renderRunAge() {
 function renderReadout() {
   // The avalanche layer needs no model run: until the time line is built, it reads now.
   setAvalancheCursor(cursor.time ?? new Date());
+  air.setCursor(cursor.time ?? null);
   const i = seriesIndex();
   pin.setReadout(active.readout(pinData(), i, settingsFor(active)));
   scheduleDetails();
@@ -768,6 +791,7 @@ function setLine(grid: NodeData | null, kind: LineKind | null) {
  */
 async function updateFills(moving = false) {
   if (!mapReady) return;
+  air.update(active.id === airQuality.id, cursor.time ?? null, moving);
   if (active.frames) {
     // Radar alone fills the map: the forecast fills step aside (and any still on their way are dropped).
     ++fillSeq;
@@ -786,7 +810,7 @@ async function updateFills(moving = false) {
   radarImages.setCoverage(null);
   // Avalanche: issued bulletins, not model grids; the weather fills step aside.
   avy.update(active.id === 'avalanche', cursor.time ?? new Date());
-  if (active.id === 'avalanche') {
+  if (active.id === 'avalanche' || active.id === airQuality.id) {
     flow.setShown(false);
     windLayer.visible = false;
     windLayer.setProfiles(null);
@@ -1186,6 +1210,7 @@ const renderPlace = (p: PinState) => {
   if (where !== lastPlace) {
     lastPlace = where;
     alertsAt(p.lat, p.lng);
+    air.pinMoved();
     scheduleRadarPin();
     clearTimeout(seriesTimer);
     seriesTimer = window.setTimeout(() => void loadSeries(), 250);
@@ -1237,6 +1262,8 @@ $('place-line').addEventListener('click', () => {
 map.on('click', (e) => {
   // A tap on a weather station opens it; the pin stays.
   if (stations.hit(e.originalEvent.target)) return;
+  // Air quality: a tap on a fire opens it; the pin stays.
+  if (active.id === airQuality.id && air.tapped(e.point)) return;
   const name = nameNear(map, e.point);
   pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
   rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
@@ -1298,7 +1325,7 @@ function renderDetails() {
   const own = active.id === 'precipitation' ? extra : [];
   const after = active.id === 'precipitation' ? [] : extra;
   // Radar is observed and an avalanche bulletin is issued: their own lines only (no model, run or bands of the app's).
-  const footLines = active.frames || active.id === 'avalanche' ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
+  const footLines = active.frames || active.id === 'avalanche' || active.id === airQuality.id ? extra : [...own, `${model} · ${runText}${elev}`, ...after, `Elevation bands approximate (${bands.region})`];
   for (const text of footLines) {
     const l = document.createElement('span');
     l.textContent = text;
@@ -1331,6 +1358,7 @@ function setLayerSetting(layer: LayerSlots, key: string, v: string | boolean) {
   renderDetails();
   void updateFills();
   if (layer.id === 'avalanche') { syncAtesThumb(); renderLegend(); }
+  if (layer.id === airQuality.id) { air.changed(); renderLegend(); }
 }
 
 /** The active layer's settings panel (v8 17-PrecipSettings, 22-TempSettings), remembered between sessions. */
@@ -1410,6 +1438,7 @@ function setActive(l: LayerSlots) {
 layerBtn.addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('#run-age') && active.frames && radarError) { void loadRadarFrames(true); return; }
   if ((e.target as HTMLElement).closest('#run-age') && active.id === 'avalanche' && avy.needsRetry()) { avy.retry(); return; }
+  if ((e.target as HTMLElement).closest('#run-age') && active.id === airQuality.id && air.needsRetry()) { air.retry(); return; }
   if ((e.target as HTMLElement).closest('#run-age') && document.body.dataset.run === 'error') { void loadRun(); return; }
   if (isOpenFrom(layerBtn)) { closePanel(); return; }
   openPanel({
@@ -1451,6 +1480,18 @@ modelBtn.addEventListener('click', () => {
     const line = at ? avy.ageLine(at.lng, at.lat).text : '';
     const rows = AVALANCHE_SOURCES.map((src, i) => ({ ...src, current: i === 0, age: line.startsWith(`${src.label} · issued `) ? line.slice(src.label.length + 10).replace(' · expired', ', expired') : 'as issued' }));
     openPanel({ origin: modelBtn, icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(rows, () => closePanel()) });
+    return;
+  }
+  if (layer.id === airQuality.id) {
+    openPanel({ origin: modelBtn, icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(air.sourceRows(), (id) => {
+      closePanel();
+      prefs.layerModels[layer.id] = id;
+      savePrefs(prefs);
+      air.changed();
+      showLayer();
+      renderRunAge();
+      void updateFills();
+    }) });
     return;
   }
   const choice = modelChoice(layer);
@@ -1627,6 +1668,7 @@ function recolourForTheme(t: Theme) {
     if (map.getLayer('freezing-line-label')) { map.setPaintProperty('freezing-line-label', 'text-color', c.label); map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
     if (map.getLayer('saved-areas')) map.setPaintProperty('saved-areas', 'line-color', c.saved);
     avy.recolour(t);
+    air.recolour(t);
   }
   // Canvases read the CSS variables when drawn.
   scrubber.refresh();
@@ -1669,7 +1711,8 @@ map.on('load', () => {
   map.addLayer(windLayer, map.getLayer('hillshade') ? 'hillshade' : firstLabel);
   addFreezingLineLayers(firstLabel);
   avy.addLayers(map.getLayer('hillshade') ? 'hillshade' : firstLabel, firstLabel);
-  if (active.id === 'avalanche') void updateFills();
+  air.addLayers(map.getLayer('hillshade') ? 'hillshade' : firstLabel, firstLabel);
+  if (active.id === 'avalanche' || active.id === airQuality.id) void updateFills();
   threeD.apply({ terrain: prefs.terrain3d, buildings: buildingsOk && prefs.buildings3d }, false);
   radarImages.setBefore(firstLabel);
   mapReady = true;

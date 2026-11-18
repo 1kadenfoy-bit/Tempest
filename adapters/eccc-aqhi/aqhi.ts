@@ -40,7 +40,7 @@ export function observationsUrl(lat: number, lon: number, deg = 1.5): string {
 }
 
 export function forecastsUrl(locationId: string): string {
-  return `${source.baseUrl}/collections/aqhi-forecasts-realtime/items?f=json&location_id=${encodeURIComponent(locationId)}&sortby=-publication_datetime,forecast_datetime&limit=60`;
+  return `${source.baseUrl}/collections/aqhi-forecasts-realtime/items?f=json&location_id=${encodeURIComponent(locationId)}&sortby=-publication_datetime,forecast_datetime&limit=80`;
 }
 
 interface Feature { geometry?: { coordinates?: [number, number] } | null; properties?: Record<string, unknown> }
