@@ -16,12 +16,13 @@ Ratings, words and colours are Avalanche Canada's, shown exactly as issued. The 
    - "Read the full forecast on avalanche.ca".
 3. **Scrub the time.** The map recolours for each issued day. Past the third day there is no colour, and the readout says "No forecast".
 4. **Tap a report pin.** You see its title, date, author, the observations as written, and photo thumbnails; tap a photo to see it larger. A link opens the report on avalanche.ca. Your pin stays where it is.
-5. **Layer settings:**
+5. **The source button** (top right, where the other layers show their model) reads **AvCan**. Tapping it lists the avalanche sources. For now only Avalanche Canada is listed, with its bulletin's age; more can be added later. There is no v8 design for it, so it reuses the model menu's rows.
+6. **Layer settings:**
    - map colour from Highest (the default, as on Avalanche Canada's map), Alpine, Treeline or Below;
    - field reports on or off;
    - reports from the last 7, 14 or 30 days.
-6. **Saving for offline:** the Avalanche row is greyed out, online only until Avalanche Canada confirms its terms.
-7. **Light theme and 3D terrain:** both work. Regions lie on the ground and pins stand on it.
+7. **Saving for offline:** the Avalanche row is greyed out, online only until Avalanche Canada confirms its terms.
+8. **Light theme and 3D terrain:** both work. Regions lie on the ground and pins stand on it.
 
 **It is early season now.** Every BC region shows "Early season" in Avalanche Canada's blue. Their bulletin says daily forecasts begin **November 25 at 4 PM**, and from then you will see the green-to-black colours.
 
@@ -31,6 +32,7 @@ Ratings, words and colours are Avalanche Canada's, shown exactly as issued. The 
 | --- | --- |
 | `map.png`, `region.png` | Today's real answers, served from saved copies (early season) |
 | `region-test-ratings.png`, `light-3d.png` | **Made-up test ratings**, to show the colours. Not a real forecast |
+| `source-menu.png` | The source menu with Avalanche Canada |
 | `report.png`, `photo.png` | A real report from Nov 15, Selkirks. The photo is a test picture, because the photo host was blocked from the build machine |
 
 ## What Avalanche Canada's terms say

@@ -74,8 +74,6 @@
   display: flex; align-items: center; justify-content: center;
 }
 
-/* The model choice does not apply to an issued bulletin. */
-body[data-layer='avalanche'] #model-pill { display: none; }
 
 /* Terrain complexity (ATES): the second legend line, the quick switch and the panels.
    Colour only on the swatches (the publisher's class colours). */
