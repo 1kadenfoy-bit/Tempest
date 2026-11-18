@@ -1,0 +1,27 @@
+{
+
+  "type": "FeatureCollection",
+  "layer": "RAQDPS.Sfc_PM2.5-WildfireSmokePlume",
+  "features": [
+    
+    {
+      "type": "Feature",
+      "id": "RAQDPS.Sfc_PM2.5-WildfireSmokePlume(-120.75577,49.07162)",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+            -120.7558,49.0716
+        ]
+      },
+      "properties": {
+        "value": 0,
+        "class": "< 1 [ug/m3]",
+        "title_en": "Total concentrations associated with forest fire and vegetation plumes: surface PM2.5 [kg/m³]",
+        "title_fr": "Concentrations totales associées aux panaches de feux de forêt et de végétation : surface PM2.5 [kg/m³]",
+        "time": "2026-11-18T12:00:00Z",
+        "dim_reference_time": "2026-11-18T00:00:00Z"
+      }
+    }
+  ]
+
+}
