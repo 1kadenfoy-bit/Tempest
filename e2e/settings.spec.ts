@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // App settings (M9): units, theme, saved data only, credits. Asserts on the
 // legend, labels and settings state rather than live forecast numbers, so it

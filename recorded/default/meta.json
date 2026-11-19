@@ -1,0 +1,21 @@
+{
+  "name": "default",
+  "description": "Starter set: a dry, settled November day on the North Shore (Nov 19, 2026)",
+  "now": "2026-11-19T18:54:00.000Z",
+  "recordedAt": "2026-11-19T19:02:28.872Z",
+  "spots": [
+    {
+      "name": "Mt Seymour",
+      "lat": 49.3895,
+      "lng": -122.948
+    }
+  ],
+  "layers": [
+    "precipitation",
+    "temperature",
+    "wind",
+    "radar",
+    "avalanche",
+    "air-quality"
+  ]
+}

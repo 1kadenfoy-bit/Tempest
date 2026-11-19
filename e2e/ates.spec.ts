@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // Terrain complexity (ATES) inside the avalanche layer. Avalanche Canada's
 // answers are stubbed: the bulletins from the saved Nov 17 answers, and the

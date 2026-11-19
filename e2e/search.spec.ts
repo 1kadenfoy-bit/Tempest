@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext } from '@playwright/test';
+import { expect, test, type BrowserContext } from './fixtures';
 
 // M9 place search: BC Geographical Names stubbed with a real answer saved on
 // Nov 17, 2026 (name=Seymour*), so the test does not depend on the live

@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // The weather stations overlay: the switch, markers over the layer, and a
 // station's panel. Station answers are stubbed from saved real ones (ECCC,

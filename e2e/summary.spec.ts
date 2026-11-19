@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // The forecast summary window: press-and-hold on the map (or a right click)
 // moves the pin there and opens every chosen layer's chart, on one time line.

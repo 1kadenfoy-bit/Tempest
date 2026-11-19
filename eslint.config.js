@@ -14,7 +14,7 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {
-    files: ['public/sw.js'],
+    files: ['public/*.js'],
     languageOptions: { globals: { ...globals.serviceworker } },
   },
   {

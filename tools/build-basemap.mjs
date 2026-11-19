@@ -36,6 +36,16 @@ async function latestBuild() {
 const intersect = (a, b) => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
 const inside = (pz, px, py) => (z, x, y) => (x >> (z - pz)) === px && (y >> (z - pz)) === py;
 
+// The pieces asked for are already here (a rebuild, or a machine without
+// network): nothing to fetch.
+if (only && !args.force && !args['dry-run'] && existsSync(`${OUT}/basemap.json`)) {
+  const want = [...only].map((n) => (n === 'overview' ? 'bc-overview' : n));
+  if (want.every((n) => existsSync(`${OUT}/${n}.pmtiles`))) {
+    console.error('base map pieces already present');
+    process.exit(0);
+  }
+}
+
 const url = typeof args.build === 'string' ? args.build : await latestBuild();
 const arc = await openArchive(url);
 console.error(`source ${url}`);

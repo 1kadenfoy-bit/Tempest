@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // 3D terrain and 3D buildings (map panel, TERRAIN group). Nothing here waits
 // for the forecast: the switches, the tilt and the draped layers work without

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('phone test page runs every check', async ({ page }) => {
   test.setTimeout(240_000);
