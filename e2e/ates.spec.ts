@@ -181,8 +181,15 @@ test('ATES: hidden with other layers; light theme and 3D drape', async ({ page, 
   await open(page, { layer: 'avalanche', theme: 'light', terrain3d: true, layerSettings: { avalanche: { ates: true } } });
   await expect(page.locator('#ates-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('body')).toHaveAttribute('data-ates-index', /^\d{3}$/);
+  const said: string[] = [];
+  page.on('console', (m) => { if (/ATES|ates/i.test(m.text())) said.push(m.text().slice(0, 160)); });
   await page.evaluate(() => (window as unknown as W).tempestMap.jumpTo({ center: [-121.43, 53.952], zoom: 12.6, pitch: 55, bearing: -20 }));
-  await expect(page.locator('body')).toHaveAttribute('data-ates-areas', /533/, { timeout: 20_000 });
+  // On a failure, say what the app was doing (seen only on GitHub's machines so far).
+  await expect(page.locator('body')).toHaveAttribute('data-ates-areas', /533/, { timeout: 20_000 }).catch(async (err: unknown) => {
+    const state = await page.evaluate(() => ({ ...document.body.dataset, zoom: (window as unknown as W).tempestMap.getZoom(), center: (window as unknown as W).tempestMap.getCenter() }));
+    console.log('ATES state', JSON.stringify(state), 'said', JSON.stringify(said));
+    throw err;
+  });
   expect(await page.evaluate(() => !!(window as unknown as W).tempestMap.getTerrain())).toBe(true);
   await expect.poll(async () => (await rendered(page, 'ates-zone-fill')).length, { timeout: 20_000 }).toBeGreaterThan(0);
   await page.waitForTimeout(1500);

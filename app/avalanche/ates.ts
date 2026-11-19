@@ -173,6 +173,7 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
 
   async function loadArea(a: AtesIndexArea): Promise<void> {
     loadingId = a.id;
+    document.body.dataset.atesLoading = String(a.id);
     opts.onChange();
     try {
       const got = await fetchKeptBytes(areaUrl(a.id), `ates-area-${a.id}`, FRESH_MS, !savedOnlyActive());
@@ -193,8 +194,10 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
     } catch (err) {
       console.warn(`no ATES area ${a.id}`, err);
       failed.set(a.id, failureReason(err));
+      document.body.dataset.atesFailed = [...failed.keys()].join(',');
     } finally {
       loadingId = null;
+      delete document.body.dataset.atesLoading;
       opts.onChange();
     }
   }
@@ -273,6 +276,9 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
   }
 
   map.on('moveend', () => { if (opts.shown()) { want(); opts.onChange(); } });
+  // Once the map settles (3D terrain can still be loading when a move ends),
+  // ask again for what the view needs; areas held or asked for are skipped.
+  map.on('idle', () => { if (opts.shown() && index && !queue.length && loadingId === null) want(); });
 
   // ---- Taps -----------------------------------------------------------------
 
