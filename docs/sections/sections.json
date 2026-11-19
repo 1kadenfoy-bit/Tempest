@@ -1,0 +1,238 @@
+{
+  "$comment": "Who owns which files. Read by tools/check-section.mjs (the area check) and by every section chat. A section edits its own paths freely; 'shared' paths only with a reason written in its handoff note (the lead decides at integration); another section's paths never. design/ is Kaden's and nobody edits it. Patterns: * is any characters but /, ** is any depth.",
+  "sections": {
+    "maps": {
+      "title": "Maps",
+      "brief": "docs/sections/maps.md",
+      "paths": [
+        "app/map/**",
+        "app/search/**",
+        "tools/build-basemap.mjs",
+        "tools/pmtiles-extract.mjs",
+        "tools/regions.json",
+        "tools/lib/**",
+        "core/basemap/**",
+        "core/pmtiles/**",
+        "core/geo/terrain.ts",
+        "core/geo/terrain.test.ts",
+        "core/search/**",
+        "adapters/bc-geonames/**",
+        "public/tiles/**",
+        "e2e/3d.spec.ts",
+        "e2e/search.spec.ts",
+        "docs/reports/maps-*/**",
+        "docs/handoffs/maps/**",
+        "docs/reports/3d/**"
+      ],
+      "except": [
+        "app/map/freezing-line.ts",
+        "app/map/wind-field.ts",
+        "app/map/image-frames.ts"
+      ],
+      "specs": [
+        "e2e/3d.spec.ts",
+        "e2e/search.spec.ts"
+      ]
+    },
+    "interface": {
+      "title": "Interface",
+      "brief": "docs/sections/interface.md",
+      "paths": [
+        "app/shell/**",
+        "app/settings/**",
+        "app/summary/**",
+        "app/theme/**",
+        "app/fonts/**",
+        "app/sources/**",
+        "app/main.css",
+        "index.html",
+        "public/icon*",
+        "public/_headers",
+        "e2e/shell.spec.ts",
+        "e2e/shell.spec.ts-snapshots/**",
+        "e2e/settings.spec.ts",
+        "e2e/summary.spec.ts",
+        "e2e/details.spec.ts",
+        "docs/reports/interface-*/**",
+        "docs/handoffs/interface/**",
+        "docs/reports/summary/**"
+      ],
+      "specs": [
+        "e2e/shell.spec.ts",
+        "e2e/settings.spec.ts",
+        "e2e/summary.spec.ts",
+        "e2e/details.spec.ts"
+      ]
+    },
+    "weather": {
+      "title": "Weather on the map",
+      "brief": "docs/sections/weather.md",
+      "paths": [
+        "layers/precipitation/**",
+        "layers/temperature/**",
+        "layers/wind/**",
+        "layers/radar/**",
+        "render/grid-gl/**",
+        "app/weather/**",
+        "app/radar/**",
+        "app/stations/**",
+        "app/map/freezing-line.ts",
+        "app/map/wind-field.ts",
+        "app/map/image-frames.ts",
+        "core/color/**",
+        "core/precip/**",
+        "core/temperature/**",
+        "core/wind/**",
+        "core/elevation/**",
+        "core/stations/**",
+        "adapters/eccc-radar/**",
+        "adapters/eccc-swob/**",
+        "adapters/avcan-weather/**",
+        "e2e/temperature.spec.ts",
+        "e2e/wind.spec.ts",
+        "e2e/radar.spec.ts",
+        "e2e/stations.spec.ts",
+        "docs/reports/weather-*/**",
+        "docs/handoffs/weather/**",
+        "docs/reports/stations/**",
+        "docs/reports/radar/**"
+      ],
+      "specs": [
+        "e2e/temperature.spec.ts",
+        "e2e/wind.spec.ts",
+        "e2e/radar.spec.ts",
+        "e2e/stations.spec.ts"
+      ]
+    },
+    "effects": {
+      "title": "Effects (3D and animation)",
+      "brief": "docs/sections/effects.md",
+      "paths": [
+        "render/effects/**",
+        "render/flow/**",
+        "app/effects/**",
+        "app/effects-lab/**",
+        "effects.html",
+        "e2e/effects.spec.ts",
+        "docs/reports/effects-*/**",
+        "docs/handoffs/effects/**"
+      ],
+      "specs": [
+        "e2e/effects.spec.ts"
+      ]
+    },
+    "data": {
+      "title": "Data",
+      "brief": "docs/sections/data.md",
+      "paths": [
+        "adapters/openmeteo-maps/**",
+        "adapters/openmeteo-api/**",
+        "adapters/eccc-geomet/hrdpa*",
+        "adapters/eccc-geomet/fixtures/hrdpa*",
+        "render/openmeteo-starter/**",
+        "core/store/**",
+        "core/time/**",
+        "core/geo/grid-request*",
+        "core/offline/**",
+        "core/region-file/**",
+        "app/data/**",
+        "app/offline/**",
+        "app/data-viewer/**",
+        "data-viewer.html",
+        "public/sw.js",
+        "public/recorded-sw.js",
+        "recorded/**",
+        "tools/record-weather.mjs",
+        "e2e/offline.spec.ts",
+        "e2e/models.spec.ts",
+        "docs/reports/data-*/**",
+        "docs/handoffs/data/**"
+      ],
+      "specs": [
+        "e2e/offline.spec.ts",
+        "e2e/models.spec.ts"
+      ]
+    },
+    "safety": {
+      "title": "Safety",
+      "brief": "docs/sections/safety.md",
+      "paths": [
+        "app/avalanche/**",
+        "app/alerts/**",
+        "app/air/**",
+        "layers/avalanche/**",
+        "layers/air-quality/**",
+        "core/avalanche/**",
+        "core/alerts/**",
+        "core/air/**",
+        "adapters/avalanche-canada/**",
+        "adapters/eccc-alerts/**",
+        "adapters/eccc-aqhi/**",
+        "adapters/bc-wildfire/**",
+        "adapters/openmeteo-air/**",
+        "adapters/eccc-geomet/raqdps*",
+        "adapters/eccc-geomet/geotiff*",
+        "adapters/eccc-geomet/fixtures/raqdps*",
+        "adapters/avalanche-org/**",
+        "public/ates/**",
+        "tools/ates-index.mjs",
+        "e2e/avalanche.spec.ts",
+        "e2e/ates.spec.ts",
+        "e2e/alerts.spec.ts",
+        "e2e/air-quality.spec.ts",
+        "e2e/avalanche-test-photo.png",
+        "docs/reports/safety-*/**",
+        "docs/handoffs/safety/**",
+        "docs/reports/air-quality/**",
+        "docs/reports/ates/**",
+        "docs/reports/avalanche/**"
+      ],
+      "specs": [
+        "e2e/avalanche.spec.ts",
+        "e2e/ates.spec.ts",
+        "e2e/alerts.spec.ts",
+        "e2e/air-quality.spec.ts"
+      ]
+    }
+  },
+  "shared": {
+    "$comment": "The lead's files: the connection points between sections and the project's setup. A section may change one only when its work cannot be seen without it, and says why in its handoff note.",
+    "paths": [
+      "app/main.ts",
+      "app/state.ts",
+      "layers/contract.ts",
+      "core/vocabulary.ts",
+      "core/units/**",
+      "core/geo/**",
+      "package.json",
+      "package-lock.json",
+      "vite.config.ts",
+      "eslint.config.js",
+      "tsconfig.json",
+      "playwright.config.ts",
+      "e2e/fixtures.ts",
+      "e2e/recorded.ts",
+      "e2e/phone-tests.spec.ts",
+      "app/spike/**",
+      "spike.html",
+      "tools/check-section.mjs",
+      "tools/diff-report.mjs",
+      "tools/vite-plugin-app-manifest.ts",
+      "CLAUDE.md",
+      "README.md",
+      "KICKOFF_PROMPT.md",
+      "docs/0*.md",
+      "docs/sections/**",
+      "docs/model-data.md",
+      "docs/hosting.md",
+      "docs/spikes/**",
+      "docs/reference/**",
+      ".github/**",
+      ".gitignore",
+      "docs/reports/m*/**"
+    ]
+  },
+  "nobody": [
+    "design/**"
+  ]
+}

@@ -19,6 +19,8 @@
     "test:watch": "vitest",
     "screenshots": "playwright test --trace off",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run screenshots",
+    "check:section": "node tools/check-section.mjs",
+    "weather:record": "node tools/record-weather.mjs",
     "tiles:all": "node tools/build-basemap.mjs"
   },
   "devDependencies": {

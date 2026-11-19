@@ -10,6 +10,7 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Icon | "Wind over peaks", chosen for now |
 | Design | Template v8 is the only design to build from |
 | Builder | Claude Code on the web, stopping at each milestone |
+| Building in sections (Nov 19) | Kaden works directly with one chat per section (Maps, Interface, Weather on the map, Effects, Data, Safety) on the cheaper model, iterating on recorded weather in the Claude app's live view; when he is happy a section runs its checks and writes a handoff note; the main chat integrates on his word and publishes. See `docs/sections/README.md`. Section branches are not published; the Pages address shows main |
 | Product | Personal, shareable with friends, never sold. No tracking, background work or push alerts |
 | Offline | Only for hand-saved areas, with chosen layers and a time window |
 | Top bar | Sits just below the phone's status bar |

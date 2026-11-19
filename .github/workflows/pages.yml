@@ -1,10 +1,11 @@
 name: Publish to GitHub Pages
 
-# Publishes the milestone branch for testing on the phone. Skips while the
-# repository is private (free GitHub Pages needs a public repository).
+# Publishes main, the combined app, for testing on the phone. Section
+# branches are not published: they show their work in the Claude app's live
+# view (docs/sections/README.md). Skips while the repository is private.
 on:
   push:
-    branches: [main, 'claude/**']
+    branches: [main]
   workflow_dispatch:
 
 permissions:

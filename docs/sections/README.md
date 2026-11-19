@@ -1,0 +1,137 @@
+# Working in sections
+
+Tempest is built by several chats at once. Kaden talks to each one directly
+and iterates quickly. One main chat (the lead) combines the work into the app.
+
+```
+                          Kaden
+          design · iterate with each section · decide
+                            │
+                    Main chat (the lead)
+   combines sections on request · full tests · publishes the app
+     ┌──────────┬──────────┼──────────┬──────────┬──────────┐
+   Maps    Interface    Weather    Effects     Data      Safety
+                        on the map
+         (section chats · each owns its own files · own branch)
+```
+
+| Section | Brief | Covers |
+| --- | --- | --- |
+| Maps | [maps.md](maps.md) | Base map, terrain, 3D terrain and buildings, place names and search, map pieces and downloads, how the map moves |
+| Interface | [interface.md](interface.md) | Everything around the map: top bar, sheet, scrubber, panels, menus, cards, settings, summary window, theme |
+| Weather on the map | [weather.md](weather.md) | Each weather layer from colours to numbers: fills, colour ramps, legends, lines, arrows, radar, stations, readouts, charts, cards |
+| Effects | [effects.md](effects.md) | Animated weather over the map: rain, snow, clouds, wind particles, in 3D |
+| Data | [data.md](data.md) | Where the numbers come from: models, runs, new sources, caching, saved areas, recorded weather |
+| Safety | [safety.md](safety.md) | Shown exactly as issued: avalanche, alerts, fire, air quality |
+| The lead | [lead.md](lead.md) | Combining, the shared files, the full checks, publishing |
+
+Who owns which file is listed in [sections.json](sections.json). The section
+check reads it.
+
+## The loop with Kaden
+
+1. **Iterate.** Kaden asks for a change. The section chat makes it inside its
+   own files and shows it running. Kaden looks, clicks around, and asks for
+   more. Repeat.
+2. **"I'm happy."** The section chat runs its checks
+   (`npm run check:section -- <section>`), writes a handoff note, and marks its
+   work ready.
+3. **"Integrate …"** In the main chat, Kaden names the sections he is happy
+   with. The lead combines them, runs every check, fixes what clashes (or sends
+   it back with a note), and publishes the app.
+4. **Pull in the new version.** Each section chat brings its branch up to date
+   with `main` at the start of every session and after each integration.
+
+## Rules for every section chat
+
+**Start of every session**
+1. Read `CLAUDE.md`, this file and your own brief.
+2. Bring your branch up to date: `git fetch origin main && git merge origin/main`.
+   If git reports a conflict, stop and tell Kaden; the lead resolves it.
+3. Start the app on recorded weather (see "Showing your work").
+
+**While working**
+- **Edit only your own files.** `npm run check:section -- <section> --area`
+  tells you in seconds.
+  - Need a change in another section's file? Write it under "Needs from other
+    sections" in your handoff note, or tell Kaden which chat to ask.
+  - Shared files belong to the lead (listed in `sections.json`): `app/main.ts`,
+    `app/state.ts`, `layers/contract.ts`, the variable list, units, packages and
+    settings. Touch one only when your work cannot be seen without it, keep the
+    change small, and explain it in the handoff note.
+- **Save every version Kaden likes.** Commit with a clear message and push your
+  branch. The cloud machine sleeps when Kaden steps away, and he may say "go
+  back two versions".
+- **Nothing new without asking.** No new library, server, design token or
+  colour.
+  - A new server must be allowed in the environment's network settings. Name
+    the host and Kaden approves it.
+  - Colours and sizes come from `design/tokens.json`, which only Kaden changes.
+    Show him options and he picks.
+- **Talk to Kaden in plain language.** He designs and tests; he does not read
+  code.
+- **Never skip, loosen or delete a test.** The same goes for a test of another
+  section.
+- **A test timed out waiting for a server?** That is a limit or the network,
+  not your code. Run it once more, then report it. Do not "fix" it.
+- **Two tries at the same problem have failed?** Stop and tell Kaden, so the
+  lead can take it.
+
+**When Kaden is happy**
+1. Bring the branch up to date with `main` again.
+2. Run `npm run check:section -- <section>`. Fix what fails, inside your own
+   files.
+3. Write the handoff note from [handoff-template.md](handoff-template.md) at
+   `docs/handoffs/<section>/<YYYY-MM-DD>-<topic>.md`. Pictures go beside it.
+4. Commit, push, and open a pull request titled `<Section>: <topic>`, with the
+   handoff note as its description. Tell Kaden it is ready to integrate.
+5. Then stop and wait.
+
+## Showing your work
+
+**Recorded weather.** Run the app on a saved day of forecasts instead of the
+live servers.
+- It loads at once and shows the same weather every time.
+- It never spends the forecast servers' free daily limit, which every chat
+  shares.
+
+```
+npm run dev
+```
+
+Open `http://localhost:5173/?weather=recorded`.
+- `?weather=live` goes back to live data.
+- The run age in the top bar says "· recorded" while it is on.
+- Sets live in `recorded/<set>/`. `recorded/default/meta.json` says what day
+  the set holds.
+- Elsewhere than the recorded spots, the app reads the recorded run's map
+  files, which is slower.
+- Only the Data section makes new sets (`npm run weather:record`).
+
+**The live view in the Claude app.** Once the dev server runs, report its port
+(5173) as a preview, so Kaden can open the running app inside the Claude app
+and click around. It refreshes by itself when you change a file. It only works
+while the chat is running; after a break, start the dev server again.
+
+**Pictures.** Take Playwright screenshots at 390 × 844 for the handoff note,
+and compare them with `design/v8/png` where a v8 screen exists.
+
+**Pages without the app.**
+- The Data section can build a bare data viewer page (`data-viewer.html`, its
+  own file): a source's output as a table and on a plain map.
+- The Effects section builds its own test page (`effects.html`) and works there
+  until an effect is ready to join the map.
+
+## The connection points
+
+These are where the sections meet. Each has one owner; others ask the owner.
+
+| Connection point | Where | Owner |
+| --- | --- | --- |
+| Variable names and units ("temperature at 2 m, °C"), data shapes | `core/vocabulary.ts` | Data, approved by the lead |
+| Layer template: readout, legend, chart, cards, settings | `layers/contract.ts` | Lead |
+| Shared app state and the calls between parts | `app/state.ts` | Lead |
+| The map's stacking order (what draws under what) | the `load` handler in `app/main.ts` | Lead, at Maps' request |
+| Panels, cards, switches, icons | `app/shell/` | Interface |
+| Units formatting | `core/units/` | Lead (anyone may add a formatter, said in the handoff) |
+| Colours, sizes, type | `design/tokens.json` | Kaden |
