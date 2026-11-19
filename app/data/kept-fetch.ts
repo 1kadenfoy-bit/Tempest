@@ -30,14 +30,19 @@ export function failureReason(err: unknown): string {
 const inFlight = new Map<string, Promise<KeptAnswer>>();
 const pause = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+/** Waits for the phone's storage at most this long: a slow or stuck store must never hold the answer back. */
+const STORE_WAIT_MS = 3000;
+const within = <T>(p: Promise<T>, fallback: T): Promise<T> =>
+  Promise.race([p, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), STORE_WAIT_MS))]);
+
 async function openCache(): Promise<Cache | null> {
-  try { return await caches.open(CACHE); } catch { return null; }
+  try { return await within(caches.open(CACHE), null); } catch { return null; }
 }
 
 /** The answer kept under `name`, if any. */
 export async function keptAnswer(name: string): Promise<KeptAnswer | null> {
   const cache = await openCache();
-  const hit = await cache?.match(`https://kept.tempest/${name}`).catch(() => undefined);
+  const hit = cache ? await within(cache.match(`https://kept.tempest/${name}`).catch(() => undefined), undefined) : undefined;
   if (!hit) return null;
   try {
     return { json: await hit.json(), fetchedAt: new Date(Number(hit.headers.get(FETCHED_AT)) || 0), kept: true };
@@ -60,7 +65,7 @@ export function fetchKeptBytes(url: string, name: string, freshMs: number, onlin
   const p = (async () => {
     const cache = await openCache();
     const address = `https://kept.tempest/${name}`;
-    const hit = await cache?.match(address).catch(() => undefined);
+    const hit = cache ? await within(cache.match(address).catch(() => undefined), undefined) : undefined;
     const kept = hit ? { bytes: new Uint8Array(await hit.arrayBuffer()), fetchedAt: new Date(Number(hit.headers.get(FETCHED_AT)) || 0), kept: true } : null;
     if (kept && (!online || Date.now() - kept.fetchedAt.getTime() < freshMs)) return kept;
     if (!online) return null;
@@ -69,7 +74,8 @@ export function fetchKeptBytes(url: string, name: string, freshMs: number, onlin
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const bytes = new Uint8Array(await res.arrayBuffer());
       const fetchedAt = new Date();
-      await cache?.put(address, new Response(bytes, { headers: { 'content-type': res.headers.get('content-type') ?? 'application/octet-stream', [FETCHED_AT]: String(fetchedAt.getTime()) } })).catch(() => undefined);
+      // Kept in the background: the answer is shown without waiting for the phone's storage.
+      void cache?.put(address, new Response(bytes, { headers: { 'content-type': res.headers.get('content-type') ?? 'application/octet-stream', [FETCHED_AT]: String(fetchedAt.getTime()) } })).catch(() => undefined);
       return { bytes, fetchedAt, kept: false };
     } catch (err) {
       if (kept) return kept;
@@ -97,7 +103,7 @@ export function fetchKept(url: string, name: string, fetchFn: typeof fetch = fet
         const json: unknown = await res.json();
         const fetchedAt = new Date();
         const cache = await openCache();
-        await cache?.put(`https://kept.tempest/${name}`, new Response(JSON.stringify(json), { headers: { 'content-type': 'application/json', [FETCHED_AT]: String(fetchedAt.getTime()) } })).catch(() => undefined);
+        void cache?.put(`https://kept.tempest/${name}`, new Response(JSON.stringify(json), { headers: { 'content-type': 'application/json', [FETCHED_AT]: String(fetchedAt.getTime()) } })).catch(() => undefined);
         return { json, fetchedAt, kept: false };
       } catch (err) {
         lastErr = err;

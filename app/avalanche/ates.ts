@@ -176,9 +176,14 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
     document.body.dataset.atesLoading = String(a.id);
     opts.onChange();
     try {
-      const got = await fetchKeptBytes(areaUrl(a.id), `ates-area-${a.id}`, FRESH_MS, !savedOnlyActive());
-      if (!got) { failed.set(a.id, 'not kept on this phone'); return; }
-      const file = await parseAtesKmz(a.id, got.bytes);
+      // One area never holds up the others: past a minute it counts as failed (Try again asks again).
+      const read = (async () => {
+        const got = await fetchKeptBytes(areaUrl(a.id), `ates-area-${a.id}`, FRESH_MS, !savedOnlyActive());
+        return got ? { got, file: await parseAtesKmz(a.id, got.bytes) } : null;
+      })();
+      const done = await Promise.race([read, new Promise<never>((_, no) => setTimeout(() => no(new Error('timed out')), 60_000))]);
+      if (!done) { failed.set(a.id, 'not kept on this phone'); return; }
+      const { got, file } = done;
       const area = file.area;
       for (const p of area.points) {
         const png = p.icon ? file.images.get(p.icon) : undefined;
