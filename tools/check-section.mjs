@@ -30,7 +30,7 @@ if (!section) {
   process.exit(2);
 }
 
-const toRegex = (glob) => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\/?/g, '\u0000').replace(/\*/g, '[^/]*').replace(/\u0000/g, '.*')}$`);
+const toRegex = (glob) => new RegExp(`^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*\/?/g, '@@').replace(/\*/g, '[^/]*').replace(/@@/g, '.*')}$`);
 const matches = (file, globs) => (globs ?? []).some((g) => toRegex(g).test(file));
 const owns = (s, file) => matches(file, s.paths) && !matches(file, s.except);
 
