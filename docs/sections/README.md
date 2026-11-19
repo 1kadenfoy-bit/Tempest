@@ -28,6 +28,22 @@ and iterates quickly. One main chat (the lead) combines the work into the app.
 Who owns which file is listed in [sections.json](sections.json). The section
 check reads it.
 
+## Which chat for what
+
+| Kaden wants to change… | Chat |
+| --- | --- |
+| How the map looks and moves: base map colours, roads, labels, peaks, trails, terrain shading, contours, 3D terrain and buildings, zoom and gestures, place search | **Maps** |
+| Anything around the map: top bar, menus, panels, the sheet, the time scrubber's controls, detail card layout, settings, the summary window, light and dark theme, fonts, icons | **Interface** |
+| What a weather layer shows: its colours on the map, its legend, its chart (for example the temperature graph), its readout, its cards' content, its settings; the freezing and snow lines, wind arrows, radar, weather stations; new weather layers (cloud, sun, snow) | **Weather on the map** |
+| Moving weather drawn over the map: falling rain and snow, drifting cloud, wind particles, 3D effects | **Effects** |
+| Where the numbers come from: models and runs, new data sources (planes, rivers…), caching, saved areas and offline, recorded weather days | **Data** |
+| Avalanche forecasts and terrain ratings, weather alerts, wildfires, air quality and smoke | **Safety** |
+| Combining sections into the app, anything that touches several sections at once, the shared files, publishing | **The main chat** |
+
+When it is unclear, the owner of the files that need to change decides: see
+[sections.json](sections.json). The way something looks inside a layer's
+chart or card is that layer's; the frame around it is the Interface's.
+
 ## The loop with Kaden
 
 1. **Iterate.** Kaden asks for a change. The section chat makes it inside its
@@ -49,6 +65,18 @@ check reads it.
 2. Bring your branch up to date: `git fetch origin main && git merge origin/main`.
    If git reports a conflict, stop and tell Kaden; the lead resolves it.
 3. Start the app on recorded weather (see "Showing your work").
+
+**When Kaden asks for something that is not yours**
+
+Do not build it, not even "just this once". Reply in one or two lines:
+- which chat owns it, using "Which chat for what" above;
+- what to tell that chat, in one sentence he can paste.
+
+For example: "That's the Data chat's job. Tell it: 'add plane routes as a new
+data source'."
+
+If the request is partly yours, do your part and name the chat for the rest.
+Only the main chat can decide that something crosses sections.
 
 **While working**
 - **Edit only your own files.** `npm run check:section -- <section> --area`
