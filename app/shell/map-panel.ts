@@ -78,15 +78,6 @@ function section(title: string, ...kids: HTMLElement[]): HTMLElement {
   return g;
 }
 
-/** An overlay tile and its options row; the row shows only while the tile is on. */
-function overlay(label: string, isOn: () => boolean, setOn: (on: boolean) => void, options: HTMLElement[] = []): HTMLElement[] {
-  const t = tile(label, isOn(), (on) => { setOn(on); if (row) row.hidden = !on; });
-  const row = options.length ? Object.assign(document.createElement('div'), { className: 'option-row' }) : null;
-  if (row) { row.append(...options); row.hidden = !isOn(); row.setAttribute('aria-label', `${label} options`); }
-  return row ? [t, row] : [t];
-}
-
-/** The offline (saved areas) group is no longer here: it lives in app settings. The third argument is ignored; callers may still pass it. */
 export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) => void, _offlineGroup?: HTMLElement): HTMLElement {
   void _offlineGroup;
   const m = mapSettings.get();
@@ -109,16 +100,16 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
       if (three === Boolean(state.terrain3d)) return;
       state.terrain3d = three;
       viewBtns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      if (buildings) buildings.hidden = !three;
+      buildingsChip?.setAttribute('aria-disabled', String(!three));
+      if (buildingsChip) buildingsChip.disabled = !three;
       onChange({ ...state });
     });
     return b;
   });
   view.append(...viewBtns);
-  if (buildings) {
-    buildings.hidden = !state.terrain3d;
-    buildings.append(chip('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }));
-  }
+  // Nothing appears or disappears: the option is always there, greyed out in 2D.
+  const buildingsChip = buildings ? chip('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }) : null;
+  if (buildings && buildingsChip) { buildingsChip.disabled = !state.terrain3d; buildings.append(buildingsChip); }
 
   // Ground: three big tiles, one selected at a time. Satellite waits for an imagery source.
   const ground = document.createElement('div');
@@ -151,32 +142,22 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
 
   // Overlays: toggle tiles. Contour lines and weather stations work as they did; the Maps section's overlays call mapSettings.
   const trailsOn = () => { const s = mapSettings.get(); return s.trails || s.huts || s.camps; };
-  const boundariesOn = () => { const s = mapSettings.get(); return s.parkBoundaries || s.regionBoundaries || s.municipalBoundaries; };
   const stations = tile('Weather stations', state.stations, (on) => { state.stations = on; onChange({ ...state }); });
   stations.id = 'stations-switch';
   if (state.stationsOffline) stations.disabled = true;
-  const boundaryChips = [
-    chip('Parks', m.parkBoundaries, (on) => setMap({ parkBoundaries: on })),
-    chip('Provincial and regional', m.regionBoundaries, (on) => setMap({ regionBoundaries: on })),
-    chip('Municipal', m.municipalBoundaries, (on) => setMap({ municipalBoundaries: on })),
-  ];
+  const one = (label: string, key: keyof MapSettings) => tile(label, Boolean(mapSettings.get()[key]), (on) => setMap({ [key]: on }));
   const grid = document.createElement('div');
   grid.className = 'toggle-grid';
+  // Trail names and peak heights are always on, so they are not choices here. Each boundary kind is its own tile.
   grid.append(
-    ...overlay('Trails, huts and campsites', trailsOn, (on) => setMap({ trails: on, huts: on, camps: on }), [
-      chip('Trail names', m.trailNames, (on) => setMap({ trailNames: on })),
-    ]),
-    ...overlay('Peaks', () => mapSettings.get().peaks, (on) => setMap({ peaks: on }), [
-      chip('Heights', m.peakHeights, (on) => setMap({ peakHeights: on })),
-    ]),
-    ...overlay('Contour lines', () => mapSettings.get().contours, (on) => setMap({ contours: on })),
-    ...overlay('Small roads', () => mapSettings.get().smallRoads, (on) => setMap({ smallRoads: on })),
-    ...overlay('Ski resorts', () => mapSettings.get().skiLifts, (on) => setMap({ skiLifts: on })),
-    ...overlay('Boundaries', boundariesOn, (on) => {
-      // Turning Boundaries on shows all three kinds; the options row narrows it.
-      setMap({ parkBoundaries: on, regionBoundaries: on, municipalBoundaries: on });
-      boundaryChips.forEach((c) => c.setAttribute('aria-pressed', String(on)));
-    }, boundaryChips),
+    tile('Trails, huts and campsites', trailsOn(), (on) => setMap({ trails: on, huts: on, camps: on })),
+    one('Peaks', 'peaks'),
+    one('Contour lines', 'contours'),
+    one('Small roads', 'smallRoads'),
+    one('Ski resorts', 'skiLifts'),
+    one('Park boundaries', 'parkBoundaries'),
+    one('Regional boundaries', 'regionBoundaries'),
+    one('Municipal boundaries', 'municipalBoundaries'),
     stations,
     ...SOON_OVERLAYS.map((l) => tile(l, false, () => undefined, true)),
   );

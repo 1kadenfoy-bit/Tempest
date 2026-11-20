@@ -150,7 +150,8 @@ export function setupTopBar(): void {
     if (S.prefs.contours === false) saved.contours = false;
   }
   if (!S.prefs.hillshade || !S.prefs.contours) { S.prefs.hillshade = true; S.prefs.contours = true; savePrefs(S.prefs); }
-  if (Object.keys(saved).length) mapSettings.set(saved as Partial<MapSettings>);
+  // Trail names and peak heights are always on (Kaden, Nov 20).
+  mapSettings.set({ ...(saved as Partial<MapSettings>), trailNames: true, peakHeights: true });
 }
 extraLegend = (doc) => S.avy.atesLegend(doc);
 // The terrain ratings' quick switch: a round button with the thumb buttons,

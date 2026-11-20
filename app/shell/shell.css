@@ -636,7 +636,6 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .toggle-tile { height: auto; min-height: var(--touch-min); padding-top: 6px; padding-bottom: 6px; text-align: left; }
 
 /* Small options under a tile or the View switch (trail names, peak heights, boundary kinds, 3D buildings). */
-.toggle-grid { grid-auto-flow: row dense; }
 .option-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
 .option-row[hidden] { display: none; }
 .option-chip {
@@ -644,3 +643,4 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   background: var(--surface); color: var(--ink-2); font: var(--type-secondary);
 }
 .option-chip[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); color: var(--ink); }
+.option-chip:disabled { opacity: 0.5; }
