@@ -6,6 +6,7 @@ import { maplibregl } from './maplibre';
 import mlcontour from 'maplibre-contour';
 import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style';
+import { addPlaces, applyPlacesTheme } from './places';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -38,6 +39,7 @@ export function applyTerrainTheme(map: MapLibreMap, theme: Theme): void {
   const p = terrainPaint(theme);
   if (map.getLayer('hillshade')) for (const [k, v] of Object.entries(p.hillshade)) map.setPaintProperty('hillshade', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
   if (map.getLayer('contour-lines')) for (const [k, v] of Object.entries(p.contours)) map.setPaintProperty('contour-lines', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
+  applyPlacesTheme(map, theme);
 }
 
 export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Theme = 'dark'): void {
@@ -74,7 +76,7 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
     type: 'hillshade',
     source: 'terrain-dem',
     paint: {
-      'hillshade-exaggeration': 0.55,
+      'hillshade-exaggeration': 0.4,
       ...paint.hillshade,
     },
   }, beforeLayerId);
@@ -94,4 +96,7 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
       'line-width': ['match', ['get', 'level'], 1, 1, 0.5],
     },
   }, beforeLayerId);
+
+  // Trails, huts and peaks, above the contours.
+  addPlaces(map, beforeLayerId, theme);
 }

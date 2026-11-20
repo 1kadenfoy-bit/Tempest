@@ -36,15 +36,15 @@ export function mapGround(theme: Theme): string {
  * Names are the base map's (OpenStreetMap) land types.
  */
 export const TERRAIN_TINTS: Record<'forest' | 'treeline' | 'meadow' | 'rock' | 'ice' | 'wetland', { dark: string; light: string }> = {
-  forest:   { dark: '#2F5A3C', light: '#8DB596' },
-  treeline: { dark: '#4C6A45', light: '#A9BF93' },
-  meadow:   { dark: '#5A7A4A', light: '#BCCFA0' },
-  rock:     { dark: '#6F7378', light: '#B5B1AA' },
-  ice:      { dark: '#8FB4C8', light: '#D6E8F0' },
-  wetland:  { dark: '#35605A', light: '#98BDB5' },
+  forest:   { dark: '#2E7D4A', light: '#5FA876' },
+  treeline: { dark: '#8FA84A', light: '#B7C971' },
+  meadow:   { dark: '#8FA84A', light: '#B7C971' },
+  rock:     { dark: '#9A8F86', light: '#C9BFB4' },
+  ice:      { dark: '#9CD3E6', light: '#DDF0F7' },
+  wetland:  { dark: '#3E8F86', light: '#7FBDB4' },
 };
-/** How strongly each tint shows over the ground. */
-const TINT_STRENGTH = 0.55;
+/** How strongly each tint shows over the ground: high, so the three zones read as flat blocks. */
+const TINT_STRENGTH = 0.8;
 const tint = (k: keyof typeof TERRAIN_TINTS, theme: Theme, ground: string) => mix(ground, TERRAIN_TINTS[k][theme], TINT_STRENGTH);
 
 export function topoFlavor(theme: Theme = 'dark'): Flavor {
@@ -62,7 +62,8 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
   return {
     ...base,
     background: ground,
-    earth: ground,
+    // Land with no cover tagged is mostly bare mountain: the rock zone.
+    earth: tint('rock', theme, ground),
     water,
     ...neutral(['zoo', 'military', 'hospital', 'school', 'industrial', 'pedestrian', 'aerodrome', 'sand', 'beach'], 0.025),
     park_a: g(0.03), park_b: g(0.03),
@@ -118,6 +119,9 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     paint: { 'fill-color': colour, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0, 9, 1] },
   } as LayerSpecification);
   const at = all.findIndex((l) => l.id === 'landuse_park') + 1;
+  // Peaks are drawn from places.json (app/map/places.ts), from zoom 10 with their heights.
+  const pois = all.find((l) => l.id === 'pois');
+  if (pois && 'filter' in pois && Array.isArray(pois.filter)) pois.filter = [...(pois.filter as unknown[]), ['!=', ['get', 'kind'], 'peak']] as never;
   all.splice(at, 0,
     extra('landuse_wetland', ['wetland'], tint('wetland', theme, ground)),
     extra('landuse_rock', ['bare_rock', 'scree', 'rock'], tint('rock', theme, ground)));

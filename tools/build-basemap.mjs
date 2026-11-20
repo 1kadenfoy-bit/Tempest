@@ -12,6 +12,7 @@
 //
 //   node tools/build-basemap.mjs [--dry-run] [--only=6-10-21,...] [--build=URL]
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { buildPeaks, readManifest } from './lib/peaks.mjs';
 import { mb, openArchive, planBytes, planTiles, tileBounds, writeArchive, lonToX, latToY } from './lib/pmtiles-cut.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => {
@@ -42,6 +43,7 @@ if (only && !args.force && !args['dry-run'] && existsSync(`${OUT}/basemap.json`)
   const want = [...only].map((n) => (n === 'overview' ? 'bc-overview' : n));
   if (want.every((n) => existsSync(`${OUT}/${n}.pmtiles`))) {
     console.error('base map pieces already present');
+    if (!existsSync(`${OUT}/places.json`)) await buildPeaks(OUT, readManifest(OUT));
     process.exit(0);
   }
 }
@@ -110,5 +112,8 @@ const manifest = {
   vector_layers: (await arc.archive.getMetadata()).vector_layers,
   files: files.map((f) => ({ file: f.file, minzoom: f.minzoom, maxzoom: f.maxzoom, tile: f.tile, ...(f.bbox ? { bbox: f.bbox, name: f.name } : {}), bytes: f.bytes })),
 };
-if (!args['dry-run']) writeFileSync(`${OUT}/basemap.json`, JSON.stringify(manifest, null, 1));
-else console.log(JSON.stringify(files.map((f) => [f.file, mb(f.bytes)])));
+if (!args['dry-run']) {
+  writeFileSync(`${OUT}/basemap.json`, JSON.stringify(manifest, null, 1));
+  // Peaks and huts, cut out of the files just written (see tools/lib/peaks.mjs).
+  await buildPeaks(OUT, manifest);
+} else console.log(JSON.stringify(files.map((f) => [f.file, mb(f.bytes)])));
