@@ -80,7 +80,8 @@ class MapSun {
     }
     const refresh = () => this.update();
     map.on('moveend', refresh);
-    S.cursor.subscribe(refresh);
+    // Pages without the app's time cursor (the phone test page) have no time to follow.
+    S.cursor?.subscribe(refresh);
     this.update();
   }
 
