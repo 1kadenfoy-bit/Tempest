@@ -10,6 +10,7 @@ import { MODELS } from '../../adapters/openmeteo-maps/point-series';
 import { avalanche } from '../../layers/avalanche';
 import { airQuality } from '../../layers/air-quality';
 import { savedOnlyActive } from '../data/connection';
+import { mapSettings, type MapSettings } from '../map/map-settings';
 import { mapTime, modelsFor } from '../data/forecast';
 import { RADAR_REFRESH_MS, radarError, radarFetchedAt, radarFrames, radarOffline } from '../radar/frames';
 import { ATES_ICON } from '../avalanche/ates';
@@ -141,6 +142,16 @@ export function openModelInfo(spec: (typeof REGISTRY)[ModelId]) {
 
 /** Wires the buttons once the map, the pin and the safety layers exist (after the 3D switches, so the thumb buttons keep their order). */
 export function setupTopBar(): void {
+// The map panel's remembered choices go back on the map. Phones that only had the old Hillshade and Contours switches carry those over once.
+{
+  const saved: Record<string, string | boolean> = { ...S.prefs.mapSettings };
+  if (!Object.keys(saved).length) {
+    if (S.prefs.hillshade === false) saved.ground = 'plain';
+    if (S.prefs.contours === false) saved.contours = false;
+  }
+  if (!S.prefs.hillshade || !S.prefs.contours) { S.prefs.hillshade = true; S.prefs.contours = true; savePrefs(S.prefs); }
+  if (Object.keys(saved).length) mapSettings.set(saved as Partial<MapSettings>);
+}
 extraLegend = (doc) => S.avy.atesLegend(doc);
 // The terrain ratings' quick switch: a round button with the thumb buttons,
 // shown only while the avalanche layer is (no v8 design; the compass's shape).

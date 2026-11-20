@@ -19,6 +19,7 @@ the old wording moves to "Changed".
 ## Map buttons
 
 8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (three big tiles, one at a time: Plain | Shaded terrain | Satellite) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Boundaries; Weather stations; Rain/snow line; Freezing line). Tiles whose data is not built yet are shown dimmed and marked "Soon" (Kaden's choice, an exception to "a switch appears only when it works").
+8a. (Nov 20) Map panel details (from the Maps chat, passed on by Kaden): a **Sun and shadows** toggle sits with the Ground tiles and is greyed out on Plain. **3D buildings** is a small option under the View switch. Overlays with options open a small row: trail names, peak heights, boundary kinds (parks, provincial and regional, municipal). The panel remembers its choices.
 
 ## Pin
 

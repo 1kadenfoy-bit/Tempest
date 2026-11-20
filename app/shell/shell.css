@@ -634,3 +634,13 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .tile-soon { font: var(--type-micro); font-style: normal; color: var(--ink-2); }
 .toggle-tile[data-soon='true'] { justify-content: space-between; }
 .toggle-tile { height: auto; min-height: var(--touch-min); padding-top: 6px; padding-bottom: 6px; text-align: left; }
+
+/* Small options under a tile or the View switch (trail names, peak heights, boundary kinds, 3D buildings). */
+.toggle-grid { grid-auto-flow: row dense; }
+.option-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
+.option-row[hidden] { display: none; }
+.option-chip {
+  min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--stroke);
+  background: var(--surface); color: var(--ink-2); font: var(--type-secondary);
+}
+.option-chip[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); color: var(--ink); }
