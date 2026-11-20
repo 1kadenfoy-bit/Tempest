@@ -1,6 +1,6 @@
 {
  "version": 1,
- "source": "https://build.protomaps.com/20261116.pmtiles",
+ "source": "https://build.protomaps.com/20261118.pmtiles",
  "attribution": "<a href=\"https://protomaps.com\">Protomaps</a> © <a href=\"https://openstreetmap.org/copyright\">OpenStreetMap</a>",
  "bbox": [
   -139.1,
@@ -435,7 +435,7 @@
    "minzoom": 0,
    "maxzoom": 8,
    "tile": null,
-   "bytes": 16803043
+   "bytes": 16799416
   },
   {
    "file": "bc-6-7-18.pmtiles",
@@ -457,7 +457,7 @@
     7,
     19
    ],
-   "bytes": 4391208
+   "bytes": 4391240
   },
   {
    "file": "bc-6-7-20.pmtiles",
@@ -512,7 +512,7 @@
     8,
     19
    ],
-   "bytes": 41378396
+   "bytes": 41378774
   },
   {
    "file": "bc-6-8-20.pmtiles",
@@ -556,7 +556,7 @@
     9,
     18
    ],
-   "bytes": 16812387
+   "bytes": 16812470
   },
   {
    "file": "bc-6-9-19.pmtiles",
@@ -567,7 +567,7 @@
     9,
     19
    ],
-   "bytes": 47063607
+   "bytes": 47063611
   },
   {
    "file": "bc-6-9-20.pmtiles",
@@ -589,7 +589,7 @@
     9,
     21
    ],
-   "bytes": 62467394
+   "bytes": 62468818
   },
   {
    "file": "bc-6-9-22.pmtiles",
@@ -622,7 +622,7 @@
     10,
     19
    ],
-   "bytes": 46990306
+   "bytes": 46996491
   },
   {
    "file": "bc-6-10-20.pmtiles",
@@ -633,7 +633,7 @@
     10,
     20
    ],
-   "bytes": 49229550
+   "bytes": 49230245
   },
   {
    "file": "bc-6-10-21.pmtiles",
@@ -644,7 +644,7 @@
     10,
     21
    ],
-   "bytes": 78449493
+   "bytes": 78457513
   },
   {
    "file": "bc-6-10-22.pmtiles",
@@ -655,7 +655,7 @@
     10,
     22
    ],
-   "bytes": 18172231
+   "bytes": 18182653
   },
   {
    "file": "bc-6-11-18.pmtiles",
@@ -677,7 +677,7 @@
     11,
     19
    ],
-   "bytes": 34867292
+   "bytes": 34867430
   },
   {
    "file": "bc-6-11-20.pmtiles",
@@ -688,7 +688,7 @@
     11,
     20
    ],
-   "bytes": 23898845
+   "bytes": 23912958
   },
   {
    "file": "bc-6-11-21.pmtiles",
@@ -699,7 +699,7 @@
     11,
     21
    ],
-   "bytes": 60422328
+   "bytes": 60425849
   },
   {
    "file": "bc-6-11-22.pmtiles",
@@ -710,7 +710,7 @@
     11,
     22
    ],
-   "bytes": 14006459
+   "bytes": 14009650
   },
   {
    "file": "detail-north-shore.pmtiles",
@@ -724,7 +724,7 @@
     49.5
    ],
    "name": "North Shore: Horseshoe Bay to Deep Cove, up to Cypress, Grouse and Seymour",
-   "bytes": 4206732
+   "bytes": 4209788
   },
   {
    "file": "detail-sea-to-sky.pmtiles",
@@ -738,7 +738,7 @@
     50.35
    ],
    "name": "North Shore and Sea to Sky",
-   "bytes": 9721805
+   "bytes": 9722913
   },
   {
    "file": "detail-kootenay-pass.pmtiles",
@@ -752,7 +752,7 @@
     49.7
    ],
    "name": "Kootenay Pass to Whitewater",
-   "bytes": 1890422
+   "bytes": 1890586
   }
  ]
 }
