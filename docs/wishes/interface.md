@@ -18,7 +18,7 @@ the old wording moves to "Changed".
 
 ## Map buttons
 
-8. (Nov 20) **Search** sits where the map layers button is. The map layers' settings move into the settings window.
+8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (three big tiles, one at a time: Plain | Shaded terrain | Satellite) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Boundaries; Weather stations; Rain/snow line; Freezing line). Tiles whose data is not built yet are shown dimmed and marked "Soon" (Kaden's choice, an exception to "a switch appears only when it works").
 
 ## Pin
 
@@ -31,4 +31,5 @@ the old wording moves to "Changed".
 
 ## Changed
 
+- Rule 8 was: "Search sits where the map layers button is. The map layers' settings move into the settings window." (Nov 20, until later the same day)
 - Rule 9 was: "The pin on the user's location shows just the layer's data (temperature, wind speed and so on) and the elevation. No 'You' label." (Nov 20, until later the same day)

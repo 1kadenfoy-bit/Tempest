@@ -139,7 +139,8 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await page.screenshot({ path: 'test-results/screens/m1-map-panel.png' });
 
   const vis = () => onMap(page, (m) => m.getLayoutProperty('hillshade', 'visibility'));
-  await panel.getByRole('button', { name: 'Hillshade' }).click();
+  // Ground: Plain has no shading, Shaded terrain is the hillshade.
+  await panel.getByRole('button', { name: 'Plain' }).click();
   expect(await vis()).toBe('none');
 
   // Closes with a tap on the scrim.
@@ -151,8 +152,8 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await mapReady(page);
   expect(await vis()).toBe('none');
   await page.click('#map-layers');
-  await expect(page.getByRole('button', { name: 'Hillshade' })).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'Hillshade' }).click();
+  await expect(page.getByRole('button', { name: 'Plain' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Shaded terrain' }).click();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(panel).toBeHidden();
 });
