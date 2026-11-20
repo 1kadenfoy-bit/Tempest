@@ -61,7 +61,8 @@ chart or card is that layer's; the frame around it is the Interface's.
 ## Rules for every section chat
 
 **Start of every session**
-1. Read `CLAUDE.md`, this file and your own brief.
+1. Read `CLAUDE.md`, this file, your own brief and your rules file
+   (`docs/wishes/<section>.md`).
 2. Bring your branch up to date: `git fetch origin main && git merge origin/main`.
    If git reports a conflict, stop and tell Kaden; the lead resolves it.
 3. Start the app on recorded weather (see "Showing your work").
@@ -77,6 +78,33 @@ data source'."
 
 If the request is partly yours, do your part and name the chat for the rest.
 Only the main chat can decide that something crosses sections.
+
+**Kaden's rules for your section** (`docs/wishes/<section>.md`)
+
+Keep a running list of how Kaden wants things to behave and look. Whenever he
+says something like "when I do X, it should do Y", "this should always look
+like…" or "never…", write it down as a rule, in his own words where you can.
+- **One rule per line,** numbered, with the date he said it. Group them under
+  plain headings (for example "Gestures", "Labels", "Colours").
+- **When he changes his mind,** edit the rule to the new wording, add the new
+  date, and move the old wording to a "Changed" list at the bottom ("was: …,
+  until <date>"). Never keep two rules that disagree.
+- **Read the file at the start of every session,** and follow it.
+- **Flag every contradiction before acting.** When Kaden asks for something, or
+  gives a new rule, that goes against a rule already on the list, stop and say
+  so before changing anything:
+  > "That goes against rule 3 (from Nov 20): 'pins never move when I tap a
+  > station'. Keep rule 3, or replace it with the new one?"
+
+  Only after he answers, either leave the rule or change it (old wording to
+  "Changed"). Never quietly break a rule or quietly rewrite one.
+- **Tell him in one line** each time you add or change a rule ("Noted as rule
+  4: …"), and commit the file with your work.
+- **Rules for another section go to that chat.** Tell him which one, as with
+  any request that is not yours.
+
+The lead folds these rules into `docs/06-decisions-and-open-items.md` when
+the section is integrated.
 
 **While working**
 - **Edit only your own files.** `npm run check:section -- <section> --area`

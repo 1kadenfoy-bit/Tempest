@@ -36,6 +36,9 @@ Output of `npm run check:section -- <section>`: area, typecheck, lint, unit
 tests, this section's browser tests on recorded weather. All must pass.
 New tests added: ...
 
+## Kaden's rules added or changed
+From `docs/wishes/<section>.md`: the new and changed rules, numbered.
+
 ## Decisions made, and anything unsure
 Things chosen without asking, and things to check on a phone.
 
