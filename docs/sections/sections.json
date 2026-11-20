@@ -22,7 +22,8 @@
         "e2e/search.spec.ts",
         "docs/reports/maps-*/**",
         "docs/handoffs/maps/**",
-        "docs/reports/3d/**"
+        "docs/reports/3d/**",
+        "docs/wishes/maps.md"
       ],
       "except": [
         "app/map/freezing-line.ts",
@@ -55,7 +56,8 @@
         "e2e/details.spec.ts",
         "docs/reports/interface-*/**",
         "docs/handoffs/interface/**",
-        "docs/reports/summary/**"
+        "docs/reports/summary/**",
+        "docs/wishes/interface.md"
       ],
       "specs": [
         "e2e/shell.spec.ts",
@@ -95,7 +97,8 @@
         "docs/reports/weather-*/**",
         "docs/handoffs/weather/**",
         "docs/reports/stations/**",
-        "docs/reports/radar/**"
+        "docs/reports/radar/**",
+        "docs/wishes/weather.md"
       ],
       "specs": [
         "e2e/temperature.spec.ts",
@@ -115,7 +118,8 @@
         "effects.html",
         "e2e/effects.spec.ts",
         "docs/reports/effects-*/**",
-        "docs/handoffs/effects/**"
+        "docs/handoffs/effects/**",
+        "docs/wishes/effects.md"
       ],
       "specs": [
         "e2e/effects.spec.ts"
@@ -146,7 +150,8 @@
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts",
         "docs/reports/data-*/**",
-        "docs/handoffs/data/**"
+        "docs/handoffs/data/**",
+        "docs/wishes/data.md"
       ],
       "specs": [
         "e2e/offline.spec.ts",
@@ -185,7 +190,8 @@
         "docs/handoffs/safety/**",
         "docs/reports/air-quality/**",
         "docs/reports/ates/**",
-        "docs/reports/avalanche/**"
+        "docs/reports/avalanche/**",
+        "docs/wishes/safety.md"
       ],
       "specs": [
         "e2e/avalanche.spec.ts",
