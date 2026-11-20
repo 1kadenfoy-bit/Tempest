@@ -62,8 +62,8 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
   return {
     ...base,
     background: ground,
-    // Land with no cover tagged is mostly bare mountain: the rock zone.
-    earth: tint('rock', theme, ground),
+    // No ground cover is assumed: land the data does not describe stays plain ground.
+    earth: ground,
     water,
     ...neutral(['zoo', 'military', 'hospital', 'school', 'industrial', 'pedestrian', 'aerodrome', 'sand', 'beach'], 0.025),
     park_a: g(0.03), park_b: g(0.03),

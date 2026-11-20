@@ -15,6 +15,8 @@ the old wording moves to "Changed".
 3. The ground is shaded by terrain type: forest in green, alpine "rocky", and the treeline a mix of the two. (Nov 20, 2026)
 4. The three zones (forest, treeline, alpine) look clearly distinct from each other. The aesthetic is "almost cartoonish". (Nov 20, 2026)
 
+7. Never assume a terrain type. Terrain colours come only from real data, and where there is no data the ground stays plain. (Nov 20, 2026)
+
 ## Labels and map features
 
 5. Peak names show when zoomed out further than before, and always with the peak's elevation. (Nov 20, 2026)
