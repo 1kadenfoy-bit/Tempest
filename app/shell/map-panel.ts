@@ -182,7 +182,7 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   if (state.stationsOffline) {
     const note = document.createElement('span');
     note.className = 'toggle-note';
-    note.textContent = 'Weather stations need a connection';
+    note.textContent = 'Needs a connection';
     overlays.append(note);
   }
 

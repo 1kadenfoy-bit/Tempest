@@ -143,8 +143,8 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await panel.getByRole('button', { name: 'Plain' }).click();
   expect(await vis()).toBe('none');
 
-  // Closes with a tap on the scrim.
-  await page.mouse.click(195, 100);
+  // Closes with a tap on the scrim (the panel is taller now, so tap its top edge).
+  await page.locator('.scrim').click({ position: { x: 8, y: 8 } });
   await expect(panel).toBeHidden();
 
   // Remembered after a reload.
