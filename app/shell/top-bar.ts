@@ -9,6 +9,7 @@ import { MODELS as REGISTRY, type ModelId } from '../../adapters/openmeteo-maps/
 import { MODELS } from '../../adapters/openmeteo-maps/point-series';
 import { avalanche } from '../../layers/avalanche';
 import { airQuality } from '../../layers/air-quality';
+import { savedOnlyActive } from '../data/connection';
 import { mapTime, modelsFor } from '../data/forecast';
 import { RADAR_REFRESH_MS, radarError, radarFetchedAt, radarFrames, radarOffline } from '../radar/frames';
 import { ATES_ICON } from '../avalanche/ates';
@@ -96,12 +97,14 @@ export function renderRunAge() {
   const r = seg ? S.runs[seg.model as ModelId] ?? S.run : S.run;
   if (!r) return;
   const el = $('run-age');
+  // No connection, saved data only, or a saved copy: nothing can update, so no next update is promised.
+  const offline = S.usingSaved || !navigator.onLine || savedOnlyActive();
   const missing = S.timeline.missing.map((m) => REGISTRY[m as ModelId]?.label ?? m);
   const model = (seg?.model ?? r.model) as ModelId;
   // How old the data is, and when the next run should arrive (one cycle after this one did).
   const due = r.lastModified.getTime() + (24 / REGISTRY[model].runsPerDay) * 3_600_000;
   // Just the age and the next update; the source button beside it says which data. A saved copy has no next update; a missing model is still named.
-  el.textContent = `${ageText(runAgeHours(r.referenceTime, new Date()))} · ${S.usingSaved ? 'saved copy' : `next ${nextText(due)}`}` + (missing.length ? ` · ${missing.join(', ')} unavailable` : '');
+  el.textContent = `${ageText(runAgeHours(r.referenceTime, new Date()))} · ${offline ? 'offline' : `next ${nextText(due)}`}` + (missing.length ? ` · ${missing.join(', ')} unavailable` : '');
   // Stale is shown, never hidden: a run over 12 h old turns the warning colour.
   el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
   const name = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
@@ -167,6 +170,9 @@ layerBtn.addEventListener('click', (e) => {
   });
 });
 
+// The status line follows the connection coming and going.
+window.addEventListener('online', () => renderRunAge());
+window.addEventListener('offline', () => renderRunAge());
 // App settings (the gear at the top right): grows from its own button.
 const settingsBtn = $('settings-button');
 settingsBtn.addEventListener('click', () => {

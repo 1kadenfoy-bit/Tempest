@@ -111,7 +111,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   display: flex; align-items: center; gap: 6px;
   font: var(--type-secondary); white-space: nowrap; pointer-events: none;
 }
-.pin-readout .muted { color: var(--ink-2); }
+.pin-readout .muted, .pin-readout .pin-name { color: var(--ink-2); }
 .pin-readout strong { font-weight: 600; color: var(--ink); }
 
 /* Bottom sheet */

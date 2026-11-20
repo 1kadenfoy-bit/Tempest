@@ -36,20 +36,26 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
 
   const render = (notify = true) => {
     if (!state) return;
-    const label = pinLabel(state).short;
+    // "Location name · layer value · elevation" (Kaden, Nov 20).
+    const name = state.kind === 'you' ? state.name : pinLabel(state).short;
     const elev = state.elevation === null ? '…' : formatElevation(state.elevation);
     text.innerHTML = '';
     const r = readoutValue;
+    if (name) {
+      const place = document.createElement('span');
+      place.className = 'pin-name';
+      place.textContent = name;
+      text.append(place, ' · ');
+    }
     if (r.value) {
       const strong = document.createElement('strong');
       strong.textContent = r.value;
-      text.append(strong, ' ');
+      text.append(strong, ' · ');
     }
     const muted = document.createElement('span');
     muted.className = 'muted';
     // "feels −6 · 1,180 m · 0 °C at 1,150 m"
-    // Your own location shows just the layer's value and the elevation (Kaden, Nov 20); a dropped pin keeps its place name.
-    muted.textContent = [r.note, state.kind === 'you' ? elev : `${label} · ${elev}`, r.extra].filter(Boolean).join(' · ');
+    muted.textContent = [r.note, elev, r.extra].filter(Boolean).join(' · ');
     text.append(muted);
     keepInside();
     if (notify) onChange(state);
@@ -76,7 +82,14 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const set = (next: Omit<PinState, 'elevation'>) => {
     state = { ...next, elevation: null };
     marker.setLngLat([next.lng, next.lat]).addTo(map);
+    // Your own location is named from the closest labelled place on the map, once the map has drawn it.
+    const nameYou = () => {
+      if (!state || state.kind !== 'you' || state.name) return;
+      const found = nameNear(map, map.project([state.lng, state.lat]), 160);
+      if (found) { state.name = found; render(false); }
+    };
     render();
+    if (next.kind === 'you' && !next.name) { nameYou(); map.once('idle', nameYou); }
     const mine = ++seq;
     elevationAt(next.lng, next.lat)
       .then((m) => { if (mine === seq && state) { state.elevation = m; render(); } })

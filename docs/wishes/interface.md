@@ -14,6 +14,7 @@ the old wording moves to "Changed".
 5. (Nov 20) Where it makes sense to combine sources, the list lets him choose one, neither or both (for example a Canadian and an American avalanche source).
 6. (Nov 20) The button at the top right is the **app settings** button, drawn as a **gear**.
 7. (Nov 20) The **status line** gives just the age of the data and when the next update comes. The source button beside it says which data. With Auto, it shows the times of the model currently being viewed.
+7a. (Nov 20) When offline and the models cannot be updated, the status line gives just how old the data is and "offline".
 
 ## Map buttons
 
@@ -21,8 +22,8 @@ the old wording moves to "Changed".
 
 ## Pin
 
-9. (Nov 20) The pin on the user's location shows just the layer's data (temperature, wind speed and so on) and the elevation. No "You" label.
+9. (Nov 20) The pin shows, in this order: **location name · layer data value · elevation**. No "You" label.
 
 ## Changed
 
-_Nothing yet._
+- Rule 9 was: "The pin on the user's location shows just the layer's data (temperature, wind speed and so on) and the elevation. No 'You' label." (Nov 20, until later the same day)
