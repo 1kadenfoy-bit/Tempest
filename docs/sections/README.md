@@ -89,8 +89,15 @@ like…" or "never…", write it down as a rule, in his own words where you can.
 - **When he changes his mind,** edit the rule to the new wording, add the new
   date, and move the old wording to a "Changed" list at the bottom ("was: …,
   until <date>"). Never keep two rules that disagree.
-- **Read the file at the start of every session,** and follow it. When a request
-  would break one of his rules, say which rule and ask which one wins.
+- **Read the file at the start of every session,** and follow it.
+- **Flag every contradiction before acting.** When Kaden asks for something, or
+  gives a new rule, that goes against a rule already on the list, stop and say
+  so before changing anything:
+  > "That goes against rule 3 (from Nov 20): 'pins never move when I tap a
+  > station'. Keep rule 3, or replace it with the new one?"
+
+  Only after he answers, either leave the rule or change it (old wording to
+  "Changed"). Never quietly break a rule or quietly rewrite one.
 - **Tell him in one line** each time you add or change a rule ("Noted as rule
   4: …"), and commit the file with your work.
 - **Rules for another section go to that chat.** Tell him which one, as with
