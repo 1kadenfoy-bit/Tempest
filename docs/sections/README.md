@@ -148,8 +148,9 @@ on his phone and uses like the real app:
 - It reads live weather from his phone, which has its own free limit, so
   recorded weather is not needed there.
 - It keeps no offline copy and never mixes with the installed app.
-- If your branch fails to build, the preview keeps the last good version. Check
-  the "Publish to GitHub Pages" run when he says nothing changed.
+- If your branch fails to build, your preview is missing until it builds again.
+  Check the "Publish to GitHub Pages" run when he says the link is gone or
+  unchanged.
 
 Section chats cannot show the running app inside the Claude app, so the
 preview address is how Kaden clicks around. Push small changes often.
