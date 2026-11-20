@@ -6,9 +6,10 @@
 import type { LngLatLike, Map as MapLibreMap } from 'maplibre-gl';
 import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
+import { applyMapSettings } from './map-settings';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
-import { hasBuildingHeights } from './three-d';
+import { hasBuildingHeights, TILT } from './three-d';
 import { mapPanelBody } from '../shell/map-panel';
 import { closePanel, isOpenFrom, openPanel } from '../shell/panel';
 import { icons } from '../shell/icons';
@@ -31,6 +32,8 @@ export function createMap(): MapLibreMap {
   style: topoStyle(S.basemap.source, S.settings.theme()),
   center: S.prefs.lastPin ? [S.prefs.lastPin.lng, S.prefs.lastPin.lat] : NORTH_SHORE,
   zoom: 11,
+  // Start tilted when a 3D switch is on, so 3D is what you see on opening.
+  pitch: S.prefs.terrain3d || (buildingsOk() && S.prefs.buildings3d) ? TILT : 0,
   minZoom: 4,
   maxZoom: 16,
   maxBounds: [[-145, 44], [-108, 63]],
@@ -48,11 +51,8 @@ export const fitPadding = () => {
   S.map.setPadding({ top: 0, bottom: S.sheet?.collapsedHeight() ?? 320, left: 0, right: 0 });
 };
 
-// Terrain switches
-export const applyTerrainPrefs = () => {
-  if (S.map.getLayer('hillshade')) S.map.setLayoutProperty('hillshade', 'visibility', S.prefs.hillshade ? 'visible' : 'none');
-  if (S.map.getLayer('contour-lines')) S.map.setLayoutProperty('contour-lines', 'visibility', S.prefs.contours ? 'visible' : 'none');
-};
+// Terrain switches: the map's settings decide (app/map/map-settings.ts), including the panel's hillshade and contour switches.
+export const applyTerrainPrefs = () => applyMapSettings(S.map);
 export function startFromLastOrDefault() {
   if (S.prefs.lastPin) {
     S.pin.set({ lng: S.prefs.lastPin.lng, lat: S.prefs.lastPin.lat, kind: 'last', name: S.prefs.lastPin.label || null });

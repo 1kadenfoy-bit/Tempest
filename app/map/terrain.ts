@@ -6,6 +6,8 @@ import { maplibregl } from './maplibre';
 import mlcontour from 'maplibre-contour';
 import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style';
+import { addPlaces, applyPlacesTheme } from './places';
+import { mapSun } from './sun';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -26,10 +28,10 @@ export function terrainPaint(theme: Theme): { hillshade: Record<string, string>;
   const dark = theme === 'dark';
   return {
     hillshade: {
-      'hillshade-shadow-color': dark ? colorToken('water') : mix(colorToken('map-ground', 'light'), colorToken('ink', 'light'), 0.55),
-      'hillshade-highlight-color': dark ? colorToken('fill-control') : colorToken('surface', 'light'),
+      'hillshade-shadow-color': dark ? mix(colorToken('water'), colorToken('map-ground'), 0.75) : mix(colorToken('map-ground', 'light'), colorToken('ink', 'light'), 0.55),
+      'hillshade-highlight-color': dark ? colorToken('stroke-strong') : colorToken('surface', 'light'),
     },
-    contours: { 'line-color': colorToken('stroke', theme) },
+    contours: { 'line-color': colorToken('stroke-strong', theme) },
   };
 }
 
@@ -38,6 +40,7 @@ export function applyTerrainTheme(map: MapLibreMap, theme: Theme): void {
   const p = terrainPaint(theme);
   if (map.getLayer('hillshade')) for (const [k, v] of Object.entries(p.hillshade)) map.setPaintProperty('hillshade', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
   if (map.getLayer('contour-lines')) for (const [k, v] of Object.entries(p.contours)) map.setPaintProperty('contour-lines', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
+  applyPlacesTheme(map, theme);
 }
 
 export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Theme = 'dark'): void {
@@ -94,4 +97,9 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
       'line-width': ['match', ['get', 'level'], 1, 1, 0.5],
     },
   }, beforeLayerId);
+
+  // Trails, huts and peaks, above the contours.
+  addPlaces(map, beforeLayerId, theme);
+  // The sun's night wash goes under the hillshade, so under the weather fills too.
+  mapSun.attach(map);
 }
