@@ -15,9 +15,23 @@ export interface ModelRow {
 
 const reach = (h: number) => (h < 120 ? `${h} h` : `${Math.round(h / 24)} days`);
 
-export function modelMenuBody(rows: ModelRow[], onPick: (s: ModelSpec) => void, onInfo: (s: ModelSpec) => void): HTMLElement {
+/** `auto` is the menu's first choice; picking it calls `onPick(null)`. */
+export function modelMenuBody(rows: ModelRow[], auto: boolean, onPick: (s: ModelSpec | null) => void, onInfo: (s: ModelSpec) => void): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
+  const first = document.createElement('div');
+  first.className = 'group';
+  const autoLine = document.createElement('div');
+  autoLine.className = 'model-line';
+  const autoRow = document.createElement('button');
+  autoRow.className = 'model-row';
+  autoRow.dataset.source = 'auto';
+  autoRow.setAttribute('aria-pressed', String(auto));
+  autoRow.innerHTML = `<span class="model-names"><span class="model-name">Auto</span><span class="model-grid">Best model for each time</span></span><span class="model-check">${icons.check}</span>`;
+  autoRow.addEventListener('click', () => onPick(null));
+  autoLine.append(autoRow);
+  first.append(autoLine);
+  wrap.append(first);
   for (const [group, title] of [['high', 'HIGH RESOLUTION'], ['global', 'GLOBAL']] as const) {
     const inGroup = rows.filter((r) => r.spec.group === group);
     if (!inGroup.length) continue;
@@ -51,7 +65,7 @@ export function modelMenuBody(rows: ModelRow[], onPick: (s: ModelSpec) => void, 
   }
   const note = document.createElement('p');
   note.className = 'panel-note';
-  note.textContent = 'Only sources that carry what this layer needs are listed. Tap i for a source’s details. HRDPS and RDPS hand over down the chain where they end; the seam is marked.';
+  note.textContent = 'Only sources that carry what this layer needs are listed. Tap i for a source’s details. Models hand over down the chain where they end; the seam is marked.';
   wrap.append(note);
   return wrap;
 }
