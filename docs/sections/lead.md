@@ -24,7 +24,8 @@ use a cheaper one.
    - Send anything bigger back to the section, with a note for Kaden to pass
      on.
 5. **Update the docs:**
-   - fold decisions into `docs/06-decisions-and-open-items.md`;
+   - fold decisions, and Kaden's rules from `docs/wishes/<section>.md`, into
+     `docs/06-decisions-and-open-items.md`;
    - fold sources and terms into `docs/05-data-sources.md`;
    - refresh the shell's reference pictures if the interface changed.
 6. **Merge to main.** The published app updates, and CI runs on the merge.
