@@ -26,8 +26,8 @@ Read CLAUDE.md, docs/sections/README.md and docs/sections/<section>.md, in that 
 
 Then:
 1. Work on the branch claude/tempest-<section>: create it from origin/main if it does not exist, otherwise check it out and merge origin/main into it.
-2. Install and get the app running: npm ci, npm run tiles, then npm run dev. Report port 5173 as a preview so I can open the live view.
+2. Install and get the app running: npm ci, npm run tiles, then npm run dev (for your own checks on recorded weather). I try your work at https://1kadenfoy-bit.github.io/Tempest/preview/<section>/, published a few minutes after each push.
 3. Tell me in a few plain sentences what this section covers and what is waiting in your brief, then ask me what to work on.
 
-I design and test; I do not read code. Keep messages short and plain. Commit and push each version I like. When I say I'm happy, run npm run check:section -- <section>, write the handoff note, open the pull request, and stop.
+I design and test; I do not read code. Keep messages short and plain. Commit and push each change for me to try, and tell me when the preview has it. When I say I'm happy, run npm run check:section -- <section>, write the handoff note, open the pull request, and stop.
 ```
