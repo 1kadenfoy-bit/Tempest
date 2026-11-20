@@ -12,7 +12,7 @@ the old wording moves to "Changed".
 ## Colours and look
 
 2. Dark mode must not be too dark; it should be easy to see things on it. (Nov 20, 2026)
-3. The ground is shaded by terrain type: forest in green, alpine "rocky", and the treeline a mix of the two. (Nov 20, 2026)
+3. The ground is coloured by terrain type: forest in green, alpine "rocky", the treeline a mix of the two, and every other type the map software knows (cities, farmland, glaciers, sand and so on) has its own colour. A city must never look like forest. The full list is in docs/reports/maps-terrain/terrain-colours.md. (Nov 20, 2026)
 4. The three zones (forest, treeline, alpine) look clearly distinct from each other. The aesthetic is "almost cartoonish". (Nov 20, 2026)
 
 7. Never assume a terrain type. Terrain colours come only from real data, and where there is no data the ground stays plain. (Nov 20, 2026)
@@ -20,9 +20,12 @@ the old wording moves to "Changed".
 
 ## Labels and map features
 
-5. Peak names show when zoomed out further than before, and always with the peak's elevation. (Nov 20, 2026)
-6. Trails and huts are shown on the map. (Nov 20, 2026)
+5. Peak names show like they used to, but a bit further zoomed out, with the peak's elevation under the name. (Nov 20, 2026)
+6. Trails and huts are shown on the map, with their names. (Nov 20, 2026)
+9. Tapping near a named peak, hut or trail puts the pin on that named place and uses its name. (Nov 20, 2026)
 
 ## Changed
 
-_Nothing yet._
+- Rule 3 was: "The ground is shaded by terrain type: forest in green, alpine \"rocky\", and the treeline a mix of the two." until Nov 20, 2026 (now every type is coloured).
+- Rule 5 was: "Peak names show when zoomed out further than before, and always with the peak's elevation." until Nov 20, 2026 (now: like they used to, a bit further out, elevation under the name).
+- Rule 6 was: "Trails and huts are shown on the map." until Nov 20, 2026 (now with their names).

@@ -10,4 +10,3 @@ public/tiles/*.pmtiles
 
 # Helper agents' working copies
 .claude/worktrees/
-public/tiles/places.json

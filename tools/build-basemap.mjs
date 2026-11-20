@@ -12,7 +12,7 @@
 //
 //   node tools/build-basemap.mjs [--dry-run] [--only=6-10-21,...] [--build=URL]
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { buildPeaks, readManifest } from './lib/peaks.mjs';
+import { buildPeaks, placesOutOfDate, readManifest } from './lib/peaks.mjs';
 import { mb, openArchive, planBytes, planTiles, tileBounds, writeArchive, lonToX, latToY } from './lib/pmtiles-cut.mjs';
 
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => {
@@ -43,7 +43,7 @@ if (only && !args.force && !args['dry-run'] && existsSync(`${OUT}/basemap.json`)
   const want = [...only].map((n) => (n === 'overview' ? 'bc-overview' : n));
   if (want.every((n) => existsSync(`${OUT}/${n}.pmtiles`))) {
     console.error('base map pieces already present');
-    if (!existsSync(`${OUT}/places.json`)) await buildPeaks(OUT, readManifest(OUT));
+    if (placesOutOfDate(readManifest(OUT))) await buildPeaks(OUT, readManifest(OUT));
     process.exit(0);
   }
 }

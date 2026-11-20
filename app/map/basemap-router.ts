@@ -4,7 +4,6 @@
 // enlarged from their zoom-13 ancestor.
 import type { VectorSourceSpecification } from 'maplibre-gl';
 import { PMTiles, findTile, zxyToTileId, type RangeResponse, type Source } from 'pmtiles';
-import { configurePlaces } from './places';
 import { ancestorOf, baseMaxZoom, filesForTile, type BasemapFile, type BasemapManifest } from '../../core/basemap/manifest';
 import { maplibregl } from './maplibre';
 import { overzoomTile } from './overzoom';
@@ -43,7 +42,6 @@ export async function loadBasemap(baseUrl: string): Promise<Basemap> {
   // map instead of carrying its own copy: VITE_TILES_BASE at build time.
   const tiles = new URL((import.meta.env.VITE_TILES_BASE as string | undefined) ?? 'tiles/', baseUrl).href;
   const manifestUrl = new URL('basemap.json', tiles).href;
-  configurePlaces(new URL('places.json', tiles).href);
   const manifest = (await (await fetch(manifestUrl)).json()) as BasemapManifest;
   const archives = new Map<string, PMTiles>();
   const archive = (file: string) => {

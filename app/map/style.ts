@@ -6,17 +6,9 @@ import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps';
 import type { LayerSpecification, Map as MapLibreMap, StyleSpecification, VectorSourceSpecification } from 'maplibre-gl';
 import { colorToken, type Theme } from '../theme/tokens';
 
-function hex(c: string): [number, number, number] {
-  const n = parseInt(c.slice(1, 7), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-/** Mix two hex tokens: t = 0 gives a, 1 gives b. */
-export function mix(a: string, b: string, t: number): string {
-  const [ar, ag, ab] = hex(a);
-  const [br, bg, bb] = hex(b);
-  const c = (x: number, y: number) => Math.round(x + (y - x) * t).toString(16).padStart(2, '0');
-  return `#${c(ar, br)}${c(ag, bg)}${c(ab, bb)}`;
-}
+import { mix } from './style-mix';
+import { TERRAIN, UNDER_ZONES, kindColourExpression, terrainColour, type TerrainClass } from './terrain-colours';
+export { mix };
 
 /**
  * How far the map's ground is lifted toward the ink so land reads on a phone
@@ -29,23 +21,9 @@ export function mapGround(theme: Theme): string {
   return mix(colorToken('map-ground', theme), colorToken('ink', theme), GROUND_LIFT[theme]);
 }
 
-/**
- * Terrain tints: what the ground is covered with, as a colour mixed into the
- * ground. Muted so the weather on top still leads. These hues are proposed,
- * pending Kaden's pick (they are not in design/tokens.json yet).
- * Names are the base map's (OpenStreetMap) land types.
- */
-export const TERRAIN_TINTS: Record<'forest' | 'treeline' | 'meadow' | 'rock' | 'ice' | 'wetland', { dark: string; light: string }> = {
-  forest:   { dark: '#2E7D4A', light: '#5FA876' },
-  treeline: { dark: '#8FA84A', light: '#B7C971' },
-  meadow:   { dark: '#8FA84A', light: '#B7C971' },
-  rock:     { dark: '#9A8F86', light: '#C9BFB4' },
-  ice:      { dark: '#9CD3E6', light: '#DDF0F7' },
-  wetland:  { dark: '#3E8F86', light: '#7FBDB4' },
-};
-/** How strongly each tint shows over the ground: high, so the three zones read as flat blocks. */
-const TINT_STRENGTH = 0.8;
-const tint = (k: keyof typeof TERRAIN_TINTS, theme: Theme, ground: string) => mix(ground, TERRAIN_TINTS[k][theme], TINT_STRENGTH);
+/** How strongly a terrain colour shows over the ground: high, so the types read as flat cartoon blocks. */
+const TINT_STRENGTH = 0.85;
+const tint = (c: TerrainClass, theme: Theme, ground: string) => mix(ground, terrainColour(c, theme), TINT_STRENGTH);
 
 const CLEAR = 'rgba(0, 0, 0, 0)';
 
@@ -100,41 +78,57 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     address_label_halo: halo,
     pois: Object.fromEntries(Object.keys(base.pois ?? {}).map((k) => [k, ink2])) as unknown as Flavor['pois'],
     landcover: {
-      grassland: g(0.03), barren: tint('rock', theme, ground), urban_area: g(0.03), farmland: g(0.02),
-      glacier: tint('ice', theme, ground), scrub: g(0.03), forest: g(0.03),
+      grassland: tint('meadow', theme, ground), barren: tint('alpine', theme, ground), urban_area: tint('residential', theme, ground), farmland: tint('farmland', theme, ground),
+      glacier: tint('ice', theme, ground), scrub: tint('treeline', theme, ground), forest: tint('forest', theme, ground),
     },
   } as Flavor;
 }
 
 const spriteUrl = (theme: Theme) => `https://protomaps.github.io/basemaps-assets/sprites/v4/${theme}`;
 
+/** Protomaps landuse layers replaced by the one terrain colour table (app/map/terrain-colours.ts). */
+const REPLACED = ['landuse_park', 'landuse_urban_green', 'landuse_hospital', 'landuse_industrial', 'landuse_school', 'landuse_beach', 'landuse_zoo', 'landuse_aerodrome', 'landuse_pedestrian'];
+
 /**
- * The base layers: the Protomaps set, plus bare rock and wetland, which the set
- * leaves undrawn. Rock sits right after the parks and woods so roads and
- * labels stay on top.
+ * The base layers: the Protomaps set with its ground-cover polygons swapped for
+ * one table of every land type and its colour. Order, bottom to top: ground,
+ * OpenStreetMap woods and grass, the BC zones (they win where they exist),
+ * everything else the data tags (rock, ice, wetland, sand, farmland and the
+ * built-up types), then cliffs. Roads and labels stay above.
  */
 function baseLayers(theme: Theme): LayerSpecification[] {
-  const all = layers('protomaps', topoFlavor(theme), { lang: 'en' }) as LayerSpecification[];
+  const all = (layers('protomaps', topoFlavor(theme), { lang: 'en' }) as LayerSpecification[]).filter((l) => !REPLACED.includes(l.id));
   const ground = mapGround(theme);
-  const extra = (id: string, kinds: string[], colour: string): LayerSpecification => ({
+  const opacity = ['interpolate', ['linear'], ['zoom'], 6, 0, 9, 1] as never;
+  const fill = (id: string, classes: TerrainClass[]): LayerSpecification => ({
     id, type: 'fill', source: 'protomaps', 'source-layer': 'landuse',
-    filter: ['in', ['get', 'kind'], ['literal', kinds]],
-    paint: { 'fill-color': colour, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0, 9, 1] },
+    filter: ['in', ['get', 'kind'], ['literal', classes.flatMap((c) => TERRAIN[c].kinds)]],
+    paint: { 'fill-color': kindColourExpression(classes, theme) as never, 'fill-opacity': opacity },
   } as LayerSpecification);
-  const zone = (id: string, cls: string, colour: string): LayerSpecification => ({
-    id, type: 'fill', source: ZONES_SOURCE, filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': colour, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
+  const zone = (id: string, cls: string, c: TerrainClass): LayerSpecification => ({
+    id, type: 'fill', source: ZONES_SOURCE, filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': tint(c, theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
   } as LayerSpecification);
-  all.splice(all.findIndex((l) => l.id === 'earth') + 1, 0,
-    zone('zone_forest', 'forest', tint('forest', theme, ground)),
-    zone('zone_parkland', 'parkland', tint('treeline', theme, ground)),
-    zone('zone_alpine', 'alpine', tint('rock', theme, ground)));
-  const at = all.findIndex((l) => l.id === 'landuse_park') + 1;
-  // Peaks are drawn from places.json (app/map/places.ts), from zoom 10 with their heights.
+  const over = (Object.keys(TERRAIN) as TerrainClass[]).filter((c) => !UNDER_ZONES.includes(c));
+  const cliffs = {
+    id: 'terrain_cliffs', type: 'line', source: 'protomaps', 'source-layer': 'earth', minzoom: 11,
+    filter: ['==', ['get', 'kind'], 'cliff'],
+    layout: { 'line-cap': 'round' },
+    paint: { 'line-color': mix(terrainColour('alpine', theme), '#000000', 0.45), 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 16, 2.5] },
+  } as LayerSpecification;
+  const after = all.findIndex((l) => l.id === 'landcover') + 1;
+  all.splice(after, 0,
+    fill('terrain_under', UNDER_ZONES),
+    zone('zone_forest', 'forest', 'forest'),
+    zone('zone_parkland', 'parkland', 'treeline'),
+    zone('zone_alpine', 'alpine', 'alpine'),
+    fill('terrain_over', over),
+    cliffs);
+  // Trails are named from zoom 14, where the base map has their names (it showed them from 15).
+  const trailLabels = all.find((l) => l.id === 'roads_labels_minor');
+  if (trailLabels) trailLabels.minzoom = 14;
+  // Peaks are drawn by app/map/places.ts, with their heights.
   const pois = all.find((l) => l.id === 'pois');
   if (pois && 'filter' in pois && Array.isArray(pois.filter)) pois.filter = [...(pois.filter as unknown[]), ['!=', ['get', 'kind'], 'peak']] as never;
-  all.splice(at, 0,
-    extra('landuse_wetland', ['wetland'], tint('wetland', theme, ground)),
-    extra('landuse_rock', ['bare_rock', 'scree', 'rock'], tint('rock', theme, ground)));
   return all;
 }
 

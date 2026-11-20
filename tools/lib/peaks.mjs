@@ -2,12 +2,14 @@
 //
 // The base map holds peaks only in its zoom-13 tiles and deeper, so a map
 // zoomed out to 10 or 11 has none. This reads those tiles once, at build time,
-// and writes one small file (public/tiles/places.json) the app draws from
-// zoom 9, so a peak's name and height show well before you zoom right in.
+// and writes one small file (public/places/places.json, shipped with the app)
+// the app draws from zoom 10, so a peak's name and height show well before you
+// zoom right in. `coverage` lists the base map files it was cut from, so a
+// bigger build (all of BC) knows to redo it.
 //
-//   { version: 1, peaks: [[name, elevation_m | null, lng, lat], ...],
+//   { version: 1, coverage: [file, ...], peaks: [[name, elevation_m | null, lng, lat], ...],
 //     huts:  [[name, kind, lng, lat], ...] }
-import { closeSync, existsSync, fstatSync, openSync, readSync, readFileSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fstatSync, mkdirSync, openSync, readSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { PMTiles } from 'pmtiles';
 import { VectorTile } from '@mapbox/vector-tile';
@@ -40,9 +42,19 @@ function deepTiles(file) {
   return null; // the overview has none
 }
 
-export async function buildPeaks(dir, manifest, log = console.error) {
+export const PLACES_FILE = 'public/places/places.json';
+
+/** Files in the manifest that hold peaks (everything but the overview) and that a peaks file has not been cut from. */
+export function placesOutOfDate(manifest, out = PLACES_FILE) {
+  if (!existsSync(out)) return true;
+  const have = new Set(JSON.parse(readFileSync(out, 'utf8')).coverage ?? []);
+  return manifest.files.filter((f) => f.tile || f.bbox).some((f) => !have.has(f.file) && existsSync(`public/tiles/${f.file}`));
+}
+
+export async function buildPeaks(dir, manifest, log = console.error, out = PLACES_FILE) {
   const peaks = new Map(); // name -> [[elev, lng, lat]]
   const huts = new Map();
+  const covered = [];
   const add = (map, name, extra, lng, lat) => {
     const list = map.get(name) ?? [];
     if (list.some((p) => Math.abs(p[1] - lng) < 0.006 && Math.abs(p[2] - lat) < 0.004)) return;
@@ -76,13 +88,15 @@ export async function buildPeaks(dir, manifest, log = console.error) {
       }
     }
     src.close();
+    covered.push(f.file);
     log(`peaks: ${f.file}: ${found} peaks and huts`);
   }
   const flat = (map) => [...map].flatMap(([name, list]) => list.map(([a, lng, lat]) => [name, a, +lng.toFixed(4), +lat.toFixed(4)]));
-  const out = { version: 1, peaks: flat(peaks), huts: flat(huts) };
-  writeFileSync(`${dir}/places.json`, JSON.stringify(out));
-  log(`places.json: ${out.peaks.length} peaks, ${out.huts.length} huts`);
-  return out;
+  const result = { version: 1, coverage: covered, peaks: flat(peaks), huts: flat(huts) };
+  mkdirSync(out.slice(0, out.lastIndexOf('/')), { recursive: true });
+  writeFileSync(out, JSON.stringify(result));
+  log(`${out}: ${result.peaks.length} peaks, ${result.huts.length} huts`);
+  return result;
 }
 
 export function readManifest(dir) {
