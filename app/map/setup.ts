@@ -8,7 +8,7 @@ import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
-import { hasBuildingHeights } from './three-d';
+import { hasBuildingHeights, TILT } from './three-d';
 import { mapPanelBody } from '../shell/map-panel';
 import { closePanel, isOpenFrom, openPanel } from '../shell/panel';
 import { icons } from '../shell/icons';
@@ -31,6 +31,8 @@ export function createMap(): MapLibreMap {
   style: topoStyle(S.basemap.source, S.settings.theme()),
   center: S.prefs.lastPin ? [S.prefs.lastPin.lng, S.prefs.lastPin.lat] : NORTH_SHORE,
   zoom: 11,
+  // Start tilted when a 3D switch is on, so 3D is what you see on opening.
+  pitch: S.prefs.terrain3d || (buildingsOk() && S.prefs.buildings3d) ? TILT : 0,
   minZoom: 4,
   maxZoom: 16,
   maxBounds: [[-145, 44], [-108, 63]],

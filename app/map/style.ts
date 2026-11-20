@@ -3,7 +3,7 @@
 // and water tokens, and the ink token mixed in at low strength for land cover,
 // roads and labels. Colour is for data, so the base map stays neutral and quiet.
 import { layers, namedFlavor, type Flavor } from '@protomaps/basemaps';
-import type { Map as MapLibreMap, StyleSpecification, VectorSourceSpecification } from 'maplibre-gl';
+import type { LayerSpecification, Map as MapLibreMap, StyleSpecification, VectorSourceSpecification } from 'maplibre-gl';
 import { colorToken, type Theme } from '../theme/tokens';
 
 function hex(c: string): [number, number, number] {
@@ -18,8 +18,37 @@ export function mix(a: string, b: string, t: number): string {
   return `#${c(ar, br)}${c(ag, bg)}${c(ab, bb)}`;
 }
 
+/**
+ * How far the map's ground is lifted toward the ink so land reads on a phone
+ * outdoors. Dark was hard to see; this lifts it without touching the token.
+ */
+const GROUND_LIFT: Record<Theme, number> = { dark: 0.2, light: 0 };
+
+/** The map's ground: the token, lifted a little toward the ink. */
+export function mapGround(theme: Theme): string {
+  return mix(colorToken('map-ground', theme), colorToken('ink', theme), GROUND_LIFT[theme]);
+}
+
+/**
+ * Terrain tints: what the ground is covered with, as a colour mixed into the
+ * ground. Muted so the weather on top still leads. These hues are proposed,
+ * pending Kaden's pick (they are not in design/tokens.json yet).
+ * Names are the base map's (OpenStreetMap) land types.
+ */
+export const TERRAIN_TINTS: Record<'forest' | 'treeline' | 'meadow' | 'rock' | 'ice' | 'wetland', { dark: string; light: string }> = {
+  forest:   { dark: '#2F5A3C', light: '#8DB596' },
+  treeline: { dark: '#4C6A45', light: '#A9BF93' },
+  meadow:   { dark: '#5A7A4A', light: '#BCCFA0' },
+  rock:     { dark: '#6F7378', light: '#B5B1AA' },
+  ice:      { dark: '#8FB4C8', light: '#D6E8F0' },
+  wetland:  { dark: '#35605A', light: '#98BDB5' },
+};
+/** How strongly each tint shows over the ground. */
+const TINT_STRENGTH = 0.55;
+const tint = (k: keyof typeof TERRAIN_TINTS, theme: Theme, ground: string) => mix(ground, TERRAIN_TINTS[k][theme], TINT_STRENGTH);
+
 export function topoFlavor(theme: Theme = 'dark'): Flavor {
-  const ground = colorToken('map-ground', theme);
+  const ground = mapGround(theme);
   const water = colorToken('water', theme);
   const ink = colorToken('ink', theme);
   const ink2 = colorToken('ink-2', theme);
@@ -35,8 +64,11 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     background: ground,
     earth: ground,
     water,
-    ...neutral(['park_a', 'park_b', 'wood_a', 'wood_b', 'scrub_a', 'scrub_b', 'zoo', 'military', 'hospital', 'school', 'industrial', 'pedestrian', 'aerodrome', 'sand', 'beach'], 0.025),
-    glacier: g(0.1),
+    ...neutral(['zoo', 'military', 'hospital', 'school', 'industrial', 'pedestrian', 'aerodrome', 'sand', 'beach'], 0.025),
+    park_a: g(0.03), park_b: g(0.03),
+    wood_a: tint('forest', theme, ground), wood_b: tint('forest', theme, ground),
+    scrub_a: tint('treeline', theme, ground), scrub_b: tint('treeline', theme, ground),
+    glacier: tint('ice', theme, ground),
     runway: g(0.12),
     pier: g(0.12),
     buildings: theme === 'dark' ? mix(ground, '#000000', 0.25) : g(0.1),
@@ -64,13 +96,33 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     address_label_halo: halo,
     pois: Object.fromEntries(Object.keys(base.pois ?? {}).map((k) => [k, ink2])) as unknown as Flavor['pois'],
     landcover: {
-      grassland: g(0.02), barren: g(0.04), urban_area: g(0.03), farmland: g(0.02),
-      glacier: g(0.1), scrub: g(0.025), forest: g(0.03),
+      grassland: tint('meadow', theme, ground), barren: tint('rock', theme, ground), urban_area: g(0.03), farmland: g(0.02),
+      glacier: tint('ice', theme, ground), scrub: tint('treeline', theme, ground), forest: tint('forest', theme, ground),
     },
   } as Flavor;
 }
 
 const spriteUrl = (theme: Theme) => `https://protomaps.github.io/basemaps-assets/sprites/v4/${theme}`;
+
+/**
+ * The base layers: the Protomaps set, plus bare rock and wetland, which the set
+ * leaves undrawn. Rock sits right after the parks and woods so roads and
+ * labels stay on top.
+ */
+function baseLayers(theme: Theme): LayerSpecification[] {
+  const all = layers('protomaps', topoFlavor(theme), { lang: 'en' }) as LayerSpecification[];
+  const ground = mapGround(theme);
+  const extra = (id: string, kinds: string[], colour: string): LayerSpecification => ({
+    id, type: 'fill', source: 'protomaps', 'source-layer': 'landuse',
+    filter: ['in', ['get', 'kind'], ['literal', kinds]],
+    paint: { 'fill-color': colour, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0, 9, 1] },
+  } as LayerSpecification);
+  const at = all.findIndex((l) => l.id === 'landuse_park') + 1;
+  all.splice(at, 0,
+    extra('landuse_wetland', ['wetland'], tint('wetland', theme, ground)),
+    extra('landuse_rock', ['bare_rock', 'scree', 'rock'], tint('rock', theme, ground)));
+  return all;
+}
 
 export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dark'): StyleSpecification {
   return {
@@ -78,7 +130,7 @@ export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dar
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
     sprite: spriteUrl(theme),
     sources: { protomaps: source },
-    layers: layers('protomaps', topoFlavor(theme), { lang: 'en' }),
+    layers: baseLayers(theme),
   };
 }
 
@@ -88,7 +140,7 @@ export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dar
  * colours and the icon sprite change; the layer set is the same for both.
  */
 export function applyBaseTheme(map: MapLibreMap, theme: Theme): void {
-  for (const layer of layers('protomaps', topoFlavor(theme), { lang: 'en' })) {
+  for (const layer of baseLayers(theme)) {
     if (!map.getLayer(layer.id) || !('paint' in layer) || !layer.paint) continue;
     for (const [prop, value] of Object.entries(layer.paint)) map.setPaintProperty(layer.id, prop as Parameters<MapLibreMap['setPaintProperty']>[1], value);
   }

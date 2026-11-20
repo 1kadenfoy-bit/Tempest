@@ -26,10 +26,10 @@ export function terrainPaint(theme: Theme): { hillshade: Record<string, string>;
   const dark = theme === 'dark';
   return {
     hillshade: {
-      'hillshade-shadow-color': dark ? colorToken('water') : mix(colorToken('map-ground', 'light'), colorToken('ink', 'light'), 0.55),
-      'hillshade-highlight-color': dark ? colorToken('fill-control') : colorToken('surface', 'light'),
+      'hillshade-shadow-color': dark ? mix(colorToken('water'), colorToken('map-ground'), 0.75) : mix(colorToken('map-ground', 'light'), colorToken('ink', 'light'), 0.55),
+      'hillshade-highlight-color': dark ? colorToken('stroke-strong') : colorToken('surface', 'light'),
     },
-    contours: { 'line-color': colorToken('stroke', theme) },
+    contours: { 'line-color': colorToken('stroke-strong', theme) },
   };
 }
 
@@ -74,7 +74,7 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
     type: 'hillshade',
     source: 'terrain-dem',
     paint: {
-      'hillshade-exaggeration': 0.4,
+      'hillshade-exaggeration': 0.55,
       ...paint.hillshade,
     },
   }, beforeLayerId);
