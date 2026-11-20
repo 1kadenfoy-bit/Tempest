@@ -123,7 +123,7 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   // Natural edges are feathered: a wide, blurred line in the type's own colour along its border bleeds into the neighbour.
   const feather = (id: string, source: string, sourceLayer: string | null, filter: unknown, colour: unknown): LayerSpecification => ({
     id, type: 'line', source, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
-    layout: { 'line-join': 'round' },
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
     paint: { 'line-color': colour, 'line-width': FEATHER, 'line-blur': FEATHER, 'line-opacity': 0.55 },
   } as LayerSpecification);
   const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, null, ['==', ['get', 'z'], cls], tint(c, theme, ground));
@@ -160,7 +160,7 @@ export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dar
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
     sprite: spriteUrl(theme),
-    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), attribution: 'BC zones © Province of BC (OGL-BC)' } },
+    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
     layers: baseLayers(theme),
   };
 }

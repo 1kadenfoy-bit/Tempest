@@ -19,6 +19,7 @@ the old wording moves to "Changed".
 8. The three zones come from the BC government's biogeoclimatic (BEC) map: alpine, parkland (the treeline mix) and forest, as issued. (Nov 20, 2026)
 10. Natural terrain types (forest, treeline, alpine and the rest) blend smoothly into each other along their edges, with rounded, not sharp, corners, so the map looks natural; urban areas stay crisp. (Nov 20, 2026)
 14. Lakes, rivers and the sea are a clear blue, not black. (Nov 20, 2026)
+15. Glaciers come from the BC government's outlines, with rounded edges, not from OpenStreetMap. (Nov 20, 2026)
 
 ## The Map panel
 

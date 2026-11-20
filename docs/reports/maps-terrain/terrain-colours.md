@@ -24,7 +24,7 @@ wetland and sand, their soft edges, urban, cliff lines.
 | Treeline, parkland, scrub | `#8FA84A` | yes, edges softened | scrub |
 | Grass and fields | `#B2CC6E` | yes, edges softened | grass, grassland, meadow, farmland, allotments, village_green, greenhouse_horticulture, plant_nursery, farmyard, golf_course, pitch, playground, dog_park, recreation_ground, garden, cemetery |
 | Alpine and bare rock | `#9A8F86` | yes, edges softened | bare_rock, scree, shingle, rock |
-| Glacier and ice | `#9CD3E6` | yes, edges softened | glacier |
+| Glacier and ice | `#9CD3E6` | smooth outline, no soft edge | BC government glacier outlines (all of BC), not OpenStreetMap |
 | Wetland | `#3E8F86` | yes, edges softened | wetland |
 | Sand and beach | `#E0CA85` | yes, edges softened | sand, beach |
 | Urban | `#B38E95` | no, crisp | residential, kindergarten, commercial, retail, marketplace, industrial, quarry, landfill, construction, brownfield, school, university, college, hospital, pedestrian, platform, railway, pier, dam, aerodrome, military, naval_base, zoo |
@@ -34,3 +34,5 @@ wetland and sand, their soft edges, urban, cliff lines.
 | Cliffs | alpine colour, darkened, as lines | | base map `earth` kind `cliff` (sparsely tagged) |
 
 Water: lakes, rivers and the sea are a clear blue (`#2B6CA3` dark, `#9CC6E3` light), a proposal for Kaden to change. The near-black water token stays only as the halo under labels.
+
+Glaciers: the province's Freshwater Atlas outlines (patches under 15 hectares left out), simplified and rounded. They come from the province's base mapping and may be older than today's ice.

@@ -4,7 +4,7 @@ export const L = {
   hillshade: 'hillshade',
   contours: 'contour-lines',
   // ground colours
-  groundColour: ['terrain_under', 'zone_forest', 'zone_parkland', 'zone_alpine', 'feather_zone_forest', 'feather_zone_parkland', 'feather_zone_alpine', 'terrain_over', 'feather_osm', 'terrain_urban'],
+  groundColour: ['terrain_under', 'zone_forest', 'zone_parkland', 'zone_alpine', 'feather_zone_forest', 'feather_zone_parkland', 'feather_zone_alpine', 'terrain_over', 'feather_osm', 'terrain_urban', 'glaciers-fill'],
   // trails, huts, camps
   trails: 'trails',
   tracks: 'tracks',
