@@ -54,7 +54,8 @@ test('home: shell sits where the v8 template puts it', async ({ page }) => {
   const layers = await box(page, '#map-layers');
   expect(layers).toMatchObject({ x: 390 - 16 - 56, width: 56, height: 56 });
   // Pin and readout describe your location with its elevation.
-  await expect(page.locator('.pin-readout')).toContainText(/You · [\d,]+ m/);
+  await expect(page.locator('.pin-readout')).toContainText(/[\d,]+ m/);
+  await expect(page.locator('.pin-readout')).not.toContainText('You');
   // The readout stays inside the screen.
   const r = await box(page, '.pin-readout');
   expect(r.x).toBeGreaterThanOrEqual(8);

@@ -2,7 +2,7 @@
 // source button and its menus, the run's age, and the legend row. Moved out
 // of app/main.ts; it reads the shared state in app/state.ts.
 import { S, app, $ } from '../state';
-import { formatCursorTime, formatMinutesAgo } from '../../core/units/format';
+import { formatMinutesAgo } from '../../core/units/format';
 import { formatRunAge, runAgeHours } from '../../core/time/run-age';
 import { segmentAt } from '../../core/time/timeline';
 import { MODELS as REGISTRY, type ModelId } from '../../adapters/openmeteo-maps/models';
@@ -100,9 +100,8 @@ export function renderRunAge() {
   const model = (seg?.model ?? r.model) as ModelId;
   // How old the data is, and when the next run should arrive (one cycle after this one did).
   const due = r.lastModified.getTime() + (24 / REGISTRY[model].runsPerDay) * 3_600_000;
-  el.textContent = `${ageText(runAgeHours(r.referenceTime, new Date()))} · next ${nextText(due)}` + (S.usingSaved ? ' · saved' : '') + (missing.length ? ` · ${missing.join(', ')} unavailable` : '')
-    // Before the forecast the map holds its first hour; the pin has the past.
-    + (S.cursor.time && S.timeline.steps[0] && S.cursor.time < S.timeline.steps[0] ? ` · map from ${formatCursorTime(S.timeline.steps[0])}` : '');
+  // Just the age and the next update; the source button beside it says which data. A saved copy has no next update; a missing model is still named.
+  el.textContent = `${ageText(runAgeHours(r.referenceTime, new Date()))} · ${S.usingSaved ? 'saved copy' : `next ${nextText(due)}`}` + (missing.length ? ` · ${missing.join(', ')} unavailable` : '');
   // Stale is shown, never hidden: a run over 12 h old turns the warning colour.
   el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
   const name = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;

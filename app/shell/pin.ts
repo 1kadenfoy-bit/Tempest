@@ -47,8 +47,9 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
     }
     const muted = document.createElement('span');
     muted.className = 'muted';
-    // "feels −6 · You · 1,180 m · 0 °C at 1,150 m"
-    muted.textContent = [r.note, `${label} · ${elev}`, r.extra].filter(Boolean).join(' · ');
+    // "feels −6 · 1,180 m · 0 °C at 1,150 m"
+    // Your own location shows just the layer's value and the elevation (Kaden, Nov 20); a dropped pin keeps its place name.
+    muted.textContent = [r.note, state.kind === 'you' ? elev : `${label} · ${elev}`, r.extra].filter(Boolean).join(' · ');
     text.append(muted);
     keepInside();
     if (notify) onChange(state);
