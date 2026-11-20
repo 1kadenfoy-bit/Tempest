@@ -24,6 +24,11 @@ the old wording moves to "Changed".
 
 9. (Nov 20) The pin shows, in this order: **location name · layer data value · elevation**. No "You" label.
 
+## App settings window
+
+10. (Nov 20) **Credits** sit in a collapsed section at the bottom of settings.
+11. (Nov 20) **Saved data** is just a button to save data, with what is currently saved listed below it. Swipe a saved item left to delete it (like mail and messages).
+
 ## Changed
 
 - Rule 9 was: "The pin on the user's location shows just the layer's data (temperature, wind speed and so on) and the elevation. No 'You' label." (Nov 20, until later the same day)

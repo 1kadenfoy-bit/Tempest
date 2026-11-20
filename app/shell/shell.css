@@ -597,3 +597,27 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .legend-bar-steps { border-radius: 2px; }
 .check-row[data-disabled] .check-title, .check-row[data-disabled] .check-note { color: var(--ink-3); }
 .check-row[data-disabled] .check-box { opacity: 0.5; }
+
+/* ── App settings: the save button, the swipe-to-delete list and the folded credits. ── */
+.wide-button {
+  width: 100%; height: var(--touch-min); border-radius: var(--radius-button-tile-row);
+  border: 1px solid var(--stroke-strong); background: var(--fill-control); color: var(--ink);
+  font: var(--type-body); font-weight: 600;
+}
+.wide-button:disabled { opacity: 0.5; }
+.saved-list { display: flex; flex-direction: column; }
+.swipe-row { position: relative; overflow: hidden; border-top: 1px solid var(--stroke); }
+.swipe-face { position: relative; background: var(--surface); touch-action: pan-y; }
+.swipe-delete {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 88px;
+  background: var(--fill-control); color: var(--ink); font: var(--type-body); font-weight: 600;
+}
+.swipe-row[data-busy='true'] { opacity: 0.5; }
+.fold-row {
+  width: 100%; min-height: var(--touch-min); display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; text-align: left; font: var(--type-body);
+}
+.fold-chevron { display: flex; color: var(--ink-2); transition: transform 150ms ease; }
+.fold-row[aria-expanded='true'] .fold-chevron { transform: rotate(180deg); }
+.fold-body { display: flex; flex-direction: column; gap: var(--gap-controls); }
+.fold-body[hidden] { display: none; }
