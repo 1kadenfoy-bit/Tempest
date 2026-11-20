@@ -347,6 +347,11 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
       origin.remove();
       document.querySelector<HTMLButtonElement>('.panel-close')?.click();
       map.fitBounds(a.bbox, { padding: 40, maxZoom: 13, duration: 700 });
+      // Ask for the area's file now, while the map zooms (not once it stops).
+      if (!areas.has(a.id) && !failed.has(a.id) && loadingId !== a.id) {
+        queue = [a, ...queue.filter((q) => q.id !== a.id)];
+        void pump();
+      }
     });
     body.append(zoom, tripLink(), sourceNote(a.id));
     openPanel({ origin, icon: TERRAIN, title: a.name, caption: 'Avalanche terrain ratings (ATES) area', body, onClose: () => origin.remove() });
