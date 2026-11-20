@@ -7,7 +7,7 @@ import type { LayerSpecification, Map as MapLibreMap, StyleSpecification, Vector
 import { colorToken, type Theme } from '../theme/tokens';
 
 import { mix } from './style-mix';
-import { TERRAIN, UNDER_ZONES, kindColourExpression, terrainColour, type TerrainClass } from './terrain-colours';
+import { NATURAL, TERRAIN, UNDER_ZONES, kindColourExpression, terrainColour, type TerrainClass } from './terrain-colours';
 export { mix };
 
 /**
@@ -78,7 +78,7 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     address_label_halo: halo,
     pois: Object.fromEntries(Object.keys(base.pois ?? {}).map((k) => [k, ink2])) as unknown as Flavor['pois'],
     landcover: {
-      grassland: tint('meadow', theme, ground), barren: tint('alpine', theme, ground), urban_area: tint('residential', theme, ground), farmland: tint('farmland', theme, ground),
+      grassland: tint('grass', theme, ground), barren: tint('alpine', theme, ground), urban_area: tint('urban', theme, ground), farmland: tint('grass', theme, ground),
       glacier: tint('ice', theme, ground), scrub: tint('treeline', theme, ground), forest: tint('forest', theme, ground),
     },
   } as Flavor;
@@ -108,20 +108,32 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   const zone = (id: string, cls: string, c: TerrainClass): LayerSpecification => ({
     id, type: 'fill', source: ZONES_SOURCE, filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': tint(c, theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
   } as LayerSpecification);
-  const over = (Object.keys(TERRAIN) as TerrainClass[]).filter((c) => !UNDER_ZONES.includes(c));
+  const overNatural = NATURAL.filter((c) => !UNDER_ZONES.includes(c));
   const cliffs = {
     id: 'terrain_cliffs', type: 'line', source: 'protomaps', 'source-layer': 'earth', minzoom: 11,
     filter: ['==', ['get', 'kind'], 'cliff'],
     layout: { 'line-cap': 'round' },
     paint: { 'line-color': mix(terrainColour('alpine', theme), '#000000', 0.45), 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 16, 2.5] },
   } as LayerSpecification;
+  // Natural edges are feathered: a wide, blurred line in the type's own colour along its border bleeds into the neighbour.
+  const feather = (id: string, source: string, sourceLayer: string | null, filter: unknown, colour: unknown): LayerSpecification => ({
+    id, type: 'line', source, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': colour, 'line-width': FEATHER, 'line-blur': FEATHER, 'line-opacity': 0.6 },
+  } as LayerSpecification);
+  const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, null, ['==', ['get', 'z'], cls], tint(c, theme, ground));
   const after = all.findIndex((l) => l.id === 'landcover') + 1;
   all.splice(after, 0,
     fill('terrain_under', UNDER_ZONES),
     zone('zone_forest', 'forest', 'forest'),
     zone('zone_parkland', 'parkland', 'treeline'),
     zone('zone_alpine', 'alpine', 'alpine'),
-    fill('terrain_over', over),
+    zoneFeather('feather_zone_forest', 'forest', 'forest'),
+    zoneFeather('feather_zone_parkland', 'parkland', 'treeline'),
+    zoneFeather('feather_zone_alpine', 'alpine', 'alpine'),
+    fill('terrain_over', overNatural),
+    feather('feather_osm', 'protomaps', 'landuse', ['in', ['get', 'kind'], ['literal', overNatural.flatMap((c) => TERRAIN[c].kinds)]], kindColourExpression(overNatural, theme)),
+    fill('terrain_urban', ['urban']),
     cliffs);
   // Trails are named from zoom 14, where the base map has their names (it showed them from 15).
   const trailLabels = all.find((l) => l.id === 'roads_labels_minor');
@@ -133,6 +145,8 @@ function baseLayers(theme: Theme): LayerSpecification[] {
 }
 
 const ZONES_SOURCE = 'terrain-zones';
+/** How wide, in pixels, the soft edge between natural types is (a blurred line centred on the border). */
+const FEATHER = 14;
 /** The BC zones file ships with the app (tools/build-zones.mjs writes it). */
 const zonesUrl = () => new URL('zones/terrain-zones.json', typeof document === 'undefined' ? 'http://localhost/' : document.baseURI).href;
 
