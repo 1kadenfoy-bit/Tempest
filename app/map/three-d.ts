@@ -21,7 +21,7 @@ export interface ThreeDState { terrain: boolean; buildings: boolean }
 /** True height. The mountains here need no help, and the fills' heights stay honest to the eye. */
 const EXAGGERATION = 1;
 /** Tilt given when a switch is turned on, so the change shows at once. */
-const TILT = 55;
+export const TILT = 55;
 /** Below this zoom buildings are too small to raise. Stored at zoom 14 (larger buildings) and 15 (all) where detail exists. */
 const BUILDINGS_MINZOOM = 14;
 /** Footprints the source gives no height: about two storeys. */
