@@ -5,7 +5,18 @@ The Interface chat keeps this list up to date (`docs/sections/README.md`). One r
 line, numbered, with the date. When he changes his mind, the rule is edited and
 the old wording moves to "Changed".
 
-_No rules yet._
+## Top bar
+
+1. (Nov 20) The warning icon is the **Notification Centre**. It shows a notification (bell) icon at rest. While a warning is in force it changes to the warning icon; once the warning has passed it goes back to the bell.
+2. (Nov 20) The **layer name** stays at the top and describes the layer it is on. Below it: how old the data is, and when the next update should arrive. The run number is dropped. Layers we can refresh whenever show when the next refresh will happen.
+3. (Nov 20) The **source button** (right of the layer name) is always shown, even with only one source. It lists the sources that can be used for the layer.
+4. (Nov 20) Where a layer has several sources, the list has an **Auto** choice. Auto picks the best data for each time: high resolution models first, lower resolution once the high resolution ones stop predicting.
+5. (Nov 20) Where it makes sense to combine sources, the list lets him choose one, neither or both (for example a Canadian and an American avalanche source).
+6. (Nov 20) The button at the top right is the **app settings** button.
+
+## Map buttons
+
+7. (Nov 20) **Search** sits where the map layers button is. The map layers' settings move into the settings window.
 
 ## Changed
 

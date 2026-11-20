@@ -68,8 +68,9 @@ test('precipitation: top bar, readout, summary and fills', async ({ page }) => {
   await page.goto(HOME);
   await ready(page);
   await expect(page.locator('#layer-name')).toHaveText('Precipitation');
-  await expect(page.locator('#model-pill')).toHaveText('HRDPS');
-  await expect(page.locator('#run-age')).toHaveText(/^\d\dZ run · \d+ [hd] old$/);
+  await expect(page.locator('#model-pill')).toHaveText('Auto');
+  // How old the data is, then when the next run is due (Auto picks the best model for each time).
+  await expect(page.locator('#run-age')).toHaveText(/^(new|\d+ [hd] old) · next (in \d+ (h|min)|any minute now|late ≈ \d+ h)/);
   await expect(page.locator('.pin-readout strong')).toHaveText(/^(\d+\.\d mm\/h (rain|mixed|snow)|Dry)$/);
   await expect(page.locator('#summary-before-label')).toHaveText(/^(Last \d+ h|\d+ h before|Since \w{3} \d+(:\d\d)? [AP]M)(\nobserved)?$/);
   await expect(page.locator('#summary-after-label')).toHaveText(/^(Next \d+ h|\d+ h after|Until \w{3} \d+(:\d\d)? [AP]M)$/);

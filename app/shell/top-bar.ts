@@ -9,8 +9,8 @@ import { MODELS as REGISTRY, type ModelId } from '../../adapters/openmeteo-maps/
 import { MODELS } from '../../adapters/openmeteo-maps/point-series';
 import { avalanche } from '../../layers/avalanche';
 import { airQuality } from '../../layers/air-quality';
-import { mapTime, modelChoice, modelsFor } from '../data/forecast';
-import { radarError, radarFrames, radarOffline } from '../radar/frames';
+import { mapTime, modelsFor } from '../data/forecast';
+import { RADAR_REFRESH_MS, radarError, radarFetchedAt, radarFrames, radarOffline } from '../radar/frames';
 import { ATES_ICON } from '../avalanche/ates';
 import { icons } from './icons';
 import { layerMenuBody } from './layer-menu';
@@ -29,6 +29,19 @@ export function renderLegend() {
   $('legend-row').replaceChildren(S.active.legend(document), ...(more ? [more] : []));
 }
 
+/** "2 h old", or "new" for a run that has just arrived. */
+function ageText(hours: number): string {
+  return hours >= 48 ? `${Math.floor(hours / 24)} d old` : hours < 1 ? 'new' : `${hours} h old`;
+}
+/** When the next update is due, in the top bar's words: "in ≈ 2 h", "any minute now", "late ≈ 1 h". */
+export function nextText(dueMs: number, now = Date.now()): string {
+  const min = Math.round((dueMs - now) / 60_000);
+  if (min >= 90) return `in ${Math.round(min / 60)} h`;
+  if (min >= 2) return `in ${min} min`;
+  if (min >= -5) return 'any minute now';
+  return `late ≈ ${Math.max(1, Math.round(-min / 60))} h`;
+}
+
 /** Point the shell's slots at the active layer. */
 export function showLayer() {
   $('layer-name').textContent = S.active.title;
@@ -42,8 +55,9 @@ export function showLayer() {
     ...(weekDay ? { weekDay: (a: Date, b: Date) => weekDay(app.pinData(), a, b) } : {}),
     frames: S.active.frames,
   });
-  // An observed layer has no model to choose.
-  $('model-pill').hidden = Boolean(S.active.frames);
+  // The source button is always shown, even where there is one source (radar names ECCC).
+  $('model-pill').hidden = false;
+  if (S.active.frames) $('model-pill-label').textContent = 'ECCC';
   // An issued layer names its source instead of a model.
   if (S.active.id === 'avalanche') $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
   if (S.active.id === airQuality.id) $('model-pill-label').textContent = S.air.short();
@@ -55,7 +69,7 @@ export function renderRunAge() {
     const el = $('run-age');
     const newest = radarFrames[radarFrames.length - 1];
     el.textContent = radarOffline() ? 'Radar · needs a connection'
-      : newest ? `ECCC radar · newest ${formatMinutesAgo(newest, new Date())}`
+      : newest ? `${formatMinutesAgo(newest, new Date()).replace(' ago', ' old')} · next ${nextText(radarFetchedAt + RADAR_REFRESH_MS)}`
       : radarError ? 'Radar not reachable · tap to retry' : 'Finding the radar frames…';
     el.dataset.stale = String(!newest || radarOffline() || Date.now() - newest.getTime() > 30 * 60_000);
     return;
@@ -83,12 +97,16 @@ export function renderRunAge() {
   if (!r) return;
   const el = $('run-age');
   const missing = S.timeline.missing.map((m) => REGISTRY[m as ModelId]?.label ?? m);
-  el.textContent = formatRunAge(r.referenceTime, new Date()) + (S.usingSaved ? ' · saved' : '') + (missing.length ? ` · ${missing.join(', ')} unavailable` : '')
+  const model = (seg?.model ?? r.model) as ModelId;
+  // How old the data is, and when the next run should arrive (one cycle after this one did).
+  const due = r.lastModified.getTime() + (24 / REGISTRY[model].runsPerDay) * 3_600_000;
+  el.textContent = `${ageText(runAgeHours(r.referenceTime, new Date()))} · next ${nextText(due)}` + (S.usingSaved ? ' · saved' : '') + (missing.length ? ` · ${missing.join(', ')} unavailable` : '')
     // Before the forecast the map holds its first hour; the pin has the past.
     + (S.cursor.time && S.timeline.steps[0] && S.cursor.time < S.timeline.steps[0] ? ` · map from ${formatCursorTime(S.timeline.steps[0])}` : '');
   // Stale is shown, never hidden: a run over 12 h old turns the warning colour.
   el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
-  $('model-pill-label').textContent = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
+  const name = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
+  $('model-pill-label').textContent = choiceOf(S.active.id) === AUTO ? 'Auto' : name;
 }
 export function syncAtesThumb() {
   atesThumb.style.display = S.active.id === 'avalanche' ? '' : 'none';
@@ -96,6 +114,10 @@ export function syncAtesThumb() {
 }
 // Model menu (04-ModelMenu) and model info (05-ModelInfo): grows from the model button.
 export const modelBtn = () => $('model-pill');
+/** The menu's first choice: the best model for each time, high resolution first (the same hand-over chain the app already uses). */
+const AUTO = 'auto';
+/** What is chosen for a layer: nothing chosen yet means Auto. */
+const choiceOf = (layerId: string): string => S.prefs.layerModels[layerId] ?? AUTO;
 export function modelAge(m: ModelId): string | null {
   const r = S.runs[m];
   return r ? formatRunAge(r.referenceTime, new Date()).split(' · ')[1] ?? null : null;
@@ -146,6 +168,13 @@ layerBtn.addEventListener('click', (e) => {
   });
 });
 
+// App settings (the gear at the top right): grows from its own button.
+const settingsBtn = $('settings-button');
+settingsBtn.addEventListener('click', () => {
+  if (isOpenFrom(settingsBtn)) { closePanel(); return; }
+  S.settings.open(settingsBtn);
+});
+
 modelBtn().addEventListener('click', () => {
   if (isOpenFrom(modelBtn())) { closePanel(); return; }
   const layer = S.active;
@@ -169,16 +198,24 @@ modelBtn().addEventListener('click', () => {
     }) });
     return;
   }
-  const choice = modelChoice(layer);
+  if (layer.frames) {
+    // Observed data: one source, listed so the button always has a menu.
+    const newest = radarFrames[radarFrames.length - 1];
+    openPanel({ origin: modelBtn(), icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody([
+      { id: 'eccc-radar', label: 'ECCC radar', detail: 'Observed rain and snow · new picture every 6 min', age: newest ? formatMinutesAgo(newest, new Date()) : 'not loaded', current: true },
+    ], () => closePanel()) });
+    return;
+  }
+  const choice = choiceOf(layer.id);
   const rows = modelsFor(layer).map((m) => ({ spec: REGISTRY[m], age: modelAge(m), current: m === choice }));
   openPanel({
     origin: modelBtn(),
     icon: '<span class="panel-letter">M</span>',
     title: 'Model',
     caption: `For this layer · ${layer.title}`,
-    body: modelMenuBody(rows, (spec) => {
+    body: modelMenuBody(rows, choice === AUTO, (spec) => {
       closePanel();
-      S.prefs.layerModels[layer.id] = spec.id;
+      S.prefs.layerModels[layer.id] = spec ? spec.id : AUTO;
       savePrefs(S.prefs);
       app.rebuildTimeline();
       renderRunAge();

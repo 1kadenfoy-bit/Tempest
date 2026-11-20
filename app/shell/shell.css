@@ -523,13 +523,17 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   position: relative; flex: 0 0 auto;
   width: var(--touch-min); height: var(--touch-min); border-radius: var(--radius-icon-button);
   background: var(--surface); border: 1px solid var(--stroke);
-  display: flex; align-items: center; justify-content: center; color: var(--warning);
+  display: flex; align-items: center; justify-content: center; color: var(--ink-2);
 }
 .alert-badge[hidden] { display: none; }
-.alert-badge[data-count='0'] { color: var(--ink-2); }
+/* The Notification Centre: a bell at rest, the warning triangle in the warning colour while an alert is in force. */
+.alert-icon { display: none; }
+.alert-badge[data-count]:not([data-count='0']) { color: var(--warning); }
+.alert-badge[data-count]:not([data-count='0']) .alert-icon { display: flex; }
+.alert-badge[data-count]:not([data-count='0']) .alert-bell { display: none; }
+.alert-bell { display: flex; }
 .alert-count:empty { display: none; }
 .alert-none { font: var(--type-body); color: var(--ink-2); padding: 4px 0; }
-.alert-icon { display: flex; }
 .alert-count {
   position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
   border-radius: 10px; background: var(--warning); color: var(--surface);
@@ -553,7 +557,7 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 /* ── Place search (M9): the round button at the right of the top bar and
    its grow panel. No v8 design for the panel; built from the panel, field
    and row parts. Controls stay neutral. ── */
-.search-button {
+.settings-button {
   flex: 0 0 auto;
   width: var(--touch-min); height: var(--touch-min); border-radius: var(--radius-icon-button);
   background: var(--surface); border: 1px solid var(--stroke); color: var(--ink);
