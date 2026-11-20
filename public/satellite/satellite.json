@@ -1,0 +1,46 @@
+{
+ "version": 1,
+ "source": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2025",
+ "year": 2025,
+ "attribution": "Contains modified Copernicus Sentinel data 2025, <a href=\"https://cloudless.eox.at\">Sentinel-2 cloudless</a> by <a href=\"https://eox.at\">EOX IT Services GmbH</a> (CC BY-NC-SA 4.0)",
+ "licence": "CC BY-NC-SA 4.0 (non-commercial, share-alike); for commercial use see https://cloudless.eox.at",
+ "season": "one cloud-free picture for the whole year (not a summer or winter version)",
+ "bbox": [
+  -139.1,
+  48.2,
+  -114.0,
+  60.0
+ ],
+ "tileSize": 256,
+ "format": "jpg",
+ "maxzoom": 14,
+ "files": [
+  {
+   "file": "close-cypress-seymour.pmtiles",
+   "minzoom": 11,
+   "maxzoom": 14,
+   "tile": null,
+   "areas": [
+    {
+     "name": "Cypress Mountain",
+     "bbox": [
+      -123.28,
+      49.34,
+      -123.12,
+      49.44
+     ]
+    },
+    {
+     "name": "Mt Seymour",
+     "bbox": [
+      -123.0,
+      49.32,
+      -122.88,
+      49.44
+     ]
+    }
+   ],
+   "bytes": 1630243
+  }
+ ]
+}
