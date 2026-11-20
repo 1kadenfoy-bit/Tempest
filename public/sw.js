@@ -39,6 +39,8 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== 'GET') return;
+  // Section previews (preview/<section>/) are separate test copies: never answered from here.
+  if (url.origin === self.location.origin && url.pathname.includes('/preview/')) return;
 
   // Other sites: only the ones a saved area keeps copies from (terrain tiles,
   // map fonts and icons) go through here, a saved copy first so the map works

@@ -38,13 +38,16 @@ class FileSliceSource implements Source {
 }
 
 export async function loadBasemap(baseUrl: string): Promise<Basemap> {
-  const manifestUrl = new URL('tiles/basemap.json', baseUrl).href;
+  // A section preview (docs/sections/README.md) reads the published app's base
+  // map instead of carrying its own copy: VITE_TILES_BASE at build time.
+  const tiles = new URL((import.meta.env.VITE_TILES_BASE as string | undefined) ?? 'tiles/', baseUrl).href;
+  const manifestUrl = new URL('basemap.json', tiles).href;
   const manifest = (await (await fetch(manifestUrl)).json()) as BasemapManifest;
   const archives = new Map<string, PMTiles>();
   const archive = (file: string) => {
     let a = archives.get(file);
     if (!a) {
-      a = new PMTiles(new RangeOrWholeSource(new URL(`tiles/${file}`, baseUrl).href));
+      a = new PMTiles(new RangeOrWholeSource(new URL(file, tiles).href));
       archives.set(file, a);
     }
     return a;
