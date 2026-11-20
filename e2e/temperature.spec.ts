@@ -24,7 +24,7 @@ test('temperature: layer menu, terrain fill, readout, summary, week values', asy
   await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: 180_000 });
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
   await expect(page.locator('.readout-text strong')).toHaveText(/^(−)?\d+ °C$/);
-  await expect(page.locator('.readout-text .muted')).toContainText(/feels (−)?\d+ · You · [\d,]+ m/);
+  await expect(page.locator('.readout-text .muted')).toContainText(/feels (−)?\d+ · [\d,]+ m/);
   await expect(page.locator('#summary-before')).toHaveText(/^High [+−]?\d+° · Low [+−]?\d+°$/);
   await expect(page.locator('#legend-row')).toContainText('20 °C');
   // Daily high and low under at least one day the model covers.

@@ -27,9 +27,12 @@ test('search: type a name, pick the peak, the pin moves there and takes its name
   await page.goto('/?insets=47,34');
   const button = page.locator('#search-button');
   await expect(button).toBeVisible({ timeout: 45_000 });
-  // A 44 px round button at the right end of the top bar (v8 01-Home).
+  // A round map button above locate (Kaden's interface rule 8, Nov 20), lined up with it.
   const b = (await button.boundingBox())!;
-  expect(b).toMatchObject({ x: 390 - 16 - 44, width: 44, height: 44 });
+  const loc = (await page.locator('#locate').boundingBox())!;
+  expect(b.x).toBe(loc.x);
+  expect(b.width).toBe(loc.width);
+  expect(b.y).toBeLessThan(loc.y);
   await page.waitForFunction(() => document.body.dataset.idle === 'true', null, { timeout: 45_000 });
 
   await button.click();

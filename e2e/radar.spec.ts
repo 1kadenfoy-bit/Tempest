@@ -67,8 +67,8 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
   // Legend: ECCC's type classes, in ECCC's colours.
   const legend = page.locator('#legend-row .legend-image');
   await expect(legend.locator('.legend-name')).toHaveText(['Snow', 'Mixed', 'Rain', 'Freezing', 'Hail']);
-  // No model and no window to choose for observed frames.
-  await expect(page.locator('#model-pill')).toBeHidden();
+  // The source button stays (Kaden's interface rule 3, Nov 20); no window to choose for observed frames.
+  await expect(page.locator('#model-pill')).toBeVisible();
   await expect(page.locator('#window-button')).toBeHidden();
 
   // The cursor sits on the newest type frame; the scrubber spans the last 3 hours.
@@ -76,7 +76,8 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
   await expect(page.locator('body')).toHaveAttribute('data-radar-frame', typeNewest);
   await expect(page.locator('#cursor-note')).toHaveText(/min ago|^now$/);
   await expect(page.locator('#summary-before')).toHaveText('31 frames · every 6 min');
-  await expect(page.locator('#run-age')).toHaveText(/^ECCC radar · newest (\d+ min ago|now)$/);
+  // The newest frame's age and the next look (Kaden's interface rules 2 and 7, Nov 20); the source button names ECCC radar.
+  await expect(page.locator('#run-age')).toHaveText(/^(\d+ min old|now) · next (in \d+ (min|h)|any minute now)$/);
 
   // The value at the pin, as ECCC classes it (the stub answers light rain next to the pin).
   await expect(page.locator('.pin-readout strong')).toHaveText('Light rain', { timeout: 15_000 });
@@ -114,8 +115,9 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
   await expect(page.locator('body')).toHaveAttribute('data-radar-frame', typeNewest);
 
   // Save for offline: radar is listed greyed out, with the reason (v8 08-SaveArea).
-  await page.click('#map-layers');
-  await page.getByRole('button', { name: /Save this area/ }).click();
+  // Saving lives in app settings (Kaden's interface rule 11, Nov 20).
+  await page.click('#settings-button');
+  await page.locator('#save-data').click();
   const box = page.getByRole('dialog', { name: 'Save for offline' });
   await expect(box).toBeVisible();
   const row = box.locator('.check-row', { hasText: 'Radar' });

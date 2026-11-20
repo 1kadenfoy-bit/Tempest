@@ -26,8 +26,9 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   await page.waitForTimeout(2000);
 
   // Choose the area with the save box (08-SaveArea): every layer, 3 days.
-  await page.click('#map-layers');
-  await page.getByRole('button', { name: /Save this area/ }).click();
+  // Saving lives in app settings (Kaden's interface rule 11, Nov 20).
+  await page.click('#settings-button');
+  await page.locator('#save-data').click();
   const box = page.getByRole('dialog', { name: 'Save for offline' });
   await expect(box).toBeVisible();
   for (const name of ['Temperature', 'Wind']) await box.locator('.check-row', { hasText: name }).click();
@@ -41,8 +42,7 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   await expect(page.locator('.save-mode')).toHaveCount(0);
 
   // The list: name, size, both models, how far it reaches.
-  await page.click('#map-layers');
-  await page.getByRole('button', { name: /Saved areas · 1/ }).click();
+  await page.click('#settings-button');
   const row = page.locator('[data-area]');
   await expect(row).toHaveCount(1);
   await expect(row.locator('.icon-row-note')).toContainText(/MB · HRDPS \+ RDPS \d\dZ run, .* · to \w{3} \d/);
@@ -62,8 +62,11 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
     await page.waitForTimeout(1500);
   };
   const read = async () => ({
-    run: (await page.textContent('#run-age'))?.replace(' · saved', ''),
-    readout: await page.textContent('.pin-readout'),
+    // The data's age only: the rest says "next …" online and "offline" without signal (Kaden's interface rule 7a, Nov 20).
+    run: (await page.textContent('#run-age'))?.split(' · ')[0],
+    // The weather only: the pin's place name comes from the nearest map label, which differs between the
+    // live base map and the saved pieces (Kaden's interface rule 9 put the name first, Nov 20).
+    readout: (await page.textContent('.pin-readout'))?.split(' · ').slice(1).join(' · '),
     before: await page.textContent('#summary-before'),
     after: await page.textContent('#summary-after'),
   });
@@ -109,11 +112,9 @@ test('"saved data only" uses saved areas with signal, and turns off again', asyn
   test.setTimeout(120_000);
   await page.goto('/?insets=47,34');
   await expect(page.locator('body')).toHaveAttribute('data-run', 'ready', { timeout: 60_000 });
-  await page.click('#map-layers');
-  await page.getByRole('button', { name: /Saved areas/ }).click();
+  await page.click('#settings-button');
   const only = page.getByRole('switch', { name: 'Saved data only' });
   await expect(only).toHaveAttribute('aria-checked', 'false');
-  await expect(page.locator('[data-kept]')).toContainText(/phone|browser/);
   // No saved area in this fresh browser: the switch is kept, the network is still used.
   await only.click();
   await expect(only).toHaveAttribute('aria-checked', 'true');
