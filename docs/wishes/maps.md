@@ -16,6 +16,7 @@ the old wording moves to "Changed".
 4. The three zones (forest, treeline, alpine) look clearly distinct from each other. The aesthetic is "almost cartoonish". (Nov 20, 2026)
 
 7. Never assume a terrain type. Terrain colours come only from real data, and where there is no data the ground stays plain. (Nov 20, 2026)
+8. The three zones come from the BC government's biogeoclimatic (BEC) map: alpine, parkland (the treeline mix) and forest, as issued. (Nov 20, 2026)
 
 ## Labels and map features
 

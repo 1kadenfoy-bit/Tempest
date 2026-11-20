@@ -47,6 +47,8 @@ export const TERRAIN_TINTS: Record<'forest' | 'treeline' | 'meadow' | 'rock' | '
 const TINT_STRENGTH = 0.8;
 const tint = (k: keyof typeof TERRAIN_TINTS, theme: Theme, ground: string) => mix(ground, TERRAIN_TINTS[k][theme], TINT_STRENGTH);
 
+const CLEAR = 'rgba(0, 0, 0, 0)';
+
 export function topoFlavor(theme: Theme = 'dark'): Flavor {
   const ground = mapGround(theme);
   const water = colorToken('water', theme);
@@ -66,9 +68,10 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     earth: ground,
     water,
     ...neutral(['zoo', 'military', 'hospital', 'school', 'industrial', 'pedestrian', 'aerodrome', 'sand', 'beach'], 0.025),
-    park_a: g(0.03), park_b: g(0.03),
-    wood_a: tint('forest', theme, ground), wood_b: tint('forest', theme, ground),
-    scrub_a: tint('treeline', theme, ground), scrub_b: tint('treeline', theme, ground),
+    // Parks, woods and scrub tags say nothing the BC zones layer does not: see-through, so the zones show.
+    park_a: CLEAR, park_b: CLEAR,
+    // Forest and treeline come from the BC zones layer below, not from these OpenStreetMap tags.
+    wood_a: CLEAR, wood_b: CLEAR, scrub_a: CLEAR, scrub_b: CLEAR,
     glacier: tint('ice', theme, ground),
     runway: g(0.12),
     pier: g(0.12),
@@ -97,8 +100,8 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     address_label_halo: halo,
     pois: Object.fromEntries(Object.keys(base.pois ?? {}).map((k) => [k, ink2])) as unknown as Flavor['pois'],
     landcover: {
-      grassland: tint('meadow', theme, ground), barren: tint('rock', theme, ground), urban_area: g(0.03), farmland: g(0.02),
-      glacier: tint('ice', theme, ground), scrub: tint('treeline', theme, ground), forest: tint('forest', theme, ground),
+      grassland: g(0.03), barren: tint('rock', theme, ground), urban_area: g(0.03), farmland: g(0.02),
+      glacier: tint('ice', theme, ground), scrub: g(0.03), forest: g(0.03),
     },
   } as Flavor;
 }
@@ -118,6 +121,13 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     filter: ['in', ['get', 'kind'], ['literal', kinds]],
     paint: { 'fill-color': colour, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0, 9, 1] },
   } as LayerSpecification);
+  const zone = (id: string, cls: string, colour: string): LayerSpecification => ({
+    id, type: 'fill', source: ZONES_SOURCE, filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': colour, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
+  } as LayerSpecification);
+  all.splice(all.findIndex((l) => l.id === 'earth') + 1, 0,
+    zone('zone_forest', 'forest', tint('forest', theme, ground)),
+    zone('zone_parkland', 'parkland', tint('treeline', theme, ground)),
+    zone('zone_alpine', 'alpine', tint('rock', theme, ground)));
   const at = all.findIndex((l) => l.id === 'landuse_park') + 1;
   // Peaks are drawn from places.json (app/map/places.ts), from zoom 10 with their heights.
   const pois = all.find((l) => l.id === 'pois');
@@ -128,12 +138,16 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   return all;
 }
 
+const ZONES_SOURCE = 'terrain-zones';
+/** The BC zones file ships with the app (tools/build-zones.mjs writes it). */
+const zonesUrl = () => new URL('zones/terrain-zones.json', typeof document === 'undefined' ? 'http://localhost/' : document.baseURI).href;
+
 export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dark'): StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
     sprite: spriteUrl(theme),
-    sources: { protomaps: source },
+    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), attribution: 'BC zones © Province of BC (OGL-BC)' } },
     layers: baseLayers(theme),
   };
 }
