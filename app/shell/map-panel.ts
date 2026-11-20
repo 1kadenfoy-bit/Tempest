@@ -86,7 +86,9 @@ function overlay(label: string, isOn: () => boolean, setOn: (on: boolean) => voi
   return row ? [t, row] : [t];
 }
 
-export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) => void, extra?: HTMLElement): HTMLElement {
+/** The offline (saved areas) group is no longer here: it lives in app settings. The third argument is ignored; callers may still pass it. */
+export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) => void, _offlineGroup?: HTMLElement): HTMLElement {
+  void _offlineGroup;
   const m = mapSettings.get();
 
   // View: one two-way switch (the 3D terrain switch). 3D buildings stay a small option under it.
@@ -195,7 +197,6 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
   wrap.append(section('VIEW', view, ...(buildings ? [buildings] : [])), section('GROUND', ground, sun), overlays);
-  if (extra) wrap.append(extra);
   wrap.append(tests);
   return wrap;
 }

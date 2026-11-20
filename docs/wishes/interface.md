@@ -30,6 +30,10 @@ the old wording moves to "Changed".
 10. (Nov 20) **Credits** sit in a collapsed section at the bottom of settings.
 11. (Nov 20) **Saved data** is just a button to save data, with what is currently saved listed below it. Swipe a saved item left to delete it (like mail and messages).
 
+## Map panel
+
+12. (Nov 20) The **Offline** section is not in the map panel. Saving and saved areas live in app settings only.
+
 ## Changed
 
 - Rule 8 was: "Search sits where the map layers button is. The map layers' settings move into the settings window." (Nov 20, until later the same day)
