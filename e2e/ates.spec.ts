@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // Terrain complexity (ATES) inside the avalanche layer. Avalanche Canada's
 // answers are stubbed: the bulletins from the saved Nov 17 answers, and the
@@ -16,6 +16,12 @@ const KMZ: Record<number, Buffer> = { 533: readFileSync(new URL('../adapters/ava
 const KMZ_DIR = process.env.ATES_KMZ_DIR;
 const SHOTS = 'docs/reports/ates';
 type W = { tempestMap: import('maplibre-gl').Map };
+// The wait for the area's zones: measured under a slowed browser, the file is
+// fetched, read and drawn within about 5 s, but drawing the zones without a
+// graphics chip (GitHub's machines) can keep the page too busy to answer for
+// well over 20 s. The check is unchanged; only the patience is longer.
+const ZONES_WAIT = 45_000;
+
 
 async function stub(context: BrowserContext) {
   const kmz: number[] = [];
@@ -116,7 +122,7 @@ test('ATES: the round button, outlines, zones on demand, taps', async ({ page, c
   await expect(area).toBeHidden();
 
   // Closer in: the area's file is asked for once, and its zones are drawn in the publisher's classes.
-  await expect(page.locator('body')).toHaveAttribute('data-ates-areas', /533/, { timeout: 20_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-ates-areas', /533/, { timeout: ZONES_WAIT });
   await expect.poll(async () => (await rendered(page, 'ates-zone-fill')).length).toBeGreaterThan(0);
   await page.waitForTimeout(1000);
   const zones = await rendered(page, 'ates-zone-fill');
@@ -181,8 +187,15 @@ test('ATES: hidden with other layers; light theme and 3D drape', async ({ page, 
   await open(page, { layer: 'avalanche', theme: 'light', terrain3d: true, layerSettings: { avalanche: { ates: true } } });
   await expect(page.locator('#ates-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('body')).toHaveAttribute('data-ates-index', /^\d{3}$/);
+  const said: string[] = [];
+  page.on('console', (m) => { if (/ATES|ates/i.test(m.text())) said.push(m.text().slice(0, 160)); });
   await page.evaluate(() => (window as unknown as W).tempestMap.jumpTo({ center: [-121.43, 53.952], zoom: 12.6, pitch: 55, bearing: -20 }));
-  await expect(page.locator('body')).toHaveAttribute('data-ates-areas', /533/, { timeout: 20_000 });
+  // On a failure, say what the app was doing (seen only on GitHub's machines so far).
+  await expect(page.locator('body')).toHaveAttribute('data-ates-areas', /533/, { timeout: ZONES_WAIT }).catch(async (err: unknown) => {
+    const state = await page.evaluate(() => ({ ...document.body.dataset, zoom: (window as unknown as W).tempestMap.getZoom(), center: (window as unknown as W).tempestMap.getCenter() }));
+    console.log('ATES state', JSON.stringify(state), 'said', JSON.stringify(said));
+    throw err;
+  });
   expect(await page.evaluate(() => !!(window as unknown as W).tempestMap.getTerrain())).toBe(true);
   await expect.poll(async () => (await rendered(page, 'ates-zone-fill')).length, { timeout: 20_000 }).toBeGreaterThan(0);
   await page.waitForTimeout(1500);

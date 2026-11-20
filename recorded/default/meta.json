@@ -1,0 +1,21 @@
+{
+  "name": "default",
+  "description": "Starter set: North Shore, Nov 20, 2026 (recorded with the point API: every layer and the forecast summary window)",
+  "now": "2026-11-20T00:11:00.000Z",
+  "recordedAt": "2026-11-20T00:18:51.636Z",
+  "spots": [
+    {
+      "name": "Mt Seymour",
+      "lat": 49.3895,
+      "lng": -122.948
+    }
+  ],
+  "layers": [
+    "precipitation",
+    "temperature",
+    "wind",
+    "radar",
+    "avalanche",
+    "air-quality"
+  ]
+}

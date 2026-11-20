@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // Mt Seymour area, where the v8 screens place "You · 1,180 m".
 const YOU = { latitude: 49.3895, longitude: -122.948 };

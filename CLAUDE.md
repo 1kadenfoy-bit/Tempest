@@ -14,15 +14,16 @@ The owner, Kaden, designs and tests. He does not read code. Write reports and qu
 | `docs/05-data-sources.md` | Every source and model, with limits and licences |
 | `docs/06-decisions-and-open-items.md` | Settled decisions, defaults, facts to check. Wins over other docs |
 | `docs/reference/` | Background research and the terrain-temperature code to port. Reference only |
+| `docs/sections/` | How the work is split between section chats, who owns which file, each section's brief, the handoff template |
 
 ## Working rules
 
-1. **One milestone at a time. Stop at the end of each** and wait for Kaden's go-ahead. Follow "How every milestone ends".
-2. **Do not ask questions mid-milestone** unless you are blocked. Take the most reasonable reading, note it, and list it in the report.
+1. **Work in sections** (`docs/sections/README.md`). A section chat works on one piece at a time with Kaden, edits only its own files, and when he is happy runs `npm run check:section -- <section>`, writes a handoff note and stops. The main chat (the lead) integrates on Kaden's word and owns the shared files.
+2. **Do not ask questions mid-task** unless you are blocked. Take the most reasonable reading, note it, and list it in the report.
 3. **Verify before relying.** Library versions, API shapes and anything marked unconfirmed must be checked against current documentation. Record what you found.
 4. **Check your own work in a browser.** Run the app, take Playwright screenshots at 390 × 844, and compare them with `design/v8/png`.
 5. **No invented designs.** If a screen has no v8 reference, build the plainest version from existing components and say so.
-6. **Small commits, clear messages.** One pull request per milestone.
+6. **Small commits, clear messages.** One pull request per handoff.
 
 ## Architecture rules
 
@@ -59,7 +60,8 @@ The owner, Kaden, designs and tests. He does not read code. Write reports and qu
 Adjust if a spike shows a better shape; say why.
 
 ```
-app/            the web app: shell, panels, map wiring
+app/            the web app: main.ts starts it, state.ts holds what the parts share;
+                one folder per part (map, shell, weather, radar, data, offline, summary...)
 core/           no UI: vocabulary, store, resolver, time cursor, units, algorithms
 adapters/       one folder per source
 layers/         one folder per layer: precipitation, temperature, wind
@@ -76,13 +78,16 @@ Node 22.12 or newer.
 | --- | --- |
 | Install | `npm ci` |
 | Dev server (http://localhost:5173, with isolation headers) | `npm run dev` |
+| Dev server on recorded weather (same weather every time, no server limits) | `npm run dev`, then open `/?weather=recorded` |
+| A section's checks before its handoff (area, typecheck, lint, unit tests, its browser tests on recorded weather) | `npm run check:section -- <section>` |
+| Record a new weather set into `recorded/` (Data section) | `npm run weather:record -- --set=<name>` |
 | Base map pieces the tests use (overview, North Shore piece, Sea to Sky detail) into `public/tiles`; skips files present; also runs before `build` | `npm run tiles` |
 | Base map for all of BC (about 680 MB in 28 files; the Pages publish runs this) | `npm run tiles:all` |
 | Unit tests (Vitest, no browser) | `npm test` |
 | Typecheck | `npm run typecheck` |
 | Lint (also enforces the architecture import rules) | `npm run lint` |
 | Build to `dist/` | `npm run build` |
-| Screenshot tests at 390 × 844 (Playwright; starts `vite preview` on 4173). Shell pixel baselines live in `e2e/shell.spec.ts-snapshots`; refresh with `npx playwright test --update-snapshots` after an intended change | `npm run screenshots` |
+| Screenshot tests at 390 × 844 (Playwright; starts `vite preview` on 4173), on recorded weather (`e2e/fixtures.ts`; `WEATHER=live` for live data). Shell pixel baselines live in `e2e/shell.spec.ts-snapshots`; refresh with `npx playwright test --update-snapshots` after an intended change | `npm run screenshots` |
 | Everything CI runs | `npm run check` |
 | Size or cut any PMTiles box | `node tools/pmtiles-extract.mjs <url> <out> --bbox=w,s,e,n --maxzoom=N [--dry-run]` |
 

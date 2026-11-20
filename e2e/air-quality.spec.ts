@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // The Air quality layer with every air source stubbed from saved real answers:
 // - ECCC RAQDPS (10 km): a real answer from Nov 18, 2026 (clean air: GeoMet

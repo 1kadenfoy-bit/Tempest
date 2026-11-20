@@ -173,11 +173,17 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
 
   async function loadArea(a: AtesIndexArea): Promise<void> {
     loadingId = a.id;
+    document.body.dataset.atesLoading = String(a.id);
     opts.onChange();
     try {
-      const got = await fetchKeptBytes(areaUrl(a.id), `ates-area-${a.id}`, FRESH_MS, !savedOnlyActive());
-      if (!got) { failed.set(a.id, 'not kept on this phone'); return; }
-      const file = await parseAtesKmz(a.id, got.bytes);
+      // One area never holds up the others: past a minute it counts as failed (Try again asks again).
+      const read = (async () => {
+        const got = await fetchKeptBytes(areaUrl(a.id), `ates-area-${a.id}`, FRESH_MS, !savedOnlyActive());
+        return got ? { got, file: await parseAtesKmz(a.id, got.bytes) } : null;
+      })();
+      const done = await Promise.race([read, new Promise<never>((_, no) => setTimeout(() => no(new Error('timed out')), 60_000))]);
+      if (!done) { failed.set(a.id, 'not kept on this phone'); return; }
+      const { got, file } = done;
       const area = file.area;
       for (const p of area.points) {
         const png = p.icon ? file.images.get(p.icon) : undefined;
@@ -193,8 +199,10 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
     } catch (err) {
       console.warn(`no ATES area ${a.id}`, err);
       failed.set(a.id, failureReason(err));
+      document.body.dataset.atesFailed = [...failed.keys()].join(',');
     } finally {
       loadingId = null;
+      delete document.body.dataset.atesLoading;
       opts.onChange();
     }
   }
@@ -273,6 +281,9 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
   }
 
   map.on('moveend', () => { if (opts.shown()) { want(); opts.onChange(); } });
+  // Once the map settles (3D terrain can still be loading when a move ends),
+  // ask again for what the view needs; areas held or asked for are skipped.
+  map.on('idle', () => { if (opts.shown() && index && !queue.length && loadingId === null) want(); });
 
   // ---- Taps -----------------------------------------------------------------
 
@@ -336,6 +347,11 @@ export function setupAtes(map: MapLibreMap, opts: AtesOptions) {
       origin.remove();
       document.querySelector<HTMLButtonElement>('.panel-close')?.click();
       map.fitBounds(a.bbox, { padding: 40, maxZoom: 13, duration: 700 });
+      // Ask for the area's file now, while the map zooms (not once it stops).
+      if (!areas.has(a.id) && !failed.has(a.id) && loadingId !== a.id) {
+        queue = [a, ...queue.filter((q) => q.id !== a.id)];
+        void pump();
+      }
     });
     body.append(zoom, tripLink(), sourceNote(a.id));
     openPanel({ origin, icon: TERRAIN, title: a.name, caption: 'Avalanche terrain ratings (ATES) area', body, onClose: () => origin.remove() });

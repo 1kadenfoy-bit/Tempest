@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // Radar (no v8 design): ECCC's GeoMet is stubbed with answers saved on
 // Nov 17, 2026, moved to the present, so the test never depends on live
@@ -10,6 +10,9 @@ test.use({ geolocation: { latitude: 49.38, longitude: -123.28 }, permissions: ['
 const fixture = (name: string) => readFileSync(new URL(`../adapters/eccc-radar/fixtures/${name}`, import.meta.url));
 const STEP = 6 * 60_000;
 /** The newest frame ECCC would hold now (a few minutes behind), and the type product one frame later. */
+// The frames are made from the real clock, and the test brings its own
+// radar answers: no recorded weather (e2e/fixtures.ts).
+test.use({ weather: 'live' });
 const newest = Math.floor((Date.now() - 4 * 60_000) / STEP) * STEP;
 const iso = (t: number) => new Date(t).toISOString().replace('.000Z', 'Z');
 

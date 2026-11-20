@@ -14,7 +14,9 @@ export default defineConfig({
   // GitHub Pages serves the app under /Tempest/; local runs use the root.
   base: process.env.BASE_PATH ?? '/',
   plugins: [appManifest()],
-  server: { headers: isolation, host: true },
+  // allowedHosts: the Claude app's live view reaches the dev server under its
+  // own address (docs/sections/README.md, "Showing your work").
+  server: { headers: isolation, host: true, allowedHosts: true },
   preview: { headers: isolation, host: true, port: 4173, strictPort: true },
   build: {
     target: 'es2022',

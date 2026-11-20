@@ -1,10 +1,14 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // The forecast summary window: press-and-hold on the map (or a right click)
 // moves the pin there and opens every chosen layer's chart, on one time line.
 
 // Mt Seymour area, where the v8 screens place "You · 1,180 m".
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
+// Live data for now: the starter recording (Nov 19) was made while the point
+// API's daily limit was spent, so it lacks the longer models the window reads.
+// Back to recorded weather once a fuller set is recorded (Data section).
+test.use({ weather: 'live' });
 const HOME = '/?insets=47,34';
 const SHOTS = 'docs/reports/summary';
 

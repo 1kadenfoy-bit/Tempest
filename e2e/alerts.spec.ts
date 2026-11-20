@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext } from '@playwright/test';
+import { expect, test, type BrowserContext } from './fixtures';
 
 // M9 alerts: the badge and panel with ECCC's alerts stubbed from saved real
 // answers (the live alerts change by the hour). Does not wait for the pin's

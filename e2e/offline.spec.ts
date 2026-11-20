@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // M8 done-test: save a touring area at home with all three layers, then with
 // no signal all three work there, with the same numbers, through the same

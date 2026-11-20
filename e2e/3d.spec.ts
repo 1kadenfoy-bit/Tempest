@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 
 // 3D terrain and 3D buildings (map panel, TERRAIN group). Nothing here waits
 // for the forecast: the switches, the tilt and the draped layers work without
@@ -81,7 +81,10 @@ test('3D terrain: switch, tilt, back to flat, remembered', async ({ page }) => {
   // Mt Seymour from the south-west, turned, with the precipitation fill (if any falls) draped.
   await onMap(page, (m) => m.jumpTo({ center: [-122.96, 49.37], zoom: 11.6, pitch: 60, bearing: 35 }));
   await settle(page);
-  await page.screenshot({ path: 'test-results/screens/3d-terrain.png' });
+  // A reference picture only (no check reads it). Under GitHub's software GPU
+  // one tilted frame takes about a minute, which pushed this test past its
+  // limit; it is taken everywhere else.
+  if (!process.env.CI) await page.screenshot({ path: 'test-results/screens/3d-terrain.png' });
 
   // The north button brings it back flat and north up.
   await page.click('#reset-view');

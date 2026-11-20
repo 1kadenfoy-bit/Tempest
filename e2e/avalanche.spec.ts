@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from './fixtures';
 
 // The avalanche layer with Avalanche Canada's answers stubbed from saved real
 // ones (Nov 17, 2026: early season everywhere), so it runs without live data.
