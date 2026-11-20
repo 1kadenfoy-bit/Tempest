@@ -32,3 +32,5 @@ wetland and sand, their soft edges, urban, cliff lines.
 | BC zone: treeline | same as Treeline | yes | BEC subzones named "Parkland" |
 | BC zone: alpine | same as Alpine | yes | BEC zones CMA, IMA, BAFA |
 | Cliffs | alpine colour, darkened, as lines | | base map `earth` kind `cliff` (sparsely tagged) |
+
+Water: lakes, rivers and the sea are a clear blue (`#2B6CA3` dark, `#9CC6E3` light), a proposal for Kaden to change. The near-black water token stays only as the halo under labels.

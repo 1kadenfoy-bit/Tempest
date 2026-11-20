@@ -21,6 +21,10 @@ export function mapGround(theme: Theme): string {
   return mix(colorToken('map-ground', theme), colorToken('ink', theme), GROUND_LIFT[theme]);
 }
 
+/** Lakes, rivers and the sea: a clear blue, not the near-black water token (that one stays under labels as their halo). A proposal for Kaden to change. */
+const WATER: Record<Theme, string> = { dark: '#2B6CA3', light: '#9CC6E3' };
+export const mapWater = (theme: Theme) => WATER[theme];
+
 /** How strongly a terrain colour shows over the ground: high, so the types read as flat cartoon blocks. */
 const TINT_STRENGTH = 0.85;
 const tint = (c: TerrainClass, theme: Theme, ground: string) => mix(ground, terrainColour(c, theme), TINT_STRENGTH);
@@ -29,7 +33,8 @@ const CLEAR = 'rgba(0, 0, 0, 0)';
 
 export function topoFlavor(theme: Theme = 'dark'): Flavor {
   const ground = mapGround(theme);
-  const water = colorToken('water', theme);
+  const water = colorToken('water', theme); // label halos
+  const lake = mapWater(theme);
   const ink = colorToken('ink', theme);
   const ink2 = colorToken('ink-2', theme);
   const g = (t: number) => mix(ground, ink, t);
@@ -44,7 +49,7 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
     background: ground,
     // No ground cover is assumed: land the data does not describe stays plain ground.
     earth: ground,
-    water,
+    water: lake,
     ...neutral(['zoo', 'military', 'hospital', 'school', 'industrial', 'pedestrian', 'aerodrome', 'sand', 'beach'], 0.025),
     // Parks, woods and scrub tags say nothing the BC zones layer does not: see-through, so the zones show.
     park_a: CLEAR, park_b: CLEAR,
@@ -119,7 +124,7 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   const feather = (id: string, source: string, sourceLayer: string | null, filter: unknown, colour: unknown): LayerSpecification => ({
     id, type: 'line', source, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
     layout: { 'line-join': 'round' },
-    paint: { 'line-color': colour, 'line-width': FEATHER, 'line-blur': FEATHER, 'line-opacity': 0.6 },
+    paint: { 'line-color': colour, 'line-width': FEATHER, 'line-blur': FEATHER, 'line-opacity': 0.55 },
   } as LayerSpecification);
   const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, null, ['==', ['get', 'z'], cls], tint(c, theme, ground));
   const after = all.findIndex((l) => l.id === 'landcover') + 1;
@@ -146,7 +151,7 @@ function baseLayers(theme: Theme): LayerSpecification[] {
 
 const ZONES_SOURCE = 'terrain-zones';
 /** How wide, in pixels, the soft edge between natural types is (a blurred line centred on the border). */
-const FEATHER = 14;
+const FEATHER = 30;
 /** The BC zones file ships with the app (tools/build-zones.mjs writes it). */
 const zonesUrl = () => new URL('zones/terrain-zones.json', typeof document === 'undefined' ? 'http://localhost/' : document.baseURI).href;
 

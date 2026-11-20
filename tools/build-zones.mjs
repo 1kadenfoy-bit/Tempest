@@ -9,7 +9,7 @@
 // the public WFS at openmaps.gov.bc.ca. Licence: Open Government Licence - British
 // Columbia (attribution to be confirmed against the data catalogue, which this
 // machine cannot reach). Polygons are huge (a whole zone is one shape), so each
-// is simplified here to about 80 m and the three classes are written as one small file.
+// is simplified here to about 300 m and its corners rounded and the three classes are written as one small file.
 //
 //   alpine    ZONE is CMA, IMA or BAFA (the alpine zones)
 //   parkland  the subzone's name says "Parkland" (trees thin out: the treeline mix)
@@ -21,7 +21,9 @@ const cfg = JSON.parse(readFileSync(new URL('./regions.json', import.meta.url), 
 const want = args.region ? new Set(String(args.region).split(',')) : null;
 const regions = cfg.detailRegions.filter((r) => !want || want.has(r.id));
 const WFS = 'https://openmaps.gov.bc.ca/geo/pub/WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY/ows';
-const TOLERANCE = 0.0008; // degrees, about 80 m
+const TOLERANCE = 0.003; // degrees, about 300 m, then rounded off below
+/** Smallest shape kept, in square degrees (about 0.1 km2). */
+const MIN_AREA = 1e-5;
 const CELL = [0.4, 0.25];
 const ALPINE = new Set(['CMA', 'IMA', 'BAFA']);
 
@@ -48,6 +50,19 @@ function simplify(pts, tol) {
     if (worst > t2) { keep[wi] = 1; stack.push([a, wi], [wi, b]); }
   }
   return pts.filter((_, i) => keep[i]);
+}
+/** Rounds the corners of a closed ring: each pass cuts every corner at a quarter and three quarters (Chaikin), so straight, angular edges become smooth curves. */
+function rounded(ring, passes = 2) {
+  let pts = ring.slice(0, -1);
+  for (let k = 0; k < passes; k++) {
+    const next = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      next.push([0.75 * a[0] + 0.25 * b[0], 0.75 * a[1] + 0.25 * b[1]], [0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]]);
+    }
+    pts = next;
+  }
+  return [...pts, pts[0]];
 }
 const round = (p) => [Math.round(p[0] * 1e4) / 1e4, Math.round(p[1] * 1e4) / 1e4];
 const area = (ring) => Math.abs(ring.reduce((s, p, i) => s + (p[0] * ring[(i + 1) % ring.length][1] - ring[(i + 1) % ring.length][0] * p[1]), 0) / 2);
@@ -80,7 +95,7 @@ for (const r of regions) {
       for (const f of fc.features) {
         if (!f.geometry || seen.has(f.id)) continue;
         fresh++;
-        const polys = polygons(f.geometry).map((rings) => rings.map((ring) => simplify(ring, TOLERANCE).map(round)).filter((ring) => ring.length >= 4 && area(ring) > TOLERANCE * TOLERANCE * 4));
+        const polys = polygons(f.geometry).map((rings) => rings.map((ring) => { const s = simplify(ring, TOLERANCE); return s.length >= 4 ? rounded(s).map(round) : s.map(round); }).filter((ring) => ring.length >= 4 && area(ring) > MIN_AREA));
         seen.set(f.id, { cls: classOf(f.properties), label: f.properties.MAP_LABEL, polys: polys.filter((p) => p.length) });
       }
       console.error(`${r.id} ${bb.map((v) => v.toFixed(2)).join(',')}: ${fc.features.length} polygons, ${fresh} new`);

@@ -17,7 +17,8 @@ the old wording moves to "Changed".
 
 7. Never assume a terrain type. Terrain colours come only from real data, and where there is no data the ground stays plain. (Nov 20, 2026)
 8. The three zones come from the BC government's biogeoclimatic (BEC) map: alpine, parkland (the treeline mix) and forest, as issued. (Nov 20, 2026)
-10. Natural terrain types blend softly into each other along their edges so the map looks natural; urban areas stay crisp. (Nov 20, 2026)
+10. Natural terrain types (forest, treeline, alpine and the rest) blend smoothly into each other along their edges, with rounded, not sharp, corners, so the map looks natural; urban areas stay crisp. (Nov 20, 2026)
+14. Lakes, rivers and the sea are a clear blue, not black. (Nov 20, 2026)
 
 ## The Map panel
 
@@ -33,6 +34,7 @@ the old wording moves to "Changed".
 
 ## Changed
 
+- Rule 10 was: "Natural terrain types blend softly into each other along their edges so the map looks natural; urban areas stay crisp." until Nov 20, 2026 (now also rounded corners, and wider blending).
 - Rule 3 was: "The ground is coloured by terrain type: forest in green, alpine \"rocky\", the treeline a mix of the two, and every other type the map software knows (cities, farmland, glaciers, sand and so on) has its own colour. A city must never look like forest. The full list is in docs/reports/maps-terrain/terrain-colours.md." until Nov 20, 2026 (replaced by a short list; farmland is grass and everything built is urban).
 - Rule 3 was: "The ground is shaded by terrain type: forest in green, alpine \"rocky\", and the treeline a mix of the two." until Nov 20, 2026 (now every type is coloured).
 - Rule 5 was: "Peak names show when zoomed out further than before, and always with the peak's elevation." until Nov 20, 2026 (now: like they used to, a bit further out, elevation under the name).
