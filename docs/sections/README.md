@@ -87,8 +87,8 @@ Only the main chat can decide that something crosses sections.
     `app/state.ts`, `layers/contract.ts`, the variable list, units, packages and
     settings. Touch one only when your work cannot be seen without it, keep the
     change small, and explain it in the handoff note.
-- **Save every version Kaden likes.** Commit with a clear message and push your
-  branch. The cloud machine sleeps when Kaden steps away, and he may say "go
+- **Push every change you want Kaden to try.** Commit with a clear message and
+  push your branch; that publishes your preview. The cloud machine sleeps when Kaden steps away, and he may say "go
   back two versions".
 - **Nothing new without asking.** No new library, server, design token or
   colour.
@@ -136,10 +136,23 @@ Open `http://localhost:5173/?weather=recorded`.
   files, which is slower.
 - Only the Data section makes new sets (`npm run weather:record`).
 
-**The live view in the Claude app.** Once the dev server runs, report its port
-(5173) as a preview, so Kaden can open the running app inside the Claude app
-and click around. It refreshes by itself when you change a file. It only works
-while the chat is running; after a break, start the dev server again.
+**Your preview address (how Kaden tries your work).** Every push to your
+branch publishes your version of the app at its own address, which Kaden opens
+on his phone and uses like the real app:
+
+`https://1kadenfoy-bit.github.io/Tempest/preview/<section>/`
+
+- It appears about 3 to 5 minutes after you push. Tell Kaden when you push and
+  give him the link.
+- The top bar says "· <section> preview", so he knows which copy he is on.
+- It reads live weather from his phone, which has its own free limit, so
+  recorded weather is not needed there.
+- It keeps no offline copy and never mixes with the installed app.
+- If your branch fails to build, the preview keeps the last good version. Check
+  the "Publish to GitHub Pages" run when he says nothing changed.
+
+Section chats cannot show the running app inside the Claude app, so the
+preview address is how Kaden clicks around. Push small changes often.
 
 **Pictures.** Take Playwright screenshots at 390 × 844 for the handoff note,
 and compare them with `design/v8/png` where a v8 screen exists.

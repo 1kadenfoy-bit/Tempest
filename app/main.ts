@@ -350,7 +350,15 @@ window.addEventListener('resize', fitPadding);
 S.map.on('idle', () => { document.body.dataset.idle = 'true'; });
 
 // Installed app: keep the app's own files on the device.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// A section preview (VITE_PREVIEW at build time) is named in the top bar and
+// keeps no offline copy, so it never mixes with the installed app.
+const preview = import.meta.env.VITE_PREVIEW as string | undefined;
+if (preview) {
+  document.title = `Tempest · ${preview} preview`;
+  $('run-age').dataset.preview = preview;
+}
+
+if ('serviceWorker' in navigator && import.meta.env.PROD && !preview) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* runs without it */ });
   // Files loaded before the worker took charge (a first visit) are not in its
   // cache yet: keep them now, so the app opens without signal next time.
