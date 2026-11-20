@@ -19,6 +19,12 @@ the old wording moves to "Changed".
 8. The three zones come from the BC government's biogeoclimatic (BEC) map: alpine, parkland (the treeline mix) and forest, as issued. (Nov 20, 2026)
 10. Natural terrain types blend softly into each other along their edges so the map looks natural; urban areas stay crisp. (Nov 20, 2026)
 
+## The Map panel
+
+11. The Map panel has three parts. View: a 2D | 3D switch. Ground: Plain, Shaded terrain or Satellite (one at a time), plus a sun and shadows toggle. Overlays (toggles): trails, huts and campsites; peaks; contour lines; small roads; ski resorts; boundaries; weather stations; rain/snow line; freezing line. Satellite appears only when it works. The buttons and what they call are in docs/reports/maps-settings/panel-spec.md. (Nov 20, 2026)
+12. Day and night with shadows: the sun lights the terrain and the map darkens at night, following the time scrubber. Cast shadows are for later. (Nov 20, 2026)
+13. The rain/snow line and freezing line hold still when zooming, like contour lines (a job for the Weather chat). (Nov 20, 2026)
+
 ## Labels and map features
 
 5. Peak names show like they used to, but a bit further zoomed out, with the peak's elevation under the name. (Nov 20, 2026)

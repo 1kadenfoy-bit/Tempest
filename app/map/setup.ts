@@ -6,6 +6,7 @@
 import type { LngLatLike, Map as MapLibreMap } from 'maplibre-gl';
 import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
+import { applyMapSettings } from './map-settings';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
 import { hasBuildingHeights, TILT } from './three-d';
@@ -50,11 +51,8 @@ export const fitPadding = () => {
   S.map.setPadding({ top: 0, bottom: S.sheet?.collapsedHeight() ?? 320, left: 0, right: 0 });
 };
 
-// Terrain switches
-export const applyTerrainPrefs = () => {
-  if (S.map.getLayer('hillshade')) S.map.setLayoutProperty('hillshade', 'visibility', S.prefs.hillshade ? 'visible' : 'none');
-  if (S.map.getLayer('contour-lines')) S.map.setLayoutProperty('contour-lines', 'visibility', S.prefs.contours ? 'visible' : 'none');
-};
+// Terrain switches: the map's settings decide (app/map/map-settings.ts), including the panel's hillshade and contour switches.
+export const applyTerrainPrefs = () => applyMapSettings(S.map);
 export function startFromLastOrDefault() {
   if (S.prefs.lastPin) {
     S.pin.set({ lng: S.prefs.lastPin.lng, lat: S.prefs.lastPin.lat, kind: 'last', name: S.prefs.lastPin.label || null });

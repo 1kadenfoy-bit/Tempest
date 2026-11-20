@@ -11,12 +11,15 @@ import type { Map as MapLibreMap, LayerSpecification } from 'maplibre-gl';
 import { colorToken, type Theme } from '../theme/tokens';
 import { formatElevation, unitSystem, type UnitSystem } from '../../core/units/format';
 import { mix } from './style';
+import { L } from './layer-ids';
+import { applyMapSettings } from './map-settings';
 
-const PEAKS = 'places-peaks';
-const HUTS = 'places-huts';
-const TRAILS = 'trails';
-const TRACKS = 'tracks';
+const PEAKS = L.peaks;
+const HUTS = L.huts;
+const TRAILS = L.trails;
+const TRACKS = L.tracks;
 const HUT_ICON = 'hut';
+const TENT_ICON = 'tent';
 
 /** The peaks and huts file ships with the app (tools/lib/peaks.mjs writes it). */
 const placesUrl = () => new URL('places/places.json', document.baseURI).href;
@@ -30,6 +33,25 @@ export function trailColours(theme: Theme): { trail: string; track: string } {
   const ground = colorToken('map-ground', theme);
   const ink = colorToken('ink', theme);
   return { trail: mix(ground, ink, theme === 'dark' ? 0.8 : 0.7), track: mix(ground, ink, theme === 'dark' ? 0.5 : 0.45) };
+}
+
+/** A little tent, drawn on a canvas the same way. */
+function tentImage(colour: string): ImageData {
+  const size = 48;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  g.fillStyle = colour;
+  g.beginPath();
+  g.moveTo(24, 8); g.lineTo(44, 40); g.lineTo(4, 40);
+  g.closePath();
+  g.fill();
+  g.globalCompositeOperation = 'destination-out';
+  g.beginPath();
+  g.moveTo(24, 22); g.lineTo(31, 40); g.lineTo(17, 40);
+  g.closePath();
+  g.fill();
+  return g.getImageData(0, 0, size, size);
 }
 
 /** A little hut, drawn once on a canvas so it follows the theme's ink. */
@@ -87,10 +109,10 @@ function textPaint(theme: Theme) {
   };
 }
 
-const BASE_PEAKS = 'peaks-base';
-const BASE_HUTS = 'huts-base';
+const BASE_PEAKS = L.peaksBase;
+const BASE_HUTS = L.hutsBase;
 /** The base map's own label for minor roads and paths: where trails are named (shown from zoom 14, where the base map has the names). */
-const TRAIL_NAMES = 'roads_labels_minor';
+const TRAIL_NAMES = L.trailNames;
 /** The base map's own kinds that are huts or shelters. */
 const HUT_KINDS = ['alpine_hut', 'wilderness_hut', 'shelter', 'hut'];
 /** From this zoom the base map's own peaks and huts (every one, everywhere) take over from the peaks file. */
@@ -102,6 +124,19 @@ const basePeakLabel = (system: UnitSystem): unknown[] => [
   'format', ['get', 'name'], {},
   ['case', ['has', 'elevation'], ['concat', '\n', baseHeight(system), system === 'metric' ? ' m' : ' ft'], ''], { 'font-scale': 0.85 },
 ];
+
+/** Whether peak labels carry the height under the name (a map setting). */
+let heightsOn = true;
+const peakFieldBase = (system: UnitSystem) => (heightsOn ? basePeakLabel(system) : ['get', 'name']);
+const peakFieldFile = (system: UnitSystem) => (heightsOn ? peakLabel(system) : ['get', 'name']);
+
+/** Show or hide the height under peak names. */
+export function setPeakHeights(map: MapLibreMap, on: boolean): void {
+  heightsOn = on;
+  const u = unitSystem();
+  if (map.getLayer(BASE_PEAKS)) map.setLayoutProperty(BASE_PEAKS, 'text-field', peakFieldBase(u) as never);
+  if (map.getLayer(PEAKS)) map.setLayoutProperty(PEAKS, 'text-field', peakFieldFile(u) as never);
+}
 
 /** Trails, huts and peaks, above the terrain and the weather, under the labels' top. */
 export function addPlaces(map: MapLibreMap, beforeLayerId: string | undefined, theme: Theme): void {
@@ -126,7 +161,7 @@ export function addPlaces(map: MapLibreMap, beforeLayerId: string | undefined, t
     id: BASE_PEAKS, type: 'symbol', source: 'protomaps', 'source-layer': 'pois', minzoom: BASE_FROM,
     filter: ['all', ['==', ['get', 'kind'], 'peak'], ['has', 'name']],
     layout: {
-      'icon-image': 'peak', 'icon-size': 0.8, 'text-field': basePeakLabel(unitSystem()) as never, 'text-font': ['Noto Sans Medium'], 'text-size': 12,
+      'icon-image': 'peak', 'icon-size': 0.8, 'text-field': peakFieldBase(unitSystem()) as never, 'text-font': ['Noto Sans Medium'], 'text-size': 12,
       'text-anchor': 'top', 'text-offset': [0, 0.8], 'text-optional': true, 'symbol-sort-key': ['-', 0, ['coalesce', ['get', 'elevation'], 0]],
     },
     paint: textPaint(theme),
@@ -141,14 +176,45 @@ export function addPlaces(map: MapLibreMap, beforeLayerId: string | undefined, t
     paint: textPaint(theme),
   });
 
+  if (!map.hasImage(TENT_ICON)) map.addImage(TENT_ICON, tentImage(colorToken('ink', theme)), { pixelRatio: 2 });
+  add({
+    id: L.camps, type: 'symbol', source: 'protomaps', 'source-layer': 'pois', minzoom: BASE_FROM,
+    filter: ['all', ['in', ['get', 'kind'], ['literal', ['camp_site', 'caravan_site']]], ['has', 'name']],
+    layout: {
+      'icon-image': TENT_ICON, 'icon-size': 0.6, 'icon-allow-overlap': true, 'text-field': ['step', ['zoom'], '', 14, ['get', 'name']], 'text-font': ['Noto Sans Regular'], 'text-size': 12,
+      'text-anchor': 'top', 'text-offset': [0, 0.9], 'text-optional': true,
+    },
+    paint: textPaint(theme),
+  });
+  // Ski lifts (the base map has lifts; ski runs are not in its data).
+  add({
+    ...roads, id: L.skiLifts, minzoom: 10,
+    filter: ['==', ['get', 'kind'], 'aerialway'],
+    layout: { 'line-cap': 'round' },
+    paint: { 'line-color': col.trail, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 16, 2], 'line-dasharray': [1, 2] },
+  });
+  add({
+    id: L.skiLiftNames, type: 'symbol', source: 'protomaps', 'source-layer': 'roads', minzoom: 13,
+    filter: ['all', ['==', ['get', 'kind'], 'aerialway'], ['has', 'name']],
+    layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Italic'], 'text-size': 11 },
+    paint: textPaint(theme),
+  });
+  // Park and reserve outlines: boundaries, so a thin dashed line, not a colour.
+  add({
+    id: L.parkBoundaries, type: 'line', source: 'protomaps', 'source-layer': 'landuse', minzoom: 8,
+    filter: ['in', ['get', 'kind'], ['literal', ['park', 'national_park', 'nature_reserve', 'protected_area']]],
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': col.track, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 1.4], 'line-dasharray': [4, 3] },
+  });
+
   // Follow the unit setting: the labels are switched when the map settles.
   let shown = unitSystem();
   map.on('moveend', () => {
     const u = unitSystem();
     if (u === shown) return;
     shown = u;
-    if (map.getLayer(BASE_PEAKS)) map.setLayoutProperty(BASE_PEAKS, 'text-field', basePeakLabel(u) as never);
-    if (map.getLayer(PEAKS)) map.setLayoutProperty(PEAKS, 'text-field', peakLabel(u) as never);
+    if (map.getLayer(BASE_PEAKS)) map.setLayoutProperty(BASE_PEAKS, 'text-field', peakFieldBase(u) as never);
+    if (map.getLayer(PEAKS)) map.setLayoutProperty(PEAKS, 'text-field', peakFieldFile(u) as never);
   });
 
   // Where the map tools cut a peaks file, tall peaks and huts show from further out.
@@ -170,13 +236,15 @@ export function addPlaces(map: MapLibreMap, beforeLayerId: string | undefined, t
       filter: ['>=', ['get', 'e'], MIN_HEIGHT_BY_ZOOM as never],
       layout: {
         'icon-image': 'peak', 'icon-size': 0.8,
-        'text-field': peakLabel(unitSystem()) as never, 'text-font': ['Noto Sans Medium'], 'text-size': 12,
+        'text-field': peakFieldFile(unitSystem()) as never, 'text-font': ['Noto Sans Medium'], 'text-size': 12,
         'text-anchor': 'top', 'text-offset': [0, 0.8], 'text-optional': true,
         'symbol-sort-key': ['-', 0, ['get', 'e']],
       },
       paint: textPaint(theme),
     });
+    applyMapSettings(map);
   }).catch(() => { /* no peaks file: the base map's peaks and huts still show from zoom 13 */ });
+  applyMapSettings(map);
 }
 
 /** Recolour trails, huts and peaks for a theme. */
@@ -184,11 +252,14 @@ export function applyPlacesTheme(map: MapLibreMap, theme: Theme): void {
   const col = trailColours(theme);
   if (map.getLayer(TRAILS)) map.setPaintProperty(TRAILS, 'line-color', col.trail);
   if (map.getLayer(TRACKS)) map.setPaintProperty(TRACKS, 'line-color', col.track);
-  for (const id of [PEAKS, HUTS, BASE_PEAKS, BASE_HUTS]) {
+  if (map.getLayer(L.skiLifts)) map.setPaintProperty(L.skiLifts, 'line-color', col.trail);
+  if (map.getLayer(L.parkBoundaries)) map.setPaintProperty(L.parkBoundaries, 'line-color', col.track);
+  for (const id of [PEAKS, HUTS, BASE_PEAKS, BASE_HUTS, L.camps, L.skiLiftNames]) {
     if (!map.getLayer(id)) continue;
     for (const [k, v] of Object.entries(textPaint(theme))) map.setPaintProperty(id, k as 'text-color', v as string);
   }
   if (map.hasImage(HUT_ICON)) map.updateImage(HUT_ICON, hutImage(colorToken('ink', theme)));
+  if (map.hasImage(TENT_ICON)) map.updateImage(TENT_ICON, tentImage(colorToken('ink', theme)));
 }
 
 /** Layers whose names can take the pin, and how to treat each: points snap to themselves, lines to the nearest point on them. */

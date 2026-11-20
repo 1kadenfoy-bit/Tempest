@@ -7,6 +7,7 @@ import mlcontour from 'maplibre-contour';
 import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style';
 import { addPlaces, applyPlacesTheme } from './places';
+import { mapSun } from './sun';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -99,4 +100,6 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
 
   // Trails, huts and peaks, above the contours.
   addPlaces(map, beforeLayerId, theme);
+  // The sun's night wash goes under the hillshade, so under the weather fills too.
+  mapSun.attach(map);
 }
