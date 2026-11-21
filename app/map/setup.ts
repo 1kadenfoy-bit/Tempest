@@ -38,6 +38,13 @@ export function createMap(): MapLibreMap {
   maxZoom: 16,
   maxBounds: [[-145, 44], [-108, 63]],
   attributionControl: false,
+  // Memory on phones. Safari reloads the page when it runs out, which 3D on
+  // an iPhone did while zooming in (Nov 21). Drawing at 2x instead of the
+  // phone's 3x needs less than half the graphics memory (3D keeps a picture
+  // of every tile at that sharpness), and keeping map pieces for two zoom
+  // levels instead of five holds fewer of them at once.
+  pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+  maxTileCacheZoomLevels: 2,
   pitchWithRotate: false,
   dragRotate: false,
 });

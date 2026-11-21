@@ -150,6 +150,12 @@ function baseLayers(theme: Theme): LayerSpecification[] {
 }
 
 const ZONES_SOURCE = 'terrain-zones';
+/**
+ * The zones and glaciers are cut into map pieces up to this zoom and enlarged
+ * beyond it. Their shapes are simplified to 120-300 m, so deeper pieces add
+ * no detail, only memory (each piece is kept).
+ */
+export const ZONES_MAXZOOM = 11;
 /** How wide, in pixels, the soft edge between natural types is (a blurred line centred on the border). */
 const FEATHER = 30;
 /** The BC zones file ships with the app (tools/build-zones.mjs writes it). */
@@ -160,7 +166,7 @@ export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dar
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
     sprite: spriteUrl(theme),
-    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
+    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), maxzoom: ZONES_MAXZOOM, attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
     layers: baseLayers(theme),
   };
 }
