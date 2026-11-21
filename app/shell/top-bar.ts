@@ -187,6 +187,7 @@ layerBtn.addEventListener('click', (e) => {
     origin: layerBtn,
     icon: icons.chevronUp,
     iconAfterTitle: true,
+    morph: true,
     title: 'Condition layer',
     caption: 'One condition layer at a time',
     body: layerMenuBody(S.layers, S.active.id, (l) => { closePanel(); app.setActive(l); }),

@@ -39,6 +39,10 @@ the old wording moves to "Changed".
 
 14. (Nov 21) Each layer tile in the layer menu has its **icon on the left and its name on the right**. No colour bars under the name. Approved icons: Precipitation (cloud with drops), Temperature (thermometer), Wind (curling lines), Radar (rings with a sweep), Avalanche (mountain with tumbling snow), Air quality (haze lines with particles).
 
+## Opening and closing windows
+
+15. (Nov 21, trying it out) When a button or selector opens a window, **the button itself grows into the window's shape** (and shrinks back into the button on close), instead of the window popping up. Tried first on the settings button and the layer name. If Kaden likes it, it becomes standard for every window.
+
 ## Changed
 
 - Rule 9 showed nothing at all while loading, for a few hours on Nov 21, before the spinning wheel.

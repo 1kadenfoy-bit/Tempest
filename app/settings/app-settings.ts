@@ -52,6 +52,8 @@ export function startAppSettings(prefs: Prefs, hooks: AppSettingsHooks): AppSett
   const open = (origin: HTMLElement) => {
     openPanel({
       origin,
+      // The settings button at the top right grows into the window (a try-out: Kaden, Nov 21).
+      morph: origin.id === 'settings-button',
       icon: icons.gear,
       title: 'App settings',
       caption: 'Remembered on this phone',
