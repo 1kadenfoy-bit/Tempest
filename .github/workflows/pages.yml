@@ -62,6 +62,9 @@ jobs:
             # The base map comes from the main site, so a preview is small.
             if (cd "../wt-$s" && BASE_PATH="/$REPO/preview/$s/" VITE_TILES_BASE="/$REPO/tiles/" VITE_PREVIEW="$s" npx vite build); then
               mkdir -p "dist/preview/$s" && cp -r "../wt-$s/dist/." "dist/preview/$s/"
+              # The satellite picture (62 MB) is read from the main site, like
+              # the base map: seven copies would pass the site's 1 GB limit.
+              rm -rf "dist/preview/$s/satellite"
             else
               echo "::warning::the $s preview did not build"
             fi

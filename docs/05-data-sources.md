@@ -84,6 +84,7 @@ MapLibre GL JS draws everything. Base map, terrain and contours can all be free,
 | Roads, trails, water, labels | [Protomaps basemap](https://docs.protomaps.com/basemaps/downloads) (OpenStreetMap as one PMTiles file) | Free daily builds; `pmtiles extract` cuts out any bounding box; the topo style is ours to write |
 | Hillshade and 3D terrain | [Mapterhorn](https://protomaps.com/blog/mapterhorn-terrain/) terrain tiles | Open terrain as PMTiles, Copernicus 30 m globally with lidar where countries publish it; extractable by bounding box |
 | Contour lines | [maplibre-contour](https://github.com/maplibre/maplibre-agent-skills/issues/19) | Generated on the device from the same terrain tiles, so no separate download |
+| Satellite picture | [EOX Sentinel-2 cloudless](https://s2maps.eu) 2025, one cloud-free picture for the year | Built into `public/satellite/` by `tools/build-satellite.py` (Data section, Nov 21): all of BC to zoom 10 (about 100 m a pixel), Cypress and Seymour to zoom 14 (about 6 m); 62 MB in 28 files. Mostly summer; no winter version in this source. Not yet drawn by the app (Maps) |
 | Better Canadian elevation | [NRCan MRDEM-30 and HRDEM](https://geo.ca/initiatives/national-elevation-data-strategy/) | MRDEM is 30 m nationwide; HRDEM is 1 to 2 m lidar where flown |
 
 In BC, Mapterhorn's detailed zooms are mostly the 30 m model stretched, with lidar in few places, according to [one developer's testing on Vancouver Island](https://github.com/TecnaGamer/BeamNG.Earth/pull/206). Fine for hillshade and contours; it matters for slope shading.
@@ -363,6 +364,7 @@ Most sources only ask for attribution. The ones below carry extra terms; record 
 | Open-Meteo weather-map-layer | GPL-2.0: sharing the app may oblige sharing its source |
 | WeatherLayers GL; maplibre-gl-wind | MPL-2.0; MIT |
 | OpenStreetMap | ODbL with attribution |
+| EOX Sentinel-2 cloudless (satellite picture) | CC BY-NC-SA 4.0: non-commercial and share-alike. Credit "Contains modified Copernicus Sentinel data 2025, Sentinel-2 cloudless by EOX IT Services GmbH". Fine for a personal app; matters if the app is ever shared or sold |
 | Avalanche Canada API | Terms of Use and Data Sharing Policy not yet read; email before relying on it |
 | ATES areas | No licence stated; website terms reserve reproduction. Used on Kaden's decision (personal, polite, attributed, as published) |
 | Mountain Information Network | Undocumented, needs a key; ask first |
