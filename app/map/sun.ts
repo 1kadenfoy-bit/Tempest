@@ -49,7 +49,7 @@ const NIGHT_OPACITY = 0.5;
 /** Lowest light height given to the hillshade, so low sun still shows relief instead of going black. */
 const MIN_LIGHT = 14;
 /** The hillshade's strength in sun mode (the plain map's is 0.4): real low sun is harsh, so it is softened to stay readable. */
-const SUN_RELIEF = 0.28;
+const SUN_RELIEF = 0.22;
 const PLAIN_RELIEF = 0.4;
 const NIGHT_LAYER = 'sun-night';
 
@@ -61,6 +61,7 @@ class MapSun {
   private listeners = new Set<Listener>();
   /** The plain map's shadow colour, kept while the sun is on so it can be put back. */
   private plainShadow: unknown = null;
+  private plainHighlight: unknown = null;
   /** True while the sun's lighting is on the hillshade, so it is put back once, not on every redraw. */
   private applied = false;
 
@@ -101,6 +102,8 @@ class MapSun {
         map.setPaintProperty('hillshade', 'hillshade-exaggeration', PLAIN_RELIEF);
         if (this.plainShadow) map.setPaintProperty('hillshade', 'hillshade-shadow-color', this.plainShadow as string);
         this.plainShadow = null;
+        if (this.plainHighlight) map.setPaintProperty('hillshade', 'hillshade-highlight-color', this.plainHighlight as string);
+        this.plainHighlight = null;
         map.setPaintProperty('hillshade', 'hillshade-illumination-direction', 335);
         map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'viewport');
       }
@@ -111,7 +114,9 @@ class MapSun {
     const { azimuth, altitude } = sunPosition(this.time(), c.lat, c.lng);
     const theme: Theme = S.settings.theme();
     // Shadows are the ground colour a little darker, not black: real low sun leaves whole slopes dark, which hides the ground.
-    if (!this.plainShadow) this.plainShadow = map.getPaintProperty('hillshade', 'hillshade-shadow-color');
+    if (!this.plainShadow) { this.plainShadow = map.getPaintProperty('hillshade', 'hillshade-shadow-color'); this.plainHighlight = map.getPaintProperty('hillshade', 'hillshade-highlight-color'); }
+    // Matte: no white highlight, so lit slopes are just the ground colour, not a shine.
+    map.setPaintProperty('hillshade', 'hillshade-highlight-color', 'rgba(0, 0, 0, 0)');
     map.setPaintProperty('hillshade', 'hillshade-shadow-color', mix(mapGround(theme), theme === 'dark' ? colorToken('water', 'dark') : colorToken('ink', 'light'), theme === 'dark' ? 0.4 : 0.25));
     map.setPaintProperty('hillshade', 'hillshade-method', 'basic');
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', SUN_RELIEF);

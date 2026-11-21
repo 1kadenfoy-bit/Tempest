@@ -108,6 +108,7 @@ export function applyMapSettings(map: MapLibreMap): void {
   const sat = s.ground === 'satellite';
   show(SATELLITE_LAYER, sat);
   show('water', !sat);
+  show('water_shine', !sat);
   show('landcover', !sat);
   if (map.getLayer(L.hillshade) && sat) map.setPaintProperty(L.hillshade, 'hillshade-exaggeration', 0.2);
   // Trails, huts, camps

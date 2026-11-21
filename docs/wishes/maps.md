@@ -20,6 +20,8 @@ the old wording moves to "Changed".
 10. Natural terrain types (forest, treeline, alpine and the rest) blend smoothly into each other along their edges, with rounded, not sharp, corners, so the map looks natural; urban areas stay crisp. (Nov 20, 2026)
 14. Lakes, rivers and the sea are a clear blue, not black. (Nov 20, 2026)
 15. Glaciers come from the BC government's outlines, with rounded edges, not from OpenStreetMap. (Nov 20, 2026)
+16. Roads are drawn a bit narrower than Protomaps draws them (about 30% less). (Nov 21, 2026)
+17. The map looks matte, with no shine or reflective look, including with sun and shadows on. Water may have a slight sheen. (Nov 21, 2026)
 
 ## The Map panel
 

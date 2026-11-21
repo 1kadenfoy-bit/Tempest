@@ -91,6 +91,28 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
 
 const spriteUrl = (theme: Theme) => `https://protomaps.github.io/basemaps-assets/sprites/v4/${theme}`;
 
+/** How much narrower the base map's roads are drawn than Protomaps draws them (Kaden: "a little too big"). */
+const ROAD_WIDTH = 0.7;
+
+/**
+ * Scale the numbers a width expression can give, wherever they sit inside its
+ * zoom curve (a zoom expression must stay at the top, so it cannot just be multiplied).
+ */
+export function scaleWidth(expr: unknown, k: number): unknown {
+  if (typeof expr === 'number') return expr * k;
+  if (!Array.isArray(expr) || typeof expr[0] !== 'string') return expr;
+  const [op, ...rest] = expr as [string, ...unknown[]];
+  const mapAt = (from: number, step: number, last = false) => rest.map((x, i) => ((i >= from && (i - from) % step === 0) || (last && i === rest.length - 1) ? scaleWidth(x, k) : x));
+  switch (op) {
+    case 'interpolate': return [op, ...mapAt(3, 2)]; // interpolation, input, then stop/output pairs (outputs at 4, 6, ...)
+    case 'step': return [op, ...mapAt(1, 2)];
+    case 'case': return [op, ...mapAt(1, 2, true)];
+    case 'match': return [op, ...mapAt(2, 2, true)];
+    case 'coalesce': return [op, ...rest.map((x) => scaleWidth(x, k))];
+    default: return expr;
+  }
+}
+
 /** Protomaps landuse layers replaced by the one terrain colour table (app/map/terrain-colours.ts). */
 const REPLACED = ['landuse_park', 'landuse_urban_green', 'landuse_hospital', 'landuse_industrial', 'landuse_school', 'landuse_beach', 'landuse_zoo', 'landuse_aerodrome', 'landuse_pedestrian'];
 
@@ -143,6 +165,20 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     { id: 'glaciers-fill', type: 'fill', source: ZONES_SOURCE, 'source-layer': 'glaciers', paint: { 'fill-color': tint('ice', theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 1] } } as LayerSpecification,
     fill('terrain_urban', ['urban']),
     cliffs);
+  // The land is matte; water gets a soft sheen: a light, blurred line along its shores.
+  const waterAt = all.findIndex((l) => l.id === 'water');
+  if (waterAt >= 0) {
+    all.splice(waterAt + 1, 0, {
+      id: 'water_shine', type: 'line', source: 'protomaps', 'source-layer': 'water', minzoom: 8,
+      filter: ['==', ['geometry-type'], 'Polygon'],
+      layout: { 'line-join': 'round' },
+      paint: { 'line-color': mix(mapWater(theme), '#FFFFFF', theme === 'dark' ? 0.4 : 0.5), 'line-width': 4, 'line-blur': 4, 'line-opacity': 0.55 },
+    } as LayerSpecification);
+  }
+  // Roads a little narrower.
+  for (const l of all) {
+    if (l.type === 'line' && l.id.startsWith('roads_') && l.paint && 'line-width' in l.paint) (l.paint as Record<string, unknown>)['line-width'] = scaleWidth((l.paint as Record<string, unknown>)['line-width'], ROAD_WIDTH);
+  }
   // Trails are named from zoom 14, where the base map has their names (it showed them from 15).
   const trailLabels = all.find((l) => l.id === 'roads_labels_minor');
   if (trailLabels) trailLabels.minzoom = 14;
