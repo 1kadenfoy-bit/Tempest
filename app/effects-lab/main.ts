@@ -36,13 +36,16 @@ interface Settings extends SyntheticWind {
   storminess: number;
   detail: number;
   cloudDrift: number;
+  evolve: number;
+  fluff: number;
+  lowDepth: number;
 }
 
 const DEFAULTS: Settings = {
   fromDeg: 280, speedKmh: 36, terrain: 0.2, gusty: 0.15, gust: 0.5, gustSize: 1,
   windOn: true, count: 700, trail: 0.4, width: 2, brightness: 0.9, speed: 1, clearance: 50,
   cloudsOn: true, coverLow: 40, coverMid: 30, coverHigh: 50, baseLow: 1200, baseMid: 3500, baseHigh: 8000,
-  density: 0.75, storminess: 0, detail: 3, cloudDrift: 1,
+  density: 0.75, storminess: 0, detail: 3, cloudDrift: 1, evolve: 1, fluff: 3, lowDepth: 700,
 };
 const KEY = 'tempest-effects-lab';
 
@@ -101,7 +104,7 @@ async function start(): Promise<void> {
     clouds.setSheet('low', { cover: settings.coverLow / 100, baseM: settings.baseLow });
     clouds.setSheet('mid', { cover: settings.coverMid / 100, baseM: settings.baseMid });
     clouds.setSheet('high', { cover: settings.coverHigh / 100, baseM: settings.baseHigh });
-    clouds.setLook({ density: settings.density, storminess: settings.storminess, detail: settings.detail, drift: settings.cloudDrift });
+    clouds.setLook({ density: settings.density, storminess: settings.storminess, detail: settings.detail, drift: settings.cloudDrift, evolve: settings.evolve, fluff: settings.fluff, lowDepthM: settings.lowDepth });
     clouds.setWind({ fromDeg: settings.fromDeg, speedKmh: settings.speedKmh });
     clouds.setVisible(settings.cloudsOn);
     $('wind-text').textContent = `From ${compassName(settings.fromDeg)} ${Math.round(settings.fromDeg)}° · ${Math.round(settings.speedKmh)} km/h`;
@@ -165,6 +168,9 @@ const SLIDERS: [string, Slider[]][] = [
     { key: 'density', label: 'Thickness', min: 0.2, max: 1, step: 0.05, unit: '', digits: 2 },
     { key: 'storminess', label: 'Storm grey', min: 0, max: 1, step: 0.05, unit: '', digits: 2 },
     { key: 'cloudDrift', label: 'Drift speed', min: 0, max: 4, step: 0.1, unit: '×', digits: 1 },
+    { key: 'evolve', label: 'Forming and fading speed', min: 0, max: 3, step: 0.1, unit: '×', digits: 1 },
+    { key: 'fluff', label: 'Low cloud fluffiness (3D steps, 0 = flat)', min: 0, max: 8, step: 1, unit: '' },
+    { key: 'lowDepth', label: 'Low cloud depth', min: 200, max: 2000, step: 50, unit: ' m' },
     { key: 'detail', label: 'Detail (more costs more)', min: 2, max: 5, step: 1, unit: '' },
   ]],
   ['Wind', [
