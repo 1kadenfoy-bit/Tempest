@@ -23,7 +23,7 @@ the old wording moves to "Changed".
 
 ## Pin
 
-9. (Nov 20, tightened Nov 21) The pin shows only, in this order: **location name · layer data value · elevation**. No "You" label, no extra notes (feels-like, snow line and so on). Nothing is shown while the data is still loading: no "…" placeholders.
+9. (Nov 20, tightened Nov 21) The pin shows only, in this order: **location name · layer data value · elevation**. No "You" label, no extra notes (feels-like, snow line and so on). While the data is still loading it shows just a small spinning wheel: no "…" placeholders or partial text.
 
 ## App settings window
 
@@ -37,6 +37,7 @@ the old wording moves to "Changed".
 
 ## Changed
 
+- Rule 9 showed nothing at all while loading, for a few hours on Nov 21, before the spinning wheel.
 - Rule 9 also showed the layer's own extra notes ("feels −6", "0 °C at 1,150 m", "snow line") and "…" while loading, until Nov 21.
 - Rule 4 said Auto only appears where a layer has several sources, until Nov 21.
 - Rule 8: Boundaries was one tile (with Parks, Provincial and regional, Municipal options in a row that opened under it) until Nov 20; it is now three tiles. Rule 8a also had option rows for trail names, peak heights and boundary kinds that opened under their tiles (until Nov 20).

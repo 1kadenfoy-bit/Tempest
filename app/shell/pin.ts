@@ -37,14 +37,20 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
 
   const render = (notify = true) => {
     if (!state) return;
-    // "Location name · layer value · elevation", nothing more (Kaden, Nov 21), and
-    // nothing at all while the data is still coming in: no "…" placeholders.
+    // "Location name · layer value · elevation", nothing more (Kaden, Nov 21). While
+    // the data is still coming in, just a small spinning wheel: no "…" placeholders.
     const name = state.kind === 'you' ? state.name : pinLabel(state).short;
     const r = readoutValue;
     const loading = !readoutSet || r.value === '…' || state.elevation === null;
-    readout.hidden = loading;
+    readout.dataset.loading = String(loading);
     text.innerHTML = '';
-    if (!loading) {
+    if (loading) {
+      const wheel = document.createElement('span');
+      wheel.className = 'pin-spinner';
+      wheel.setAttribute('role', 'progressbar');
+      wheel.setAttribute('aria-label', 'Loading');
+      text.append(wheel);
+    } else {
       if (name) {
         const place = document.createElement('span');
         place.className = 'pin-name';
