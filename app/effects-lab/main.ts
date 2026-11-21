@@ -22,7 +22,7 @@ interface Settings extends SyntheticWind {
   clearance: number;
 }
 
-const DEFAULTS: Settings = { fromDeg: 280, speedKmh: 36, terrain: 0.2, gusty: 0.15, count: 700, trail: 0.4, width: 2, brightness: 0.9, speed: 1, clearance: 50 };
+const DEFAULTS: Settings = { fromDeg: 280, speedKmh: 36, terrain: 0.2, gusty: 0.15, gust: 0.5, gustSize: 1, count: 700, trail: 0.4, width: 2, brightness: 0.9, speed: 1, clearance: 50 };
 const KEY = 'tempest-effects-lab';
 
 function load(): Settings {
@@ -60,7 +60,15 @@ async function start(): Promise<void> {
 
   const layer = new WindParticlesLayer();
   const metresPerUnit = () => 40_075_016.686 * Math.cos((map.getCenter().lat * Math.PI) / 180);
-  layer.setWind(syntheticWind(() => settings, layer.grid, metresPerUnit));
+  // Gusts ride along at the speed the streaks really move on the ground.
+  const clock = {
+    seconds: () => performance.now() / 1000,
+    groundMps: () => {
+      const mPerPx = metresPerUnit() / (512 * 2 ** map.getZoom());
+      return settings.speedKmh * 2.2 * settings.speed * mPerPx;
+    },
+  };
+  layer.setWind(syntheticWind(() => settings, layer.grid, metresPerUnit, clock));
   // Particles fly under the labels, like every weather picture.
   map.addLayer(layer, firstLabel);
 
@@ -104,6 +112,10 @@ const SLIDERS: [string, Slider[]][] = [
   ['Terrain', [
     { key: 'terrain', label: 'Hills bend the wind', min: 0, max: 1, step: 0.05, unit: '', digits: 2 },
     { key: 'gusty', label: 'Patchiness', min: 0, max: 1, step: 0.05, unit: '', digits: 2 },
+  ]],
+  ['Gusts', [
+    { key: 'gust', label: 'Gust strength', min: 0, max: 1, step: 0.05, unit: '', digits: 2 },
+    { key: 'gustSize', label: 'Gust size', min: 0.4, max: 3, step: 0.1, unit: '×', digits: 1 },
   ]],
   ['Look', [
     { key: 'count', label: 'Streaks', min: 200, max: 4000, step: 100, unit: '' },
