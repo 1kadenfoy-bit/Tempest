@@ -22,7 +22,7 @@ interface Settings extends SyntheticWind {
   clearance: number;
 }
 
-const DEFAULTS: Settings = { fromDeg: 240, speedKmh: 35, terrain: 0.7, gusty: 0.4, count: 1200, trail: 0.7, width: 2.4, brightness: 0.9, speed: 1, clearance: 60 };
+const DEFAULTS: Settings = { fromDeg: 280, speedKmh: 36, terrain: 0.2, gusty: 0.15, count: 700, trail: 0.4, width: 2, brightness: 0.9, speed: 1, clearance: 50 };
 const KEY = 'tempest-effects-lab';
 
 function load(): Settings {

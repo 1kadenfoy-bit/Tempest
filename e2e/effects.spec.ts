@@ -7,7 +7,7 @@ test('wind particles draw, follow the wind, and stop when paused', async ({ page
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/effects.html');
   await expect(page.locator('body')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#wind-text')).toHaveText(/From WSW 240° · 35 km\/h/);
+  await expect(page.locator('#wind-text')).toHaveText(/From W 280° · 36 km\/h/);
   await expect(page.locator('#fps')).toContainText('streaks');
 
   // The wind slider turns the readout and the arrow.

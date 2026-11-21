@@ -16,6 +16,20 @@ export type WindFn = (x: number, y: number, out: Float32Array) => void;
 /** Metres of ground height at a mercator position. */
 export type GroundFn = (x: number, y: number) => number;
 
+/**
+ * How the sim sees the screen. Particles are kept evenly spread over what is
+ * on screen, whatever the zoom or tilt: one that leaves the screen, or sits in
+ * a crowded patch, is moved to a sparser part of the screen.
+ */
+export interface ParticleView {
+  /** Column-major matrix from mercator position (x, y, z in mercator units) to clip space. */
+  matrix: ArrayLike<number>;
+  /** The top of the usable screen in clip space (-1 to 1; above it is sky or too far to matter). */
+  topNdcY: number;
+  /** A mercator position under a random point of the usable screen. */
+  spawn(out: Float64Array): void;
+}
+
 export interface ParticleLook {
   /** Particles drawn (up to the sim's maximum). */
   count: number;
@@ -42,6 +56,16 @@ export const VERTS_PER_SEGMENT = 4;
 /** Wind speed (km/h) at which the line reaches full strength. */
 export const FULL_KMH = 60;
 
+/** Screen cells (across, down) used to keep the spread even. */
+const CELLS_X = 8;
+const CELLS_Y = 14;
+/** A cell may hold this many times the average before its extras are moved. */
+const CROWD = 1.5;
+/** Chance per frame that an extra particle in a crowded cell is moved. */
+const MOVE_CHANCE = 0.25;
+/** Past the screen's edge by this much (clip units) a particle counts as off screen. */
+const EDGE = 0.02;
+
 const MIN_LIFE = 2.5;
 const MAX_LIFE = 5;
 
@@ -61,7 +85,9 @@ export class ParticleSim {
   private filled: Uint8Array;
   private sinceRecord = 0;
   private wind = new Float32Array(2);
-  private box: [number, number, number, number] = [0, 0, 1, 1];
+  private spot = new Float64Array(2);
+  /** Particles per screen cell, for thinning crowded patches. */
+  private cells = new Uint16Array(CELLS_X * CELLS_Y);
   /** Metres per mercator unit at the view's latitude, for turning heights into z. */
   private metresPerUnit = 1;
   private seed = 0x9e3779b9;
@@ -91,16 +117,22 @@ export class ParticleSim {
     return this.seed / 4294967296;
   }
 
-  /** The part of the world particles live in (the view, a little enlarged), and the scale there. */
-  setView(box: [number, number, number, number], metresPerUnit: number): void {
-    this.box = box;
+  /** The scale (metres per mercator unit) where the view is. */
+  setView(metresPerUnit: number): void {
     this.metresPerUnit = metresPerUnit;
   }
 
-  private spawn(i: number, stagger: boolean): void {
-    const [x0, y0, x1, y1] = this.box;
-    this.x[i] = x0 + this.rand() * (x1 - x0);
-    this.y[i] = y0 + this.rand() * (y1 - y0);
+  /** Put particle `i` at a fresh spot on the screen: of a few tries, the one in the emptiest cell. */
+  private spawn(i: number, view: ParticleView, stagger: boolean, ground: GroundFn, look: ParticleLook): void {
+    let best = -1, bx = 0, by = 0;
+    for (let t = 0; t < 3; t++) {
+      view.spawn(this.spot);
+      const c = this.cellOf(view, this.spot[0]!, this.spot[1]!, ground, look);
+      const load = c < 0 ? 1e9 : this.cells[c]!;
+      if (best < 0 || load < best) { best = load; bx = this.spot[0]!; by = this.spot[1]!; }
+    }
+    this.x[i] = bx;
+    this.y[i] = by;
     this.life[i] = MIN_LIFE + this.rand() * (MAX_LIFE - MIN_LIFE);
     this.age[i] = stagger ? this.rand() * this.life[i]! : 0;
     this.lift[i] = 0.5 + this.rand();
@@ -108,19 +140,52 @@ export class ParticleSim {
     this.head[i] = 0;
   }
 
+  /** The screen cell a mercator position falls in (and flying height there), or -1 when off screen. */
+  private cellOf(view: ParticleView, x: number, y: number, ground: GroundFn, look: ParticleLook): number {
+    const m = view.matrix;
+    const z = (ground(x, y) + look.clearance) / this.metresPerUnit;
+    const w = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
+    if (!(w > 0)) return -1;
+    const nx = (m[0]! * x + m[4]! * y + m[8]! * z + m[12]!) / w;
+    const ny = (m[1]! * x + m[5]! * y + m[9]! * z + m[13]!) / w;
+    if (nx < -1 + EDGE || nx > 1 - EDGE || ny < -1 + EDGE || ny > view.topNdcY - EDGE) return -1;
+    const cx = Math.min(CELLS_X - 1, Math.floor(((nx + 1) / 2) * CELLS_X));
+    const cy = Math.min(CELLS_Y - 1, Math.floor(((ny + 1) / (view.topNdcY + 1)) * CELLS_Y));
+    return cy * CELLS_X + cx;
+  }
+
   /** Move every active particle by `dt` seconds. */
-  step(dt: number, look: ParticleLook, wind: WindFn, ground: GroundFn, unitsPerPx: number): void {
+  step(dt: number, look: ParticleLook, wind: WindFn, ground: GroundFn, unitsPerPx: number, view: ParticleView): void {
     const n = Math.min(look.count, this.max);
-    const [x0, y0, x1, y1] = this.box;
     this.sinceRecord += dt;
     const record = this.sinceRecord >= look.trailSeconds / (TRAIL_POINTS - 1);
     if (record) this.sinceRecord = 0;
     const k = look.pxPerKmh * look.speedScale * unitsPerPx;
+    // Where everyone is on screen now. Old or off-screen particles are moved first.
+    this.cells.fill(0);
     for (let i = 0; i < n; i++) {
-      if (this.age[i]! >= this.life[i]! || this.x[i]! < x0 || this.x[i]! > x1 || this.y[i]! < y0 || this.y[i]! > y1) {
-        this.spawn(i, this.age[i] === 1e6);
+      const fresh = this.age[i] === 1e6;
+      let c = fresh ? -1 : this.cellOf(view, this.x[i]!, this.y[i]!, ground, look);
+      if (fresh || this.age[i]! >= this.life[i]! || c < 0) {
+        this.spawn(i, view, fresh, ground, look);
         this.record(i, look, ground);
+        c = this.cellOf(view, this.x[i]!, this.y[i]!, ground, look);
       }
+      if (c >= 0) this.cells[c]!++;
+    }
+    // Thin crowded patches (after zooming out, or looking across a ridge): extras are moved to emptier places.
+    const limit = (n / (CELLS_X * CELLS_Y)) * CROWD + 1;
+    for (let i = 0; i < n; i++) {
+      const c = this.cellOf(view, this.x[i]!, this.y[i]!, ground, look);
+      if (c >= 0 && this.cells[c]! > limit && this.rand() < MOVE_CHANCE) {
+        this.cells[c]!--;
+        this.spawn(i, view, false, ground, look);
+        this.record(i, look, ground);
+        const c2 = this.cellOf(view, this.x[i]!, this.y[i]!, ground, look);
+        if (c2 >= 0) this.cells[c2]!++;
+      }
+    }
+    for (let i = 0; i < n; i++) {
       wind(this.x[i]!, this.y[i]!, this.wind);
       const u = this.wind[0]!, v = this.wind[1]!;
       this.speed[i] = Math.hypot(u, v);

@@ -8,10 +8,12 @@
 // while the page is hidden.
 import type { CustomLayerInterface, CustomRenderMethodInput, Map as MapLibreMap } from 'maplibre-gl';
 import { HeightGrid } from './height-grid';
-import { ParticleSim, TRAIL_POINTS, VERTEX_FLOATS, VERTS_PER_SEGMENT, type ParticleLook, type WindFn } from './particles';
+import { ParticleSim, TRAIL_POINTS, VERTEX_FLOATS, VERTS_PER_SEGMENT, type ParticleLook, type ParticleView, type WindFn } from './particles';
 
 const MAX_PARTICLES = 4000;
-/** How far past the screen's edge particles are kept, as a share of the view. */
+/** Ground farther than this many screen widths from the middle is too far away to fill with streaks. */
+const REACH_WIDTHS = 6;
+/** How far past the usable screen the terrain picture reaches, as a share of the view. */
 const OVERSCAN = 0.15;
 /** Metres around the equator, for turning mercator units into metres. */
 const EQUATOR_M = 40_075_016.686;
@@ -81,6 +83,14 @@ export class WindParticlesLayer implements CustomLayerInterface {
   private last = 0;
   private times: number[] = [];
   private work = 0;
+  /** Top of the usable screen (CSS pixels from the top): below the sky, and not too far away to matter. */
+  private topPx = 0;
+  private view: ParticleView = {
+    matrix: new Float32Array(16),
+    topNdcY: 1,
+    spawn: (out) => this.spawnOnScreen(out),
+  };
+  private onMove = () => this.updateTop();
   private onVisible = () => { if (!document.hidden) this.map?.triggerRepaint(); };
 
   setWind(fn: WindFn): void { this.wind = fn; }
@@ -92,8 +102,7 @@ export class WindParticlesLayer implements CustomLayerInterface {
     this.running = on;
     this.last = 0;
     this.times.length = 0;
-    if (on) this.map?.triggerRepaint();
-    else this.map?.triggerRepaint(); // one last draw keeps the picture as it is
+    this.map?.triggerRepaint(); // on: start the loop; off: one last draw keeps the picture as it is
   }
   get isRunning(): boolean { return this.running; }
 
@@ -117,16 +126,50 @@ export class WindParticlesLayer implements CustomLayerInterface {
       const h = map.queryTerrainElevation(mercatorToLngLat(x, y));
       return h == null ? NaN : h / ex;
     });
-    this.sim.setView(box, EQUATOR_M * Math.cos(map.getCenter().lat * Math.PI / 180));
+    this.sim.setView(EQUATOR_M * Math.cos(map.getCenter().lat * Math.PI / 180));
+  }
+
+  /** Find where the usable screen starts (called when the view moves). */
+  private updateTop(): void {
+    const map = this.map;
+    if (!map) return;
+    const canvas = map.getCanvas();
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const c = map.getCenter();
+    const cx = (c.lng + 180) / 360;
+    const cy = (1 - Math.asinh(Math.tan((c.lat * Math.PI) / 180)) / Math.PI) / 2;
+    const reach = (REACH_WIDTHS * w) / (512 * 2 ** map.getZoom());
+    let top = h * 0.9;
+    for (let k = 0; k <= 30; k++) {
+      const sy = (k / 30) * h;
+      const p = map.unproject([w / 2, sy]);
+      if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+      const mx = (p.lng + 180) / 360;
+      const my = (1 - Math.asinh(Math.tan((p.lat * Math.PI) / 180)) / Math.PI) / 2;
+      if (Math.hypot(mx - cx, my - cy) <= reach) { top = sy; break; }
+    }
+    this.topPx = top;
+    this.view.topNdcY = 1 - (2 * top) / h;
+  }
+
+  /** A mercator position under a random point of the usable screen. */
+  private spawnOnScreen(out: Float64Array): void {
+    const map = this.map!;
+    const canvas = map.getCanvas();
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const p = map.unproject([Math.random() * w, this.topPx + Math.random() * (h - this.topPx)]);
+    out[0] = (p.lng + 180) / 360;
+    out[1] = (1 - Math.asinh(Math.tan((p.lat * Math.PI) / 180)) / Math.PI) / 2;
   }
 
   private viewBox(over: number): [number, number, number, number] {
     const map = this.map!;
     const canvas = map.getCanvas();
-    // The four screen corners and the middle of the top edge, so a tilted view's far land counts.
+    // The corners of the usable screen and the middle of its top edge, so a tilted view's far land counts.
     const w = canvas.clientWidth, h = canvas.clientHeight;
     let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
-    for (const [sx, sy] of [[0, 0], [w, 0], [0, h], [w, h], [w / 2, 0]] as const) {
+    this.updateTop();
+    for (const [sx, sy] of [[0, this.topPx], [w, this.topPx], [0, h], [w, h], [w / 2, this.topPx]] as const) {
       const p = map.unproject([sx, sy]);
       const mx = (p.lng + 180) / 360;
       const my = (1 - Math.asinh(Math.tan((p.lat * Math.PI) / 180)) / Math.PI) / 2;
@@ -181,10 +224,13 @@ export class WindParticlesLayer implements CustomLayerInterface {
     g.bindVertexArray(null);
 
     document.addEventListener('visibilitychange', this.onVisible);
+    map.on('move', this.onMove);
+    this.updateTop();
   }
 
   onRemove(): void {
     document.removeEventListener('visibilitychange', this.onVisible);
+    this.map?.off('move', this.onMove);
     const g = this.gl;
     if (g) {
       if (this.program) g.deleteProgram(this.program);
@@ -208,7 +254,8 @@ export class WindParticlesLayer implements CustomLayerInterface {
       this.times.push(now);
       if (this.times.length > 90) this.times.shift();
       const unitsPerPx = 1 / (512 * 2 ** map.getZoom());
-      if (dt > 0) this.sim.step(dt, this.look, this.wind, this.groundAt, unitsPerPx);
+      this.view.matrix = options.defaultProjectionData.mainMatrix as unknown as Float32Array;
+      if (dt > 0) this.sim.step(dt, this.look, this.wind, this.groundAt, unitsPerPx, this.view);
     }
     const count = this.sim.write(this.verts, this.look, this.groundAt);
     this.work = this.work * 0.9 + (performance.now() - t0) * 0.1;
