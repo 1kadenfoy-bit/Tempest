@@ -1,0 +1,38 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--map-ground); color: var(--ink); font: var(--type-body); overscroll-behavior: none; }
+#map { position: fixed; inset: 0; }
+button { min-height: var(--touch-min); border-radius: var(--radius-button-tile-row); font: var(--type-body); padding: 0 14px; }
+.primary { background: var(--ink); color: var(--map-ground); border: 0; }
+.secondary { background: var(--card); color: var(--ink); border: 1px solid var(--stroke-strong); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+#readout {
+  position: fixed; z-index: 2; left: var(--screen-edge); top: calc(env(safe-area-inset-top) + 8px);
+  display: flex; gap: 10px; align-items: center; padding: 8px 14px 8px 10px;
+  background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius-top-bar);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); pointer-events: none;
+}
+#readout div { display: grid; gap: 2px; }
+#wind-text { font: var(--type-stat); font-variant-numeric: tabular-nums; }
+#fps { font: var(--type-caption); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+#arrow { width: 36px; height: 36px; fill: var(--ink); transition: transform 0.2s; }
+
+#panel {
+  position: fixed; z-index: 2; left: 0; right: 0; bottom: 0;
+  padding: 0 var(--screen-edge) calc(env(safe-area-inset-bottom) + 8px); display: grid; gap: 8px; justify-items: start;
+  pointer-events: none;
+}
+#panel > * { pointer-events: auto; }
+#controls {
+  width: 100%; box-sizing: border-box; max-height: 36vh; overflow: auto; padding: 12px 14px; display: grid; gap: 4px;
+  background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius-grow-panel);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+#controls[hidden] { display: none; }
+#controls h2 { font: var(--type-caption); color: var(--ink-2); margin: 10px 0 0; text-transform: uppercase; letter-spacing: 0.06em; }
+#controls h2:first-child { margin-top: 0; }
+.row { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 12px; }
+.row label { font: var(--type-secondary); color: var(--ink-2); }
+.row output { font: var(--type-secondary); color: var(--ink); font-variant-numeric: tabular-nums; }
+.row input[type=range] { grid-column: 1 / -1; width: 100%; min-height: var(--touch-min); margin: -6px 0; accent-color: var(--ink); }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.buttons button { flex: 1 1 auto; }
