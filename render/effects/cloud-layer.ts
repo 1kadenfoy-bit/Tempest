@@ -64,6 +64,24 @@ export function drawnHeight(m: number): number {
   return m <= SQUEEZE_FROM_M ? m : SQUEEZE_FROM_M + (m - SQUEEZE_FROM_M) * SQUEEZE;
 }
 
+/**
+ * Where the camera is, in the map's mercator coordinates (x, y, and height in mercator units), from the matrix
+ * that takes those to the screen. The camera is the one point that lands at the screen's very middle of
+ * nowhere (x, y and w all zero), so three rows of the matrix give three equations for its three coordinates.
+ * Returns null when the matrix has no such point.
+ */
+export function cameraFromMatrix(m: ArrayLike<number>): [number, number, number] | null {
+  const row = (r: number) => [m[r]!, m[4 + r]!, m[8 + r]!, m[12 + r]!];
+  const [r0, r1, r3] = [row(0), row(1), row(3)] as [number[], number[], number[]];
+  const det3 = (a: number[], b: number[], c: number[]) => a[0]! * (b[1]! * c[2]! - b[2]! * c[1]!) - a[1]! * (b[0]! * c[2]! - b[2]! * c[0]!) + a[2]! * (b[0]! * c[1]! - b[1]! * c[0]!);
+  const d = det3(r0, r1, r3);
+  if (!Number.isFinite(d) || Math.abs(d) < 1e-30) return null;
+  const rhs = [-r0[3]!, -r1[3]!, -r3[3]!];
+  const col = (k: number) => [r0, r1, r3].map((r, i) => r.slice(0, 3).map((v, j) => (j === k ? rhs[i]! : v)));
+  const solve = (k: number) => { const [a, b, c] = col(k) as [number[], number[], number[]]; return det3(a, b, c) / d; };
+  return [solve(0), solve(1), solve(2)];
+}
+
 /** Value the noise must exceed for a layer to cover `cover` of the sky. */
 export function coverThreshold(cover: number, detail: number): number {
   if (cover <= 0.005) return 2;
@@ -134,7 +152,7 @@ vec2 field(vec2 km) {
   return vec2(al / (u_scale * u_stretch), ac / u_scale) + u_seed;
 }
 float hazeAt(float dist) {
-  return 1.0 - smoothstep(30.0, 70.0, dist);
+  return 1.0 - smoothstep(70.0, 160.0, dist);
 }
 `;
 
@@ -272,6 +290,8 @@ export class CloudLayer implements CustomLayerInterface {
   /** Seconds of drifting so far (only counts while running). */
   private clock = 0;
   private quad = new Float32Array(12);
+  /** The camera as last used for drawing (mercator x, y and height), for checking. */
+  cameraMercator: [number, number, number] = [0, 0, 0];
   private onVisible = () => { if (!document.hidden) this.map?.triggerRepaint(); };
 
   setSheet(kind: CloudKind, s: Partial<CloudSheet>): void { Object.assign(this.sheets[kind], s); this.map?.triggerRepaint(); }
@@ -376,20 +396,30 @@ export class CloudLayer implements CustomLayerInterface {
     const metresPerUnit = KM_PER_UNIT * 1000;
     const canvas = map.getCanvas();
     const unitsPerPx = 1 / (512 * 2 ** map.getZoom());
-    const half = REACH_WIDTHS * canvas.clientWidth * unitsPerPx;
+    // Cloud covers the land out to the horizon (at least 120 km each way), not just a patch around the view.
+    const half = Math.max(REACH_WIDTHS * canvas.clientWidth * unitsPerPx, 120_000 / metresPerUnit);
     const quad = this.quad;
     quad.set([cx - half, cy - half, cx + half, cy - half, cx - half, cy + half, cx - half, cy + half, cx + half, cy - half, cx + half, cy + half]);
 
     // The camera's place, to draw the sheets farthest first, to fade distant cloud and to look through the low
     // cloud: behind and above the map's middle, at the distance the map's field of view puts it.
-    const worldPx = 512 * 2 ** map.getZoom();
-    const distPx = (0.5 * canvas.clientHeight) / Math.tan(FOV / 2);
-    const pitch = (map.getPitch() * Math.PI) / 180, bearing = (map.getBearing() * Math.PI) / 180;
-    const back = (distPx * Math.sin(pitch)) / worldPx;
-    const camX = cx - back * Math.sin(bearing), camY = cy + back * Math.cos(bearing);
-    const groundM = map.queryTerrainElevation(c) ?? 0;
-    const camZ = ((distPx * Math.cos(pitch)) / worldPx) + groundM / metresPerUnit;
+    const matrix = options.defaultProjectionData.mainMatrix as unknown as ArrayLike<number>;
+    const exact = cameraFromMatrix(matrix);
+    // The matrix gives the camera exactly; if it ever cannot, fall back on working it out from zoom and tilt.
+    let camX: number, camY: number, camZ: number;
+    if (exact && Number.isFinite(exact[0]) && Number.isFinite(exact[2])) {
+      [camX, camY, camZ] = exact;
+    } else {
+      const worldPx = 512 * 2 ** map.getZoom();
+      const distPx = (0.5 * canvas.clientHeight) / Math.tan(FOV / 2);
+      const pitch = (map.getPitch() * Math.PI) / 180, bearing = (map.getBearing() * Math.PI) / 180;
+      const back = (distPx * Math.sin(pitch)) / worldPx;
+      camX = cx - back * Math.sin(bearing);
+      camY = cy + back * Math.cos(bearing);
+      camZ = ((distPx * Math.cos(pitch)) / worldPx) + (map.queryTerrainElevation(c) ?? 0) / metresPerUnit;
+    }
     const camKm: [number, number, number] = [(camX - ORIGIN_X) * KM_PER_UNIT, (camY - ORIGIN_Y) * KM_PER_UNIT, camZ * KM_PER_UNIT];
+    this.cameraMercator = [camX, camY, camZ];
     const camHeightM = camZ * metresPerUnit;
 
     const active = KINDS.filter((k) => this.sheets[k].cover > 0.005);
