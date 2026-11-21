@@ -6,6 +6,7 @@ import { formatElevation } from '../../core/units/format';
 import type { Readout } from '../../layers/contract';
 import { elevationAt } from '../map/elevation';
 import { maplibregl } from '../map/maplibre';
+import { terrainAt } from './pin-terrain';
 
 export type PinKind = 'you' | 'dropped' | 'last';
 
@@ -33,13 +34,16 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   let state: PinState | null = null;
   let readoutValue: Readout = { value: '' };
   let readoutSet = false;
+  /** What the ground is here ("Alpine", "Glacier"), for when there is no place name. */
+  let terrain: string | null = null;
   let seq = 0;
 
   const render = (notify = true) => {
     if (!state) return;
     // "Location name · layer value · elevation", nothing more (Kaden, Nov 21). While
     // the data is still coming in, just a small spinning wheel: no "…" placeholders.
-    const name = state.kind === 'you' ? state.name : pinLabel(state).short;
+    // The place's name if there is one; otherwise what the ground is; otherwise the plain label (a dropped pin's "Pin").
+    const name = state.name ?? terrain ?? (state.kind === 'you' ? null : pinLabel(state).short);
     const r = readoutValue;
     const loading = !readoutSet || r.value === '…' || state.elevation === null;
     readout.dataset.loading = String(loading);
@@ -92,15 +96,23 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const set = (next: Omit<PinState, 'elevation'>) => {
     state = { ...next, elevation: null };
     marker.setLngLat([next.lng, next.lat]).addTo(map);
-    // Your own location is named from the closest labelled place on the map, once the map has drawn it.
-    const nameYou = () => {
-      if (!state || state.kind !== 'you' || state.name) return;
-      const found = nameNear(map, map.project([state.lng, state.lat]), 160);
-      if (found) { state.name = found; render(false); }
+    terrain = null;
+    const mine = ++seq;
+    // The pin is named from a labelled place right next to it, once the map has drawn it; if there is none, by what the ground is.
+    const nameIt = () => {
+      if (!state || seq !== mine) return;
+      if (!state.name && state.kind === 'you') {
+        const found = nameNear(map, map.project([state.lng, state.lat]), 50);
+        if (found) { state.name = found; render(false); return; }
+      }
+      if (!state.name && !terrain) {
+        const t = terrainAt(map, state.lng, state.lat);
+        if (t) { terrain = t; render(false); }
+      }
     };
     render();
-    if (next.kind === 'you' && !next.name) { nameYou(); map.once('idle', nameYou); }
-    const mine = ++seq;
+    nameIt();
+    if (!next.name) map.once('idle', nameIt);
     elevationAt(next.lng, next.lat)
       .then((m) => { if (mine === seq && state) { state.elevation = m; render(); } })
       .catch(() => { /* offline or no terrain: elevation stays unknown */ });

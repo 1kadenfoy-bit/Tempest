@@ -23,7 +23,7 @@ the old wording moves to "Changed".
 
 ## Pin
 
-9. (Nov 20, tightened Nov 21) The pin shows only, in this order: **location name · layer data value · elevation**. No "You" label, no extra notes (feels-like, snow line and so on). While the data is still loading it shows just a small spinning wheel: no "…" placeholders or partial text.
+9. (Nov 20, tightened Nov 21) The pin shows only, in this order: **location name · layer data value · elevation**. Where there is no actual place name, the location is what the ground is ("Alpine", "Glacier", "Forest", "Grassland", "Treeline", "Wetland", "Beach", "Urban"), as the map draws it. No "You" label, no extra notes (feels-like, snow line and so on). While the data is still loading it shows just a small spinning wheel: no "…" placeholders or partial text.
 
 ## App settings window
 
