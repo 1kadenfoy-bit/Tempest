@@ -35,6 +35,10 @@ the old wording moves to "Changed".
 13. (Nov 20) **Trail names** and **peak heights** (names and elevations on the map) are always on. They are not choices in the map panel.
 12. (Nov 20) The **Offline** section is not in the map panel. Saving and saved areas live in app settings only.
 
+## Layer menu
+
+14. (Nov 21) Each layer tile in the layer menu has its **icon on the left and its name on the right**. No colour bars under the name. Approved icons: Precipitation (cloud with drops), Temperature (thermometer), Wind (curling lines), Radar (rings with a sweep), Avalanche (mountain with tumbling snow), Air quality (haze lines with particles).
+
 ## Changed
 
 - Rule 9 showed nothing at all while loading, for a few hours on Nov 21, before the spinning wheel.

@@ -406,17 +406,16 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .fact-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font: var(--type-body); font-weight: 400; line-height: 20px; }
 .fact-list a { color: var(--ink); }
 
-/* Layer menu tiles (03-LayerMenu): colour bars on top, the name below. */
+/* Layer menu tiles: the layer's icon on the left, the name on the right. */
 .layer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }
 .layer-tile {
   min-height: 72px; padding: 12px; border-radius: var(--radius-button-tile-row);
   border: 1px solid var(--stroke-strong);
-  display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 14px;
+  display: flex; flex-direction: row; align-items: center; gap: 12px;
   text-align: left;
 }
 .layer-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
-.layer-swatches { display: flex; gap: 6px; }
-.layer-swatches span { flex: 1 1 0; height: 6px; border-radius: 3px; }
+.layer-tile-icon { flex: 0 0 auto; display: flex; color: var(--ink); }
 .layer-tile-name { font: 600 15px var(--font-body); }
 
 /* Map attribution, kept clear of the sheet */

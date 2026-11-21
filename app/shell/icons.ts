@@ -21,6 +21,13 @@ export const icons = {
   // The Notification Centre at rest; the warning triangle replaces it while an alert is in force.
   bell: svg(24, '<path d="M6 9.5a6 6 0 0 1 12 0c0 4.8 2 6.3 2 6.3H4s2-1.5 2-6.3z"/><path d="M10 19.2a2 2 0 0 0 4 0"/>'),
   gearLarge: svg(24, '<path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.2a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.2a2 2 0 0 1 1 1.7V20a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.2a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.2a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'),
+  // The layer menu's icons (Kaden approved Nov 21): one per condition layer, keyed by layer id.
+  'layer-precipitation': svg(28, '<path d="M7.5 14.5H7a3.5 3.5 0 0 1-.4-6.98 5.5 5.5 0 0 1 10.7-.9A3.9 3.9 0 0 1 17 14.5h-.5"/><path d="M8.5 17.5l-1 2.5M12.5 17.5l-1 2.5M16.5 17.5l-1 2.5"/>'),
+  'layer-temperature': svg(28, '<path d="M10 14.2V5a2 2 0 0 1 4 0v9.2a4 4 0 1 1-4 0z"/><path d="M12 9.5v7"/><path d="M16.8 6h2M16.8 9h2"/><circle cx="12" cy="17.5" r="1.3" fill="currentColor"/>'),
+  'layer-wind': svg(28, '<path d="M3.5 8.5h9.5a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3.5 12.5h14a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3.5 16.5h6a2 2 0 1 1-2 2"/>'),
+  'layer-radar': svg(28, '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
+  'layer-avalanche': svg(28, '<path d="M3 19.5 9.5 7.5l3.8 6.5 1.7-2.8 6 8.3H3z"/><path d="M7.4 11.6 9.5 10l1.9 1.4"/><circle cx="15.2" cy="8" r="0.9" fill="currentColor"/><circle cx="18.3" cy="10.3" r="0.9" fill="currentColor"/><circle cx="19.6" cy="6.6" r="0.9" fill="currentColor"/>'),
+  'layer-air-quality': svg(28, '<path d="M3.5 12.5c2-2 3.5 2 5.5 0s3.5 2 5.5 0 3.5 2 5.5 0"/><path d="M3.5 17.5c2-2 3.5 2 5.5 0s3.5 2 5.5 0 3.5 2 5.5 0"/><circle cx="6" cy="7" r="1.1" fill="currentColor"/><circle cx="11" cy="5.2" r="1.1" fill="currentColor"/><circle cx="16" cy="7.4" r="1.1" fill="currentColor"/><circle cx="19.5" cy="5" r="1.1" fill="currentColor"/>'),
   info: svg(20, '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.6" fill="currentColor"/>'),
   'pin-small': svg(14, '<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 2),
 } as const;
