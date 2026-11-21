@@ -43,6 +43,9 @@ export class PressTracker {
     return { x: d.x, y: d.y };
   }
 
+  /** True while this pointer is the one being held still. */
+  holding(id: number): boolean { return this.down_?.id === id; }
+
   /** When the press now being held is due, or null. */
   dueAt(): number | null { return this.down_ ? this.down_.t + this.holdMs : null; }
 }
