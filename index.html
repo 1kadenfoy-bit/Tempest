@@ -17,7 +17,7 @@
     <div id="map" aria-label="Map"></div>
 
     <header class="topbar" aria-label="Layer and model">
-      <button class="alert-badge" id="alert-badge" hidden aria-haspopup="dialog" aria-expanded="false" aria-label="Weather alerts"><span class="alert-icon"></span><span class="alert-count"></span></button>
+      <button class="alert-badge" id="alert-badge" hidden aria-haspopup="dialog" aria-expanded="false" aria-label="Notification Centre"><span class="alert-bell" data-icon="bell"></span><span class="alert-icon"></span><span class="alert-count"></span></button>
       <div class="topbar-main">
         <button class="layer-title" id="layer-button" aria-haspopup="dialog" aria-expanded="false">
           <span class="layer-name-row"><span class="layer-name" id="layer-name">Precipitation</span><span class="layer-chevron" data-icon="chevron"></span></span>
@@ -25,10 +25,11 @@
         </button>
         <button class="model-pill" id="model-pill" aria-haspopup="dialog" aria-expanded="false" aria-label="Model"><span id="model-pill-label">HRDPS</span><span class="model-chevron" data-icon="chevron"></span></button>
       </div>
-      <button class="search-button" id="search-button" aria-haspopup="dialog" aria-expanded="false" aria-label="Search for a place"></button>
+      <button class="settings-button" id="settings-button" aria-haspopup="dialog" aria-expanded="false" aria-label="App settings" data-icon="gearLarge"></button>
     </header>
 
     <div class="thumbs">
+      <button class="thumb" id="search-button" aria-haspopup="dialog" aria-expanded="false" aria-label="Search for a place"></button>
       <button class="thumb" id="locate" aria-label="Go to my location" data-icon="locate"></button>
       <button class="thumb" id="map-layers" aria-label="Map layers" data-icon="layers" aria-haspopup="dialog" aria-expanded="false"></button>
     </div>

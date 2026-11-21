@@ -9,13 +9,14 @@ test('model menu: only fitting models, info card, switching changes everything t
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?insets=47,34');
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 120_000 });
-  await expect(page.locator('#model-pill-label')).toHaveText('HRDPS');
+  // Nothing chosen yet means Auto (Kaden's interface rule 4, Nov 20).
+  await expect(page.locator('#model-pill-label')).toHaveText('Auto');
 
-  // Precipitation lists every model; ECMWF carries precipitation.
+  // Precipitation lists Auto, then every model; ECMWF carries precipitation.
   await page.click('#model-pill');
   const menu = page.getByRole('dialog', { name: 'Model' });
-  await expect(menu.locator('.model-name')).toHaveText(['HRDPS', 'RDPS', 'ECMWF IFS', 'GDPS']);
-  await expect(menu.locator('.model-row[aria-pressed="true"] .model-name')).toHaveText('HRDPS');
+  await expect(menu.locator('.model-name')).toHaveText(['Auto', 'HRDPS', 'RDPS', 'ECMWF IFS', 'GDPS']);
+  await expect(menu.locator('.model-row[aria-pressed="true"] .model-name')).toHaveText('Auto');
   await page.screenshot({ path: 'test-results/screens/m6-model-menu.png' });
 
   // The info card, and Escape closes it.
@@ -50,7 +51,7 @@ test('model menu: only fitting models, info card, switching changes everything t
   await page.click('#layer-button');
   await page.getByRole('dialog', { name: 'Condition layer' }).getByRole('button', { name: 'Temperature' }).click();
   await page.click('#model-pill');
-  await expect(page.getByRole('dialog', { name: 'Model' }).locator('.model-name')).toHaveText(['HRDPS', 'RDPS', 'GDPS']);
+  await expect(page.getByRole('dialog', { name: 'Model' }).locator('.model-name')).toHaveText(['Auto', 'HRDPS', 'RDPS', 'GDPS']);
   expect(errors).toEqual([]);
 });
 
@@ -64,7 +65,8 @@ test.describe('fallback', () => {
     await page.goto('/?insets=47,34');
     await expect(page.locator('body')).toHaveAttribute('data-run', 'ready', { timeout: 120_000 });
     await expect(page.locator('#run-age')).toContainText('HRDPS unavailable');
-    await expect(page.locator('#model-pill-label')).toHaveText('RDPS');
+    // With Auto, the button keeps saying Auto; the status line names the missing model.
+    await expect(page.locator('#model-pill-label')).toHaveText('Auto');
     await expect(page.locator('#run-age')).toHaveAttribute('data-stale', 'true');
     await page.screenshot({ path: 'test-results/screens/m6-fallback.png' });
   });

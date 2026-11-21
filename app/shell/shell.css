@@ -87,7 +87,10 @@ body[data-weather='recorded'] .run-age::after { content: ' · recorded'; }
   bottom: calc(var(--sheet-visible) + 16px);
   display: flex; flex-direction: column; gap: 12px;
   transition: opacity 200ms ease, bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Only the buttons take taps: the gaps between them belong to the map. */
+  pointer-events: none;
 }
+.thumbs > * { pointer-events: auto; }
 .thumb {
   width: var(--thumb); height: var(--thumb); border-radius: 50%;
   background: var(--surface); border: 1px solid var(--stroke);
@@ -111,7 +114,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   display: flex; align-items: center; gap: 6px;
   font: var(--type-secondary); white-space: nowrap; pointer-events: none;
 }
-.pin-readout .muted { color: var(--ink-2); }
+.pin-readout .muted, .pin-readout .pin-name { color: var(--ink-2); }
 .pin-readout strong { font-weight: 600; color: var(--ink); }
 
 /* Bottom sheet */
@@ -523,13 +526,17 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
   position: relative; flex: 0 0 auto;
   width: var(--touch-min); height: var(--touch-min); border-radius: var(--radius-icon-button);
   background: var(--surface); border: 1px solid var(--stroke);
-  display: flex; align-items: center; justify-content: center; color: var(--warning);
+  display: flex; align-items: center; justify-content: center; color: var(--ink-2);
 }
 .alert-badge[hidden] { display: none; }
-.alert-badge[data-count='0'] { color: var(--ink-2); }
+/* The Notification Centre: a bell at rest, the warning triangle in the warning colour while an alert is in force. */
+.alert-icon { display: none; }
+.alert-badge[data-count]:not([data-count='0']) { color: var(--warning); }
+.alert-badge[data-count]:not([data-count='0']) .alert-icon { display: flex; }
+.alert-badge[data-count]:not([data-count='0']) .alert-bell { display: none; }
+.alert-bell { display: flex; }
 .alert-count:empty { display: none; }
 .alert-none { font: var(--type-body); color: var(--ink-2); padding: 4px 0; }
-.alert-icon { display: flex; }
 .alert-count {
   position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
   border-radius: 10px; background: var(--warning); color: var(--surface);
@@ -553,7 +560,7 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 /* ── Place search (M9): the round button at the right of the top bar and
    its grow panel. No v8 design for the panel; built from the panel, field
    and row parts. Controls stay neutral. ── */
-.search-button {
+.settings-button {
   flex: 0 0 auto;
   width: var(--touch-min); height: var(--touch-min); border-radius: var(--radius-icon-button);
   background: var(--surface); border: 1px solid var(--stroke); color: var(--ink);
@@ -593,3 +600,50 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .legend-bar-steps { border-radius: 2px; }
 .check-row[data-disabled] .check-title, .check-row[data-disabled] .check-note { color: var(--ink-3); }
 .check-row[data-disabled] .check-box { opacity: 0.5; }
+
+/* ── App settings: the save button, the swipe-to-delete list and the folded credits. ── */
+.wide-button {
+  width: 100%; height: var(--touch-min); border-radius: var(--radius-button-tile-row);
+  border: 1px solid var(--stroke-strong); background: var(--fill-control); color: var(--ink);
+  font: var(--type-body); font-weight: 600;
+}
+.wide-button:disabled { opacity: 0.5; }
+.saved-list { display: flex; flex-direction: column; }
+.swipe-row { position: relative; overflow: hidden; border-top: 1px solid var(--stroke); }
+.swipe-face { position: relative; background: var(--surface); touch-action: pan-y; }
+.swipe-delete {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 88px;
+  background: var(--fill-control); color: var(--ink); font: var(--type-body); font-weight: 600;
+}
+.swipe-row[data-busy='true'] { opacity: 0.5; }
+.fold-row {
+  width: 100%; min-height: var(--touch-min); display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; text-align: left; font: var(--type-body);
+}
+.fold-chevron { display: flex; color: var(--ink-2); transition: transform 150ms ease; }
+.fold-row[aria-expanded='true'] .fold-chevron { transform: rotate(180deg); }
+.fold-body { display: flex; flex-direction: column; gap: var(--gap-controls); }
+.fold-body[hidden] { display: none; }
+
+/* ── Map panel: Ground tiles and the "Soon" mark on tiles whose data is not built yet. ── */
+.ground-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-controls); }
+.ground-tile {
+  min-height: 72px; padding: 8px; border-radius: var(--radius-button-tile-row); border: 1px solid var(--stroke);
+  background: var(--surface); color: var(--ink); font: var(--type-secondary); font-weight: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center;
+}
+.ground-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
+.ground-tile:disabled { opacity: 0.5; }
+.tile-soon { font: var(--type-micro); font-style: normal; color: var(--ink-2); }
+.toggle-tile[data-soon='true'] { justify-content: space-between; }
+.toggle-tile { height: auto; min-height: var(--touch-min); padding-top: 6px; padding-bottom: 6px; text-align: left; }
+
+/* Small options under a tile or the View switch (trail names, peak heights, boundary kinds, 3D buildings). */
+.option-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
+.option-row[hidden] { display: none; }
+.option-chip {
+  min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--stroke);
+  background: var(--surface); color: var(--ink-2); font: var(--type-secondary);
+}
+.option-chip[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); color: var(--ink); }
+.option-chip:disabled { opacity: 0.5; }

@@ -54,7 +54,8 @@ test('home: shell sits where the v8 template puts it', async ({ page }) => {
   const layers = await box(page, '#map-layers');
   expect(layers).toMatchObject({ x: 390 - 16 - 56, width: 56, height: 56 });
   // Pin and readout describe your location with its elevation.
-  await expect(page.locator('.pin-readout')).toContainText(/You · [\d,]+ m/);
+  await expect(page.locator('.pin-readout')).toContainText(/[\d,]+ m/);
+  await expect(page.locator('.pin-readout')).not.toContainText('You');
   // The readout stays inside the screen.
   const r = await box(page, '.pin-readout');
   expect(r.x).toBeGreaterThanOrEqual(8);
@@ -68,8 +69,9 @@ test('precipitation: top bar, readout, summary and fills', async ({ page }) => {
   await page.goto(HOME);
   await ready(page);
   await expect(page.locator('#layer-name')).toHaveText('Precipitation');
-  await expect(page.locator('#model-pill')).toHaveText('HRDPS');
-  await expect(page.locator('#run-age')).toHaveText(/^\d\dZ run · \d+ [hd] old$/);
+  await expect(page.locator('#model-pill')).toHaveText('Auto');
+  // How old the data is, then when the next run is due (Auto picks the best model for each time).
+  await expect(page.locator('#run-age')).toHaveText(/^(new|\d+ [hd] old) · next (in \d+ (h|min)|any minute now|late ≈ \d+ h)/);
   await expect(page.locator('.pin-readout strong')).toHaveText(/^(\d+\.\d mm\/h (rain|mixed|snow)|Dry)$/);
   await expect(page.locator('#summary-before-label')).toHaveText(/^(Last \d+ h|\d+ h before|Since \w{3} \d+(:\d\d)? [AP]M)(\nobserved)?$/);
   await expect(page.locator('#summary-after-label')).toHaveText(/^(Next \d+ h|\d+ h after|Until \w{3} \d+(:\d\d)? [AP]M)$/);
@@ -137,11 +139,12 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await page.screenshot({ path: 'test-results/screens/m1-map-panel.png' });
 
   const vis = () => onMap(page, (m) => m.getLayoutProperty('hillshade', 'visibility'));
-  await panel.getByRole('button', { name: 'Hillshade' }).click();
+  // Ground: Plain has no shading, Shaded terrain is the hillshade.
+  await panel.getByRole('button', { name: 'Plain' }).click();
   expect(await vis()).toBe('none');
 
-  // Closes with a tap on the scrim.
-  await page.mouse.click(195, 100);
+  // Closes with a tap on the scrim (the panel is taller now, so tap its top edge).
+  await page.locator('.scrim').click({ position: { x: 8, y: 8 } });
   await expect(panel).toBeHidden();
 
   // Remembered after a reload.
@@ -149,8 +152,8 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await mapReady(page);
   expect(await vis()).toBe('none');
   await page.click('#map-layers');
-  await expect(page.getByRole('button', { name: 'Hillshade' })).toHaveAttribute('aria-pressed', 'false');
-  await page.getByRole('button', { name: 'Hillshade' }).click();
+  await expect(page.getByRole('button', { name: 'Plain' })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Shaded terrain' }).click();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(panel).toBeHidden();
 });

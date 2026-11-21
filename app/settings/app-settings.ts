@@ -4,7 +4,10 @@
 // The shell passes what to redraw; this file never reaches into the map.
 import { setUnitSystem, type UnitSystem } from '../../core/units/format';
 import { icons } from '../shell/icons';
-import { openPanel } from '../shell/panel';
+import { closePanel, openPanel } from '../shell/panel';
+import { S } from '../state';
+import { afterSavedChange, openSaveBox } from '../offline/wiring';
+import { deleteArea } from '../offline/saved-areas';
 import type { Prefs } from '../shell/prefs';
 import { credits } from '../sources/credits';
 import { applyTheme, prefersLight, resolveTheme, watchPhoneTheme, type ThemeChoice } from '../theme/theme';
@@ -66,6 +69,13 @@ export function startAppSettings(prefs: Prefs, hooks: AppSettingsHooks): AppSett
           showTheme();
         },
         setSavedOnly: (on) => hooks.onSavedOnly(on),
+        saved: {
+          areas: S.savedAreas,
+          canSave: navigator.onLine && !!S.run && !S.usingSaved,
+          // The settings give way to the save box, which draws on the map.
+          save: () => { closePanel(); openSaveBox(); },
+          remove: async (a) => { await deleteArea(a); await afterSavedChange(); },
+        },
       }),
     });
   };
