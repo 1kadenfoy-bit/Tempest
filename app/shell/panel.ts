@@ -1,6 +1,7 @@
 // The grow panel: any control that opens something grows from its own
 // position into a rounded panel over a 35% scrim. One component serves the
 // map panel now and the menus and settings later.
+import { growMs } from './anim-speed';
 import { icons } from './icons';
 
 export interface PanelOptions {
@@ -24,9 +25,6 @@ export interface PanelOptions {
 
 // A calmer curve than the pop-up's, so the button can be seen turning into the window.
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
-const GROW_MS = 400;
-const SHRINK_MS = 320;
-const frame = (r: DOMRect, radius: string): Keyframe => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: radius });
 
 let current: { close: () => void; origin: HTMLElement } | null = null;
 
@@ -36,6 +34,13 @@ export function isOpenFrom(origin: HTMLElement): boolean {
 
 export function closePanel(): void {
   current?.close();
+}
+
+/** The button's corner radius in pixels (a round button's is half its size). */
+function originRadiusPx(el: HTMLElement, box: DOMRect): number {
+  const r = getComputedStyle(el).borderTopLeftRadius;
+  const max = Math.min(box.width, box.height) / 2;
+  return Math.min(r.endsWith('%') ? max : parseFloat(r) || 0, max);
 }
 
 export function openPanel(opts: PanelOptions): void {
@@ -81,26 +86,27 @@ export function openPanel(opts: PanelOptions): void {
   document.body.append(scrim, panel);
   const p = panel.getBoundingClientRect();
   panel.style.transformOrigin = `${r.left + r.width / 2 - p.left}px ${r.top + r.height / 2 - p.top}px`;
-  const originRadius = getComputedStyle(opts.origin).borderRadius || '0px';
   if (morph) {
-    // The button grows into the window: the panel starts exactly on the button and animates to its own size.
+    // The button grows into the window, from the button's own centre (as the notification button's does): the
+    // panel starts scaled down to the button's shape and size and scales up to its own.
     const from = opts.origin.getBoundingClientRect();
     const to = panel.getBoundingClientRect();
-    const finalRadius = getComputedStyle(panel).borderRadius;
-    // Keep the content at its final width so text does not re-wrap while the panel grows.
+    const sx = from.width / to.width, sy = from.height / to.height;
+    const rb = originRadiusPx(opts.origin, from);
+    // Radii in the panel's own space that come out as the button's radius at the start scale.
+    const startRadius = `${rb / sx}px / ${rb / sy}px`;
+    const ms = growMs();
+    panel.animate([{ transform: `scale(${sx}, ${sy})`, borderRadius: startRadius }, { transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }], { duration: ms, easing: EASE });
     const inner = [...panel.children].filter((c): c is HTMLElement => c instanceof HTMLElement);
-    inner.forEach((c) => { c.style.width = `${to.width - 2}px`; });
-    const grow = panel.animate([frame(from, originRadius), frame(to, finalRadius)], { duration: GROW_MS, easing: EASE });
-    inner.forEach((c) => c.animate([{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }], { duration: GROW_MS, easing: 'linear' }));
-    // What was on the button fades away as the window's own content fades in.
+    inner.forEach((c) => c.animate([{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }], { duration: ms, easing: 'linear' }));
+    // What was on the button fades away over the first part of the growth.
     const ghost = opts.origin.cloneNode(true) as HTMLElement;
     ghost.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
     ghost.removeAttribute('id');
-    ghost.style.cssText = `position:absolute;left:-1px;top:-1px;margin:0;width:${from.width}px;height:${from.height}px;pointer-events:none;background:transparent;border-color:transparent;`;
-    panel.append(ghost);
-    ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, fill: 'forwards' }).finished.then(() => ghost.remove()).catch(() => ghost.remove());
+    ghost.style.cssText = `position:fixed;z-index:12;left:${from.left}px;top:${from.top}px;margin:0;width:${from.width}px;height:${from.height}px;pointer-events:none;background:transparent;border-color:transparent;`;
+    document.body.append(ghost);
+    ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.35, 400), fill: 'forwards' }).finished.then(() => ghost.remove()).catch(() => ghost.remove());
     opts.origin.style.visibility = 'hidden';
-    void grow.finished.then(() => inner.forEach((c) => { c.style.width = ''; })).catch(() => undefined);
     scrim.dataset.open = 'true';
     panel.dataset.open = 'true';
   } else {
@@ -122,10 +128,13 @@ export function openPanel(opts: PanelOptions): void {
     opts.origin.setAttribute('aria-expanded', 'false');
     if (morph) {
       // Shrink back into the button, then show the button again.
-      const nowBox = panel.getBoundingClientRect();
       const back = opts.origin.getBoundingClientRect();
-      [...panel.children].forEach((c) => (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }));
-      const shrink = panel.animate([frame(nowBox, getComputedStyle(panel).borderRadius), frame(back, originRadius)], { duration: SHRINK_MS, easing: EASE, fill: 'forwards' });
+      const now = panel.getBoundingClientRect();
+      const sx = back.width / now.width, sy = back.height / now.height;
+      const rb = originRadiusPx(opts.origin, back);
+      const ms = Math.round(growMs() * 0.8);
+      [...panel.children].forEach((c) => (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.4, 300), fill: 'forwards' }));
+      const shrink = panel.animate([{ transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }, { transform: `scale(${sx}, ${sy})`, borderRadius: `${rb / sx}px / ${rb / sy}px` }], { duration: ms, easing: EASE, fill: 'forwards' });
       const done = () => { opts.origin.style.visibility = ''; scrim.remove(); panel.remove(); opts.origin.focus({ preventScroll: true }); };
       shrink.finished.then(done).catch(done);
       opts.onClose?.();

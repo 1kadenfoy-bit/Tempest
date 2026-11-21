@@ -14,6 +14,7 @@ import { mapSettings, type MapSettings } from '../map/map-settings';
 import { mapTime, modelsFor } from '../data/forecast';
 import { RADAR_REFRESH_MS, radarError, radarFetchedAt, radarFrames, radarOffline } from '../radar/frames';
 import { ATES_ICON } from '../avalanche/ates';
+import { mountSpeedSlider } from './anim-speed';
 import { icons } from './icons';
 import { layerMenuBody } from './layer-menu';
 import { modelInfoBody, modelMenuBody, sourceMenuBody } from './model-menu';
@@ -153,6 +154,7 @@ export function openModelInfo(spec: (typeof REGISTRY)[ModelId]) {
 
 /** Wires the buttons once the map, the pin and the safety layers exist (after the 3D switches, so the thumb buttons keep their order). */
 export function setupTopBar(): void {
+mountSpeedSlider();
 // The map panel's remembered choices go back on the map. Phones that only had the old Hillshade and Contours switches carry those over once.
 {
   const saved: Record<string, string | boolean> = { ...S.prefs.mapSettings };
