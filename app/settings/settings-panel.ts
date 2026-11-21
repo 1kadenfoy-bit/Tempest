@@ -3,10 +3,14 @@
 // controls for units and theme, the "Saved data only" switch (the same pref
 // as in the saved areas list), and the credits, generated from the sources'
 // metadata (app/sources/credits.ts).
+import { icons } from '../shell/icons';
 import type { UnitSystem } from '../../core/units/format';
 import { savedOnlySwitch } from '../offline/offline-panel';
 import type { ThemeChoice } from '../theme/theme';
 import type { Credit } from '../sources/credits';
+import { areaNote } from '../offline/offline-panel';
+import type { SavedArea } from '../../core/offline/saved-area';
+import { swipeRow } from './swipe-row';
 
 export interface SettingsState { units: UnitSystem; theme: ThemeChoice; savedOnly: boolean }
 
@@ -14,6 +18,14 @@ export interface SettingsHandlers {
   setUnits(u: UnitSystem): void;
   setTheme(t: ThemeChoice): void;
   setSavedOnly(on: boolean): void;
+  /** The saved data: the button, and the list below it. */
+  saved: {
+    areas: SavedArea[];
+    /** False when there is no connection or no forecast to save from. */
+    canSave: boolean;
+    save(): void;
+    remove(area: SavedArea): Promise<void>;
+  };
 }
 
 function group(title: string): HTMLElement {
@@ -100,15 +112,59 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
   const offline = group('OFFLINE');
   offline.append(...savedOnlySwitch(state.savedOnly, h.setSavedOnly));
 
+  // Saved data: one button to save, and what is saved below it; swipe a row left to delete.
+  const saved = group('SAVED DATA');
+  const save = document.createElement('button');
+  save.className = 'wide-button';
+  save.id = 'save-data';
+  save.textContent = 'Save data';
+  save.disabled = !h.saved.canSave;
+  save.addEventListener('click', () => h.saved.save());
+  saved.append(save);
+  if (!h.saved.canSave) saved.append(note('Needs a connection.'));
+  const listEl = document.createElement('div');
+  listEl.className = 'saved-list';
+  const empty = note('Nothing saved yet.');
+  const sync = () => { empty.hidden = listEl.children.length > 0; };
+  const now = new Date();
+  for (const a of h.saved.areas) {
+    const r = document.createElement('div');
+    r.className = 'icon-row';
+    r.dataset.area = a.id;
+    r.innerHTML = '<span class="icon-row-text"><span class="icon-row-title"></span><span class="icon-row-note"></span></span>';
+    r.querySelector('.icon-row-title')!.textContent = a.name ?? 'Saved area';
+    r.querySelector('.icon-row-note')!.textContent = areaNote(a, now);
+    listEl.append(swipeRow({ content: r, label: `Delete ${a.name ?? 'saved area'}`, onDelete: async () => { await h.saved.remove(a); queueMicrotask(sync); } }));
+  }
+  saved.append(listEl, empty);
+  sync();
+  if (listEl.children.length) saved.append(note('Swipe left on an item to delete it.'));
+
+  // Credits sit at the bottom, folded away until asked for.
   const credits = group('CREDITS');
+  const fold = document.createElement('button');
+  fold.className = 'fold-row';
+  fold.setAttribute('aria-expanded', 'false');
+  fold.innerHTML = '<span>Credits and licences</span><span class="fold-chevron" aria-hidden="true"></span>';
+  fold.querySelector('.fold-chevron')!.innerHTML = icons.chevron;
+  const body = document.createElement('div');
+  body.className = 'fold-body';
+  body.hidden = true;
   const groups = [...new Set(list.map((c) => c.group))];
   for (const g of groups) {
     const sub = document.createElement('span');
     sub.className = 'panel-note';
     sub.textContent = g;
-    credits.append(sub, ...list.filter((c) => c.group === g).map(creditRow));
+    body.append(sub, ...list.filter((c) => c.group === g).map(creditRow));
   }
+  fold.addEventListener('click', () => {
+    const open = fold.getAttribute('aria-expanded') !== 'true';
+    fold.setAttribute('aria-expanded', String(open));
+    body.hidden = !open;
+    if (open) body.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+  credits.append(fold, body);
 
-  wrap.append(units, theme, offline, credits);
+  wrap.append(units, theme, offline, saved, credits);
   return wrap;
 }

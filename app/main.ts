@@ -34,6 +34,7 @@ import { addFreezingLineLayers, flow, precipLayer, recolourFills, scheduleFills,
 import { drawSavedOutlines, recolourSavedOutlines, registerSavedAreas, setSavedOnly } from './offline/wiring';
 import { hydrateIcons } from './shell/icons';
 import { applyInsetOverride } from './shell/insets';
+import { namedPlaceAt } from './map/places';
 import { createPin, nameNear, pinLabel, type PinState } from './shell/pin';
 import { loadPrefs, savePrefs } from './shell/prefs';
 import { setupScrubber } from './shell/scrubber';
@@ -234,9 +235,12 @@ S.map.on('click', (e) => {
   if (S.stations.hit(e.originalEvent.target)) return;
   // Air quality: a tap on a fire opens it; the pin stays.
   if (S.active.id === airQuality.id && S.air.tapped(e.point)) return;
-  const name = nameNear(S.map, e.point);
-  S.pin.set({ lng: e.lngLat.lng, lat: e.lngLat.lat, kind: 'dropped', name });
-  rememberPin({ lng: e.lngLat.lng, lat: e.lngLat.lat, name });
+  // A tap near a named peak, hut or trail takes that place (and its name) for the pin.
+  const named = namedPlaceAt(S.map, e.point);
+  const at = named ?? { lng: e.lngLat.lng, lat: e.lngLat.lat };
+  const name = named?.name ?? nameNear(S.map, e.point);
+  S.pin.set({ lng: at.lng, lat: at.lat, kind: 'dropped', name });
+  rememberPin({ lng: at.lng, lat: at.lat, name });
   // Avalanche: the tapped region's forecast opens, as on Avalanche Canada's map.
   if (S.active.id === 'avalanche') S.avy.tapped(e.point, e.lngLat);
 });

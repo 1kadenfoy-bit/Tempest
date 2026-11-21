@@ -17,9 +17,18 @@ permissions:
   contents: read
 
 jobs:
+  # The browser tests are split across three machines that run at the same
+  # time, one test at a time on each: the map draws in software on these
+  # machines, and two tests sharing one machine starved each other (the
+  # Nov 21 run hit the time limit). Every test still runs, unchanged.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    name: check (${{ matrix.shard }} of 3)
     steps:
       - uses: actions/checkout@v7
 
@@ -31,12 +40,15 @@ jobs:
       - run: npm ci
 
       - name: Typecheck
+        if: matrix.shard == 1
         run: npm run typecheck
 
       - name: Lint
+        if: matrix.shard == 1
         run: npm run lint
 
       - name: Unit tests
+        if: matrix.shard == 1
         run: npm test
 
       # The base map is cut from the Protomaps daily build. Keep it for a week
@@ -57,7 +69,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Screenshot tests (390 x 844)
-        run: npm run screenshots
+        run: npm run screenshots -- --shard=${{ matrix.shard }}/3 --workers=1
 
       - name: Where pixel tests differ
         if: failure()
@@ -67,6 +79,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: screenshots
+          name: screenshots-${{ matrix.shard }}
           path: test-results/
           retention-days: 14
