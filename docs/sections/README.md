@@ -143,6 +143,38 @@ the section is integrated.
    handoff note as its description. Tell Kaden it is ready to integrate.
 5. Then stop and wait.
 
+## Lessons from combining sections
+
+What broke when sections met. Check these before a handoff.
+
+- **Run the whole suite when anything visible moves.** If you move, rename
+  or restyle a button, panel or id, run `npx playwright test` on recorded
+  weather, not only your own specs. Other sections' tests find things by
+  place and id.
+- **Tests read `<body>` data attributes:** `data-idle`, `data-pin`,
+  `data-series`, `data-summary`, `data-model-in-view`, `data-ates-loading`…
+  Keep every one working when you rework a part. With "Auto" the top bar
+  names no model; read `data-model-in-view`.
+- **Watch the speed.** GitHub's test machines draw the map in software.
+  - Big GeoJSON files (megabytes), wide blurred lines and continuous redraws
+    make every test slower, not just yours.
+  - Compare a few test durations with `main` before a handoff.
+  - Prefer vector tiles or loading by area. The map must do no redraws at
+    rest.
+- **Wide overlays must let taps through.** A container that spans the map
+  gets `pointer-events: none`, and its buttons `pointer-events: auto`.
+- **Not every page has the whole app.** The phone test page
+  (`spike.html`) has no time cursor and no layers. Code that reads `S.*`
+  must cope with a missing part (`S.cursor?.…`).
+- **Recorded weather freezes the clock** to the recording's day
+  (`recorded/<set>/meta.json`). Dates such as "issued today" follow the
+  page's clock, never a date typed into a test.
+- **Pictures redrawn by tests** (`docs/reports/…`) are committed only when
+  you meant to change them.
+- **Live-weather tests are slow and can be flaky** on GitHub (the summary
+  window still runs on live weather). A failure there is worth one re-run
+  before you look for a bug.
+
 ## Showing your work
 
 **Recorded weather.** Run the app on a saved day of forecasts instead of the
