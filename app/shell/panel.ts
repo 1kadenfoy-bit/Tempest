@@ -36,23 +36,19 @@ export function closePanel(): void {
   current?.close();
 }
 
-/** The button's corner radius in pixels (a round button's is half its size). */
+/** The button's corner radius in pixels: a round button's is half its size, and a button with no shape of its own is drawn as a pill. */
 function originRadiusPx(el: HTMLElement, box: DOMRect): number {
   const r = getComputedStyle(el).borderTopLeftRadius;
   const max = Math.min(box.width, box.height) / 2;
-  return Math.min(r.endsWith('%') ? max : parseFloat(r) || 0, max);
+  const px = r.endsWith('%') ? max : parseFloat(r) || 0;
+  return Math.min(px > 0 ? px : max, max);
 }
 
 /**
- * The transform that lays the panel exactly over the button: scaled to the button's size about the
- * button's centre, then moved so their centres coincide. It eases to nothing as the panel grows.
+ * One frame of the growth: the panel's real box and real corner radius. Animating the box itself (not
+ * a scaled copy) keeps the corners true all the way: they ease from the button's radius to the window's.
  */
-function overButton(panel: DOMRect, button: DOMRect): string {
-  const sx = button.width / panel.width, sy = button.height / panel.height;
-  const cx = button.left + button.width / 2, cy = button.top + button.height / 2;
-  const dx = sx * (cx - (panel.left + panel.width / 2)), dy = sy * (cy - (panel.top + panel.height / 2));
-  return `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
-}
+const box = (r: DOMRect, radius: number): Keyframe => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: `${radius}px` });
 
 export function openPanel(opts: PanelOptions): void {
   closePanel();
@@ -98,16 +94,17 @@ export function openPanel(opts: PanelOptions): void {
   const p = panel.getBoundingClientRect();
   panel.style.transformOrigin = `${r.left + r.width / 2 - p.left}px ${r.top + r.height / 2 - p.top}px`;
   if (morph) {
-    // The button grows into the window, from the button's own centre (as the notification button's does): the
-    // panel starts scaled down to the button's shape and size and scales up to its own.
+    // The button grows into the window: the panel starts exactly on the button (same box, same corners)
+    // and its box and corners ease to the window's.
     const from = opts.origin.getBoundingClientRect();
     const to = panel.getBoundingClientRect();
-    const sx = from.width / to.width, sy = from.height / to.height;
     const rb = originRadiusPx(opts.origin, from);
-    // Radii in the panel's own space that come out as the button's radius at the start scale.
-    const startRadius = `${rb / sx}px / ${rb / sy}px`;
     const ms = growMs();
-    panel.animate([{ transform: overButton(to, from), borderRadius: startRadius }, { transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }], { duration: ms, easing: EASE });
+    // The content keeps its final width while the box grows, so text does not re-wrap on the way.
+    const kids = [...panel.children].filter((c): c is HTMLElement => c instanceof HTMLElement);
+    kids.forEach((c) => { c.style.width = `${to.width - 2}px`; });
+    panel.animate([box(from, rb), box(to, parseFloat(getComputedStyle(panel).borderRadius) || 28)], { duration: ms, easing: EASE })
+      .finished.then(() => kids.forEach((c) => { c.style.width = ''; })).catch(() => undefined);
     const inner = [...panel.children].filter((c): c is HTMLElement => c instanceof HTMLElement);
     inner.forEach((c) => c.animate([{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }], { duration: ms, easing: 'linear' }));
     // What was on the button fades away over the first part of the growth.
@@ -141,11 +138,10 @@ export function openPanel(opts: PanelOptions): void {
       // Shrink back into the button, then show the button again.
       const back = opts.origin.getBoundingClientRect();
       const now = panel.getBoundingClientRect();
-      const sx = back.width / now.width, sy = back.height / now.height;
       const rb = originRadiusPx(opts.origin, back);
       const ms = Math.round(growMs() * 0.8);
-      [...panel.children].forEach((c) => (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.4, 300), fill: 'forwards' }));
-      const shrink = panel.animate([{ transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }, { transform: overButton(now, back), borderRadius: `${rb / sx}px / ${rb / sy}px` }], { duration: ms, easing: EASE, fill: 'forwards' });
+      [...panel.children].forEach((c) => { (c as HTMLElement).style.width = `${now.width - 2}px`; (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.4, 300), fill: 'forwards' }); });
+      const shrink = panel.animate([box(now, parseFloat(getComputedStyle(panel).borderRadius) || 28), box(back, rb)], { duration: ms, easing: EASE, fill: 'forwards' });
       const done = () => { opts.origin.style.visibility = ''; scrim.remove(); panel.remove(); opts.origin.focus({ preventScroll: true }); };
       shrink.finished.then(done).catch(done);
       opts.onClose?.();
