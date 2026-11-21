@@ -3,9 +3,9 @@
 // does to the map. Nothing here draws a button.
 //
 //   View       2D or 3D: already the 3D terrain switch (app/map/three-d.ts)
-//   Ground     plain, or shaded terrain (terrain colours and hillshade).
-//              Satellite is not here: it needs an imagery source Kaden has not
-//              approved yet, and a switch appears only when it works.
+//   Ground     plain, shaded terrain (terrain colours and hillshade), or satellite
+//              (the Sentinel-2 picture built by the Data section; app/map/satellite.ts).
+//              Satellite shows only where the picture's tiles exist.
 //   Overlays   trails, huts, campsites, peaks, contour lines, small roads,
 //              ski lifts, boundaries
 //   Sun        the sun-lit relief and night tint (app/map/sun.ts)
@@ -16,10 +16,11 @@ import { L } from './layer-ids';
 import { S } from '../state';
 import { mapSun } from './sun';
 import { setPeakHeights } from './places';
+import { SATELLITE_LAYER } from './satellite';
 
 export interface MapSettings {
-  /** What covers the ground: plain, or terrain colours with hillshade. */
-  ground: 'plain' | 'shaded';
+  /** What covers the ground: nothing, terrain colours with hillshade, or the satellite picture. */
+  ground: 'plain' | 'shaded' | 'satellite';
   trails: boolean;
   trailNames: boolean;
   huts: boolean;
@@ -57,7 +58,7 @@ export function parseMapSettings(text: string): Partial<MapSettings> {
   for (const part of text.split(',')) {
     const [k, v] = part.split(':').map((x) => x.trim());
     if (!k || !(k in DEFAULT_MAP_SETTINGS)) continue;
-    if (k === 'ground') { if (v === 'plain' || v === 'shaded') out.ground = v; continue; }
+    if (k === 'ground') { if (v === 'plain' || v === 'shaded' || v === 'satellite') out.ground = v; continue; }
     if (v === 'on' || v === 'true') out[k] = true;
     else if (v === 'off' || v === 'false') out[k] = false;
   }
@@ -102,7 +103,13 @@ export function applyMapSettings(map: MapLibreMap): void {
 
   // Ground
   showAll(L.groundColour, s.ground === 'shaded');
-  show(L.hillshade, s.ground === 'shaded' && prefOn('hillshade'));
+  show(L.hillshade, s.ground !== 'plain' && prefOn('hillshade'));
+  // Satellite: the picture replaces the colours, the sea, and the low-zoom land cover (it already shows them); relief stays, gently.
+  const sat = s.ground === 'satellite';
+  show(SATELLITE_LAYER, sat);
+  show('water', !sat);
+  show('landcover', !sat);
+  if (map.getLayer(L.hillshade) && sat) map.setPaintProperty(L.hillshade, 'hillshade-exaggeration', 0.2);
   // Trails, huts, camps
   show(L.trails, s.trails);
   show(L.trailsBase, s.trails);
@@ -137,7 +144,9 @@ export function applyMapSettings(map: MapLibreMap): void {
     map.setFilter(L.boundaries, f as never);
   }
   // Sun
-  mapSun.setEnabled(s.sun);
+  mapSun.setEnabled(s.sun && s.ground === 'shaded');
+  // Back to the plain map's relief when leaving satellite (the sun sets its own while on).
+  if (map.getLayer(L.hillshade) && !sat && !mapSun.enabled()) map.setPaintProperty(L.hillshade, 'hillshade-exaggeration', 0.4);
 }
 
 /** The panel's older hillshade and contour switches (saved preferences) still count while the panel has them. */

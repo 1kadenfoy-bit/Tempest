@@ -8,6 +8,7 @@ import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style';
 import { addPlaces, applyPlacesTheme } from './places';
 import { mapSun } from './sun';
+import { addSatellite } from './satellite';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -102,4 +103,6 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
   addPlaces(map, beforeLayerId, theme);
   // The sun's night wash goes under the hillshade, so under the weather fills too.
   mapSun.attach(map);
+  // The satellite picture, hidden until the ground setting is Satellite.
+  addSatellite(map);
 }

@@ -61,6 +61,8 @@ class MapSun {
   private listeners = new Set<Listener>();
   /** The plain map's shadow colour, kept while the sun is on so it can be put back. */
   private plainShadow: unknown = null;
+  /** True while the sun's lighting is on the hillshade, so it is put back once, not on every redraw. */
+  private applied = false;
 
   enabled(): boolean { return this.on; }
   onChange(fn: Listener): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
@@ -93,14 +95,18 @@ class MapSun {
     if (!map || !map.getLayer('hillshade')) return;
     if (!this.on) {
       map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'none');
-      map.setPaintProperty('hillshade', 'hillshade-method', 'standard');
-      map.setPaintProperty('hillshade', 'hillshade-exaggeration', PLAIN_RELIEF);
-      if (this.plainShadow) map.setPaintProperty('hillshade', 'hillshade-shadow-color', this.plainShadow as string);
-      this.plainShadow = null;
-      map.setPaintProperty('hillshade', 'hillshade-illumination-direction', 335);
-      map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'viewport');
+      if (this.applied) {
+        this.applied = false;
+        map.setPaintProperty('hillshade', 'hillshade-method', 'standard');
+        map.setPaintProperty('hillshade', 'hillshade-exaggeration', PLAIN_RELIEF);
+        if (this.plainShadow) map.setPaintProperty('hillshade', 'hillshade-shadow-color', this.plainShadow as string);
+        this.plainShadow = null;
+        map.setPaintProperty('hillshade', 'hillshade-illumination-direction', 335);
+        map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'viewport');
+      }
       return;
     }
+    this.applied = true;
     const c = map.getCenter();
     const { azimuth, altitude } = sunPosition(this.time(), c.lat, c.lng);
     const theme: Theme = S.settings.theme();
