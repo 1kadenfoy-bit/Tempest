@@ -41,7 +41,7 @@ the old wording moves to "Changed".
 
 ## Opening and closing windows
 
-15. (Nov 21, trying it out) When a button or selector opens a window, **the button itself grows into the window's shape** (and shrinks back into the button on close), instead of the window popping up. Tried first on the settings button and the layer name. It should grow out from the button's centre in every direction (as the notification button's window does), not drop down from the top of the screen. Slower than first tried, with a temporary speed slider above the sheet. If Kaden likes it, it becomes standard for every window.
+15. (Nov 21) When a button or selector opens a window, **the button's shape turns continuously into the window's shape** (box and corner radius together), starting exactly over the button, and shrinks back onto it on close; no pop-up, no jump. Every window works the same way, the notification button included. About 0.4 s, with a temporary speed slider above the sheet until Kaden says to remove it.
 
 ## Changed
 

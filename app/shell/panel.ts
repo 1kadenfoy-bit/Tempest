@@ -16,9 +16,8 @@ export interface PanelOptions {
   /** A button in the header, before Close (the map panel's settings gear). */
   headerAction?: HTMLElement;
   /**
-   * Try-out (Kaden, Nov 21): instead of a panel popping up, the button itself
-   * grows into the panel's shape, and shrinks back into the button on close.
-   * Off unless asked for, so each window can be compared with the old grow.
+   * The button itself grows into the panel's shape, and shrinks back into the
+   * button on close (Kaden, Nov 21). On for every window; `false` opts one out.
    */
   morph?: boolean;
 }
@@ -88,7 +87,7 @@ export function openPanel(opts: PanelOptions): void {
   const fromBottom = r.top > window.innerHeight / 2;
   if (fromBottom) panel.style.bottom = 'calc(var(--bottom-inset) + 16px - var(--viewport-gap))';
   else panel.style.top = `${r.top}px`;
-  const morph = Boolean(opts.morph) && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const morph = opts.morph !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (morph) panel.dataset.morph = 'true';
   document.body.append(scrim, panel);
   const p = panel.getBoundingClientRect();
@@ -142,7 +141,8 @@ export function openPanel(opts: PanelOptions): void {
       const ms = Math.round(growMs() * 0.8);
       [...panel.children].forEach((c) => { (c as HTMLElement).style.width = `${now.width - 2}px`; (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.4, 300), fill: 'forwards' }); });
       const shrink = panel.animate([box(now, parseFloat(getComputedStyle(panel).borderRadius) || 28), box(back, rb)], { duration: ms, easing: EASE, fill: 'forwards' });
-      const done = () => { opts.origin.style.visibility = ''; scrim.remove(); panel.remove(); opts.origin.focus({ preventScroll: true }); };
+      // A window that replaced this one on the same button keeps the button hidden.
+      const done = () => { scrim.remove(); panel.remove(); if (current?.origin !== opts.origin) { opts.origin.style.visibility = ''; opts.origin.focus({ preventScroll: true }); } };
       shrink.finished.then(done).catch(done);
       opts.onClose?.();
       return;
