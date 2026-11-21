@@ -41,7 +41,7 @@ the old wording moves to "Changed".
 
 ## Opening and closing windows
 
-15. (Nov 21) When a button or selector opens a window, **the button's shape turns continuously into the window's shape** (box and corner radius together), starting exactly over the button, and shrinks back onto it on close; no pop-up, no jump. Every window works the same way, the notification button included. About 0.4 s, with a temporary speed slider above the sheet until Kaden says to remove it.
+15. (Nov 21) When a button or selector opens a window, **the button's shape turns continuously into the window's shape** (box and corner radius together), starting exactly over the button, and shrinks back onto it on close; no pop-up, no jump. Every window works the same way, the notification button included. The layer window grows from the whole top bar bar the layer button sits in (so it includes the source button's area), not just the layer label. About 0.4 s, with a temporary speed slider above the sheet until Kaden says to remove it.
 
 ## Changed
 
