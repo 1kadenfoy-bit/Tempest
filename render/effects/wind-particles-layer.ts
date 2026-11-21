@@ -80,6 +80,7 @@ export class WindParticlesLayer implements CustomLayerInterface {
   private wind: WindFn = (_x, _y, out) => { out[0] = 0; out[1] = 0; };
   private look: ParticleLook = { count: 1200, trailSeconds: 0.7, pxPerKmh: 2.2, speedScale: 1, clearance: 60, widthPx: 2.4, brightness: 0.9 };
   private running = true;
+  private visible = true;
   private last = 0;
   private times: number[] = [];
   private work = 0;
@@ -105,6 +106,14 @@ export class WindParticlesLayer implements CustomLayerInterface {
     this.map?.triggerRepaint(); // on: start the loop; off: one last draw keeps the picture as it is
   }
   get isRunning(): boolean { return this.running; }
+
+  /** Show or hide the streaks. Hidden, nothing is moved or drawn and no frames are asked for. */
+  setVisible(on: boolean): void {
+    this.visible = on;
+    this.last = 0;
+    this.times.length = 0;
+    this.map?.triggerRepaint();
+  }
 
   stats(): WindLayerStats {
     const now = performance.now();
@@ -244,7 +253,7 @@ export class WindParticlesLayer implements CustomLayerInterface {
   render(gl: WebGLRenderingContext | WebGL2RenderingContext, options: CustomRenderMethodInput): void {
     const g = gl as WebGL2RenderingContext;
     const map = this.map;
-    if (!map || !this.program) return;
+    if (!map || !this.program || !this.visible) return;
     const now = performance.now();
     const t0 = now;
     if (this.running && !document.hidden) {

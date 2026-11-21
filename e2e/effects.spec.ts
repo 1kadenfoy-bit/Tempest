@@ -9,6 +9,10 @@ test('wind particles draw, follow the wind, and stop when paused', async ({ page
   await expect(page.locator('body')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#wind-text')).toHaveText(/From W 280° · 36 km\/h/);
   await expect(page.locator('#fps')).toContainText('streaks');
+  // Clouds: a readout of their cover and height, and the sliders change it.
+  await expect(page.locator('#cloud-text')).toContainText('Low 40% 1.2 km');
+  await page.locator('#s-coverLow').fill('80');
+  await expect(page.locator('#cloud-text')).toContainText('Low 80% 1.2 km');
 
   // The wind slider turns the readout and the arrow.
   await page.locator('#s-speedKmh').fill('80');

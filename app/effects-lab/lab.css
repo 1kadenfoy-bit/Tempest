@@ -13,6 +13,8 @@ button { min-height: var(--touch-min); border-radius: var(--radius-button-tile-r
 }
 #readout div { display: grid; gap: 2px; }
 #wind-text { font: var(--type-stat); font-variant-numeric: tabular-nums; }
+#cloud-text { font: var(--type-micro); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+#cloud-text:empty { display: none; }
 #fps { font: var(--type-caption); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 #arrow { width: 36px; height: 36px; fill: var(--ink); transition: transform 0.2s; }
 
