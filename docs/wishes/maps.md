@@ -22,6 +22,7 @@ the old wording moves to "Changed".
 15. Glaciers come from the BC government's outlines, with rounded edges, not from OpenStreetMap. (Nov 20, 2026)
 16. Roads are drawn a bit narrower than Protomaps draws them (about 30% less). (Nov 21, 2026)
 17. The map looks matte, with no shine or reflective look, including with sun and shadows on. Water may have a slight sheen. (Nov 21, 2026)
+18. Sun and shadows must never wash the map out, on the light theme or the dark one: at night the map takes an even, bluish dusk with its colours kept. (Nov 21, 2026)
 
 ## The Map panel
 

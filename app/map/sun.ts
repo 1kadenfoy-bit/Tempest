@@ -13,7 +13,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { S } from '../state';
 import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style-mix';
-import { mapGround } from './style';
+import { mapGround, mapWater } from './style';
 
 const RAD = Math.PI / 180;
 const DAY_MS = 86_400_000;
@@ -46,6 +46,10 @@ export function nightAmount(altitudeDeg: number): number {
 
 /** The strongest the night wash gets, as an opacity: dark enough to read as night, light enough to keep the map readable. */
 const NIGHT_OPACITY = 0.5;
+/** On the light theme the wash is lighter: a heavy one turns the map to grey fog. */
+const NIGHT_OPACITY_LIGHT = 0.32;
+/** The hillshade's strength while the sun is down. */
+const NIGHT_RELIEF = 0.3;
 /** Lowest light height given to the hillshade, so low sun still shows relief instead of going black. */
 const MIN_LIGHT = 14;
 /** The hillshade's strength in sun mode (the plain map's is 0.4): real low sun is harsh, so it is softened to stay readable. */
@@ -115,18 +119,27 @@ class MapSun {
     const theme: Theme = S.settings.theme();
     // Shadows are the ground colour a little darker, not black: real low sun leaves whole slopes dark, which hides the ground.
     if (!this.plainShadow) { this.plainShadow = map.getPaintProperty('hillshade', 'hillshade-shadow-color'); this.plainHighlight = map.getPaintProperty('hillshade', 'hillshade-highlight-color'); }
+    map.setPaintProperty('hillshade', 'hillshade-shadow-color', mix(mapGround(theme), theme === 'dark' ? colorToken('water', 'dark') : colorToken('ink', 'light'), theme === 'dark' ? 0.4 : 0.25));
     // Matte: no white highlight, so lit slopes are just the ground colour, not a shine.
     map.setPaintProperty('hillshade', 'hillshade-highlight-color', 'rgba(0, 0, 0, 0)');
-    map.setPaintProperty('hillshade', 'hillshade-shadow-color', mix(mapGround(theme), theme === 'dark' ? colorToken('water', 'dark') : colorToken('ink', 'light'), theme === 'dark' ? 0.4 : 0.25));
-    map.setPaintProperty('hillshade', 'hillshade-method', 'basic');
-    map.setPaintProperty('hillshade', 'hillshade-exaggeration', SUN_RELIEF);
-    map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'map');
-    map.setPaintProperty('hillshade', 'hillshade-illumination-direction', azimuth);
-    map.setPaintProperty('hillshade', 'hillshade-illumination-altitude', Math.max(MIN_LIGHT, Math.min(90, altitude)));
+    if (altitude > 0) {
+      // Sun up: the relief is lit from where the sun is.
+      map.setPaintProperty('hillshade', 'hillshade-method', 'basic');
+      map.setPaintProperty('hillshade', 'hillshade-exaggeration', SUN_RELIEF);
+      map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'map');
+      map.setPaintProperty('hillshade', 'hillshade-illumination-direction', azimuth);
+      map.setPaintProperty('hillshade', 'hillshade-illumination-altitude', Math.max(MIN_LIGHT, Math.min(90, altitude)));
+    } else {
+      // Sun down: nothing lights the slopes, so the relief goes back to the plain, even light (a sun below the horizon drew streaks).
+      map.setPaintProperty('hillshade', 'hillshade-method', 'standard');
+      map.setPaintProperty('hillshade', 'hillshade-exaggeration', NIGHT_RELIEF);
+      map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'viewport');
+      map.setPaintProperty('hillshade', 'hillshade-illumination-direction', 335);
+    }
     map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'visible');
-    // The wash is the dark water token on the dark theme, the ink token on light.
-    map.setPaintProperty(NIGHT_LAYER, 'background-color', theme === 'dark' ? colorToken('water', 'dark') : colorToken('ink', 'light'));
-    map.setPaintProperty(NIGHT_LAYER, 'background-opacity', NIGHT_OPACITY * nightAmount(altitude));
+    // The night wash: on the dark theme the dark water token; on light a deep blue-grey, lighter, because a heavy dark wash over a light map only turns it to grey fog.
+    map.setPaintProperty(NIGHT_LAYER, 'background-color', theme === 'dark' ? colorToken('water', 'dark') : mix(colorToken('ink', 'light'), mapWater('dark'), 0.45));
+    map.setPaintProperty(NIGHT_LAYER, 'background-opacity', (theme === 'dark' ? NIGHT_OPACITY : NIGHT_OPACITY_LIGHT) * nightAmount(altitude));
   }
 }
 
