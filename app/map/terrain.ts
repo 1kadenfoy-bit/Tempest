@@ -8,7 +8,6 @@ import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style';
 import { addPlaces, applyPlacesTheme } from './places';
 import { mapSun } from './sun';
-import { addGlaciers, applyGlaciersTheme } from './glaciers';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -42,7 +41,6 @@ export function applyTerrainTheme(map: MapLibreMap, theme: Theme): void {
   if (map.getLayer('hillshade')) for (const [k, v] of Object.entries(p.hillshade)) map.setPaintProperty('hillshade', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
   if (map.getLayer('contour-lines')) for (const [k, v] of Object.entries(p.contours)) map.setPaintProperty('contour-lines', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
   applyPlacesTheme(map, theme);
-  applyGlaciersTheme(map, theme);
 }
 
 export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Theme = 'dark'): void {
@@ -104,6 +102,4 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
   addPlaces(map, beforeLayerId, theme);
   // The sun's night wash goes under the hillshade, so under the weather fills too.
   mapSun.attach(map);
-  // The BC glaciers, fetched once the map is idle.
-  addGlaciers(map, theme);
 }

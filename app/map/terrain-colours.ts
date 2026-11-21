@@ -21,7 +21,7 @@ export const TERRAIN: Record<TerrainClass, { label: string; colour: string; kind
   treeline: { label: 'Treeline, parkland, scrub', colour: '#8FA84A', kinds: ['scrub'], natural: true },
   grass:    { label: 'Grass and fields',          colour: '#B2CC6E', kinds: ['grass', 'grassland', 'meadow', 'farmland', 'allotments', 'village_green', 'greenhouse_horticulture', 'plant_nursery', 'farmyard', 'golf_course', 'pitch', 'playground', 'dog_park', 'recreation_ground', 'garden', 'cemetery'], natural: true },
   alpine:   { label: 'Alpine and bare rock',      colour: '#9A8F86', kinds: ['bare_rock', 'scree', 'shingle', 'rock'], natural: true },
-  // Glaciers come from the BC government's outlines (app/map/glaciers.ts), not from OpenStreetMap.
+  // Glaciers come from the BC government's outlines (public/zones/terrain.pmtiles), not from OpenStreetMap.
   ice:      { label: 'Glacier and ice',           colour: '#9CD3E6', kinds: [], natural: true },
   wetland:  { label: 'Wetland',                   colour: '#3E8F86', kinds: ['wetland'], natural: true },
   sand:     { label: 'Sand and beach',            colour: '#E0CA85', kinds: ['sand', 'beach'], natural: true },

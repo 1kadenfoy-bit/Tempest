@@ -111,7 +111,7 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     paint: { 'fill-color': kindColourExpression(classes, theme) as never, 'fill-opacity': opacity },
   } as LayerSpecification);
   const zone = (id: string, cls: string, c: TerrainClass): LayerSpecification => ({
-    id, type: 'fill', source: ZONES_SOURCE, filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': tint(c, theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
+    id, type: 'fill', source: ZONES_SOURCE, 'source-layer': 'zones', filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': tint(c, theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
   } as LayerSpecification);
   const overNatural = NATURAL.filter((c) => !UNDER_ZONES.includes(c));
   const cliffs = {
@@ -122,11 +122,12 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   } as LayerSpecification;
   // Natural edges are feathered: a wide, blurred line in the type's own colour along its border bleeds into the neighbour.
   const feather = (id: string, source: string, sourceLayer: string | null, filter: unknown, colour: unknown): LayerSpecification => ({
-    id, type: 'line', source, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
+    // Only from zoom 10: further out the edges are tiny, and the blurred lines were the costliest thing the map drew (about 50 ms a frame at zoom 9.5 in a software test).
+    id, type: 'line', source, minzoom: FEATHER_MINZOOM, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
     layout: { 'line-join': 'round', 'line-cap': 'round' },
     paint: { 'line-color': colour, 'line-width': FEATHER, 'line-blur': FEATHER, 'line-opacity': 0.55 },
   } as LayerSpecification);
-  const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, null, ['==', ['get', 'z'], cls], tint(c, theme, ground));
+  const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, 'zones', ['==', ['get', 'z'], cls], tint(c, theme, ground));
   const after = all.findIndex((l) => l.id === 'landcover') + 1;
   all.splice(after, 0,
     fill('terrain_under', UNDER_ZONES),
@@ -138,6 +139,8 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     zoneFeather('feather_zone_alpine', 'alpine', 'alpine'),
     fill('terrain_over', overNatural),
     feather('feather_osm', 'protomaps', 'landuse', ['in', ['get', 'kind'], ['literal', overNatural.flatMap((c) => TERRAIN[c].kinds)]], kindColourExpression(overNatural, theme)),
+    // Glaciers: the BC government's outlines (tile layer 'glaciers'), a clean rounded edge, under the built-up land.
+    { id: 'glaciers-fill', type: 'fill', source: ZONES_SOURCE, 'source-layer': 'glaciers', paint: { 'fill-color': tint('ice', theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 1] } } as LayerSpecification,
     fill('terrain_urban', ['urban']),
     cliffs);
   // Trails are named from zoom 14, where the base map has their names (it showed them from 15).
@@ -149,24 +152,25 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   return all;
 }
 
-const ZONES_SOURCE = 'terrain-zones';
+const ZONES_SOURCE = 'terrain-tiles';
 /**
- * The zones and glaciers are cut into map pieces up to this zoom and enlarged
+ * The zones and glaciers are cut into map tiles up to this zoom and enlarged
  * beyond it. Their shapes are simplified to 120-300 m, so deeper pieces add
  * no detail, only memory (each piece is kept).
  */
 export const ZONES_MAXZOOM = 11;
 /** How wide, in pixels, the soft edge between natural types is (a blurred line centred on the border). */
 const FEATHER = 30;
-/** The BC zones file ships with the app (tools/build-zones.mjs writes it). */
-const zonesUrl = () => new URL('zones/terrain-zones.json', typeof document === 'undefined' ? 'http://localhost/' : document.baseURI).href;
+const FEATHER_MINZOOM = 10;
+/** The terrain tiles (zones and glaciers), read by app/map/terrain-tiles.ts. */
+const TERRAIN_TILES = 'terrain://{z}/{x}/{y}';
 
 export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dark'): StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
     sprite: spriteUrl(theme),
-    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), maxzoom: ZONES_MAXZOOM, attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
+    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'vector', tiles: [TERRAIN_TILES], minzoom: 0, maxzoom: ZONES_MAXZOOM, attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
     layers: baseLayers(theme),
   };
 }
