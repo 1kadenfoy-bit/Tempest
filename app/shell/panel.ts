@@ -43,6 +43,17 @@ function originRadiusPx(el: HTMLElement, box: DOMRect): number {
   return Math.min(r.endsWith('%') ? max : parseFloat(r) || 0, max);
 }
 
+/**
+ * The transform that lays the panel exactly over the button: scaled to the button's size about the
+ * button's centre, then moved so their centres coincide. It eases to nothing as the panel grows.
+ */
+function overButton(panel: DOMRect, button: DOMRect): string {
+  const sx = button.width / panel.width, sy = button.height / panel.height;
+  const cx = button.left + button.width / 2, cy = button.top + button.height / 2;
+  const dx = sx * (cx - (panel.left + panel.width / 2)), dy = sy * (cy - (panel.top + panel.height / 2));
+  return `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+}
+
 export function openPanel(opts: PanelOptions): void {
   closePanel();
   const scrim = document.createElement('div');
@@ -96,7 +107,7 @@ export function openPanel(opts: PanelOptions): void {
     // Radii in the panel's own space that come out as the button's radius at the start scale.
     const startRadius = `${rb / sx}px / ${rb / sy}px`;
     const ms = growMs();
-    panel.animate([{ transform: `scale(${sx}, ${sy})`, borderRadius: startRadius }, { transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }], { duration: ms, easing: EASE });
+    panel.animate([{ transform: overButton(to, from), borderRadius: startRadius }, { transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }], { duration: ms, easing: EASE });
     const inner = [...panel.children].filter((c): c is HTMLElement => c instanceof HTMLElement);
     inner.forEach((c) => c.animate([{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }], { duration: ms, easing: 'linear' }));
     // What was on the button fades away over the first part of the growth.
@@ -134,7 +145,7 @@ export function openPanel(opts: PanelOptions): void {
       const rb = originRadiusPx(opts.origin, back);
       const ms = Math.round(growMs() * 0.8);
       [...panel.children].forEach((c) => (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.4, 300), fill: 'forwards' }));
-      const shrink = panel.animate([{ transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }, { transform: `scale(${sx}, ${sy})`, borderRadius: `${rb / sx}px / ${rb / sy}px` }], { duration: ms, easing: EASE, fill: 'forwards' });
+      const shrink = panel.animate([{ transform: 'none', borderRadius: getComputedStyle(panel).borderRadius }, { transform: overButton(now, back), borderRadius: `${rb / sx}px / ${rb / sy}px` }], { duration: ms, easing: EASE, fill: 'forwards' });
       const done = () => { opts.origin.style.visibility = ''; scrim.remove(); panel.remove(); opts.origin.focus({ preventScroll: true }); };
       shrink.finished.then(done).catch(done);
       opts.onClose?.();

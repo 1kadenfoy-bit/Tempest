@@ -2,7 +2,7 @@
 // that grow out of their button. Remove it, and keep the speed Kaden picks as a
 // plain constant in panel.ts, once the animation is settled.
 const KEY = 'tempest.growMs';
-const DEFAULT_MS = 900;
+const DEFAULT_MS = 400;
 let ms = DEFAULT_MS;
 try { const v = Number(localStorage.getItem(KEY)); if (v >= 150 && v <= 4000) ms = v; } catch { /* storage unavailable */ }
 
