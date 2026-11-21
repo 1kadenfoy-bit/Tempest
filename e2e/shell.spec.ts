@@ -236,7 +236,8 @@ test.describe('without location permission', () => {
     await page.goto(HOME);
     await ready(page);
     await expect(page.locator('#place-text')).toContainText('Last pin used');
-    await expect(page.locator('.pin-readout')).toContainText('Last pin');
+    // The pin names a place or the ground (rule 9), not "Last pin"; the sheet's place line carries the label.
+    await expect(page.locator('.pin-readout')).toContainText(/[\d,]+ m/);
   });
 });
 

@@ -656,13 +656,3 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 }
 @keyframes pin-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .pin-spinner { animation-duration: 3s; } }
-
-/* TEMPORARY: the window-growth speed slider (anim-speed.ts). */
-.speed-slider {
-  position: fixed; z-index: 9; left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--sheet-visible) + 8px);
-  display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 16px;
-  background: var(--surface); border: 1px solid var(--stroke); color: var(--ink-2); font: var(--type-micro);
-}
-.speed-label { white-space: nowrap; min-width: 70px; }
-.speed-slider input { width: 120px; }

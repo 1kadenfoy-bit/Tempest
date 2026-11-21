@@ -1,7 +1,6 @@
 // The grow panel: any control that opens something grows from its own
 // position into a rounded panel over a 35% scrim. One component serves the
 // map panel now and the menus and settings later.
-import { growMs } from './anim-speed';
 import { icons } from './icons';
 
 export interface PanelOptions {
@@ -30,6 +29,8 @@ export interface PanelOptions {
 
 // A calmer curve than the pop-up's, so the button can be seen turning into the window.
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)';
+/** How long a window takes to grow out of its button (Kaden settled on 0.4 s, Nov 21). Closing takes 80% of it. */
+const GROW_MS = 400;
 
 let current: { close: (instant?: boolean) => void; origin: HTMLElement } | null = null;
 
@@ -99,7 +100,9 @@ export function openPanel(opts: PanelOptions): void {
   // Anchor to the side of the screen the control is on, and grow from it.
   const r = opts.origin.getBoundingClientRect();
   const fromBottom = r.top > window.innerHeight / 2;
-  if (fromBottom) panel.style.bottom = 'calc(var(--bottom-inset) + 16px - var(--viewport-gap))';
+  // A button can ask for its window at the top of the screen (the search button's data-panel-anchor).
+  if (opts.origin.dataset.panelAnchor === 'top') panel.style.top = 'calc(var(--safe-top) + 8px)';
+  else if (fromBottom) panel.style.bottom = 'calc(var(--bottom-inset) + 16px - var(--viewport-gap))';
   else panel.style.top = `${r.top}px`;
   const shape = opts.shape ?? opts.origin;
   const morph = opts.morph !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches && growsFrom(shape);
@@ -113,7 +116,7 @@ export function openPanel(opts: PanelOptions): void {
     const from = shape.getBoundingClientRect();
     const to = panel.getBoundingClientRect();
     const rb = originRadiusPx(shape, from);
-    const ms = growMs();
+    const ms = GROW_MS;
     // The content keeps its final width while the box grows, so text does not re-wrap on the way.
     const kids = [...panel.children].filter((c): c is HTMLElement => c instanceof HTMLElement);
     kids.forEach((c) => { c.style.width = `${to.width - 2}px`; });
@@ -155,7 +158,7 @@ export function openPanel(opts: PanelOptions): void {
       const back = shape.getBoundingClientRect();
       const now = panel.getBoundingClientRect();
       const rb = originRadiusPx(shape, back);
-      const ms = Math.round(growMs() * 0.8);
+      const ms = Math.round(GROW_MS * 0.8);
       [...panel.children].forEach((c) => { (c as HTMLElement).style.width = `${now.width - 2}px`; (c as HTMLElement).animate([{ opacity: 1 }, { opacity: 0 }], { duration: Math.min(ms * 0.4, 300), fill: 'forwards' }); });
       const shrink = panel.animate([box(now, parseFloat(getComputedStyle(panel).borderRadius) || 28), box(back, rb)], { duration: ms, easing: EASE, fill: 'forwards' });
       // A window that replaced this one on the same button keeps the button hidden.
