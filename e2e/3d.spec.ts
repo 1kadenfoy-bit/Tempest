@@ -44,12 +44,13 @@ async function settle(page: Page) {
 }
 // The open map panel (a closing one can still be in the page for a moment).
 const mapPanel = (page: Page) => page.locator('.panel[data-open="true"][aria-label="Map"]');
+/** Press a button in the map panel, then close it. 3D on is the View switch's "3D" (named "3D terrain"), off is its "2D". */
 async function toggle(page: Page, name: string) {
   await page.click('#map-layers');
   const panel = mapPanel(page);
   await expect(panel).toBeVisible();
   await panel.getByRole('button', { name, exact: true }).click();
-  await page.mouse.click(195, 100);
+  await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
 }
 
@@ -66,8 +67,10 @@ test('3D terrain: switch, tilt, back to flat, remembered', async ({ page }) => {
   await page.click('#map-layers');
   const panel = mapPanel(page);
   await expect(panel.getByRole('button', { name: '3D terrain' })).toHaveAttribute('aria-pressed', 'false');
+  // 3D buildings is greyed out in 2D (Kaden's interface rule 8a, Nov 20).
   await expect(panel.getByRole('button', { name: '3D buildings' })).toHaveAttribute('aria-pressed', 'false');
-  await page.mouse.click(195, 100);
+  await expect(panel.getByRole('button', { name: '3D buildings' })).toBeDisabled();
+  await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
 
   await toggle(page, '3D terrain');
@@ -96,9 +99,9 @@ test('3D terrain: switch, tilt, back to flat, remembered', async ({ page }) => {
   await mapReady(page);
   expect(await onMap(page, (m) => m.getTerrain())).not.toBeNull();
 
-  // Off again: no terrain, flat.
+  // Off again (the View switch's 2D): no terrain, flat.
   await onMap(page, (m) => m.jumpTo({ pitch: 40 }));
-  await toggle(page, '3D terrain');
+  await toggle(page, '2D');
   await expect(page.locator('body')).toHaveAttribute('data-terrain3d', 'false');
   expect(await onMap(page, (m) => m.getTerrain())).toBeNull();
   await page.waitForFunction(() => (window as unknown as Win).tempestMap.getPitch() === 0);
@@ -111,6 +114,8 @@ test('3D buildings: downtown Vancouver, raised by height', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?insets=47,34');
   await mapReady(page);
+  // Buildings are a 3D option: 3D first (Kaden's interface rule 8a, Nov 20).
+  await toggle(page, '3D terrain');
   await toggle(page, '3D buildings');
   expect(await onMap(page, (m) => Boolean(m.getLayer('buildings-3d')))).toBe(true);
   await onMap(page, (m) => m.jumpTo({ center: [-123.1195, 49.2835], zoom: 15.5, pitch: 60, bearing: -30 }));

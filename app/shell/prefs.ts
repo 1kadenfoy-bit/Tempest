@@ -26,10 +26,12 @@ export interface Prefs {
   theme: 'dark' | 'light' | 'system';
   /** Forecast summary window: each layer's strip on or off, by layer id; a layer not listed takes its default (app/summary/choice.ts). */
   summaryLayers: Record<string, boolean>;
+  /** The map panel's choices (ground, overlays, sun), as app/map/map-settings.ts names them; what is not listed takes the map's default. */
+  mapSettings: Record<string, string | boolean>;
 }
 
 const KEY = 'tempest.prefs.v1';
-const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, buildings3d: false, stations: false, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false, units: 'metric', theme: 'dark', summaryLayers: {} };
+const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, buildings3d: false, stations: false, lastPin: null, windowHours: 48, layer: 'precipitation', layerSettings: {}, layerModels: {}, savedOnly: false, units: 'metric', theme: 'dark', summaryLayers: {}, mapSettings: {} };
 
 export function loadPrefs(): Prefs {
   try {

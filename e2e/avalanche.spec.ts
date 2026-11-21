@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type BrowserContext, type Page } from './fixtures';
 
+/** The time the page sees: the recorded set's moment, or now with WEATHER=live. */
+function pageNow(): number {
+  const set = process.env.WEATHER ?? 'default';
+  if (set === 'live') return Date.now();
+  return Date.parse((JSON.parse(readFileSync(`recorded/${set}/meta.json`, 'utf8')) as { now: string }).now);
+}
+
 // The avalanche layer with Avalanche Canada's answers stubbed from saved real
 // ones (Nov 17, 2026: early season everywhere), so it runs without live data.
 // Report photos are a local test image (Cloudinary is not reachable from the
@@ -18,7 +25,8 @@ function products(rated: boolean): string {
   if (!rated) return fixture('products-2026-11-17.json');
   const list = JSON.parse(fixture('products-2026-11-17.json')) as { area: { id: string }; report: Record<string, unknown> }[];
   const bc = list.find((p) => p.area.id.startsWith('53bb614c'))!;
-  const day = (k: number) => new Date(Date.now() + k * 86_400_000);
+  // Days counted from the page's clock: frozen at the recorded weather's moment (e2e/recorded.ts), or now on live data.
+  const day = (k: number) => new Date(pageNow() + k * 86_400_000);
   const r = (v: string, d: string) => ({ rating: { value: v, display: d } });
   const levels: [string, string][][] = [
     [['considerable', 'Considerable'], ['moderate', 'Moderate'], ['low', 'Low']],
@@ -82,7 +90,7 @@ test('avalanche: regions coloured as issued, region forecast, report with photos
   // The BC product is early season (valid to Nov 26): the North Shore's region holds that value.
   await page.evaluate(() => (window as unknown as { tempestMap: import('maplibre-gl').Map }).tempestMap.jumpTo({ center: [-122.6, 50.1], zoom: 6.2 }));
   await page.waitForTimeout(800);
-  const now = Date.now();
+  const now = pageNow();
   const expected = now < Date.parse('2026-11-26T00:00:00Z') ? 'earlyseason' : 'none';
   expect(await regionValue(page, -123.08, 49.6)).toBe(expected);
   await expect(page.locator('#legend-row')).toContainText('Early season');

@@ -35,6 +35,7 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Panning (Nov 16, after M4) | Colour should be there while panning, not only after letting go: the fill reaches a margin past the screen and refreshes during long pans |
 | Map detail (Nov 15, after M1) | North Vancouver area at the base map's finest level (zoom 15), Horseshoe Bay to Deep Cove up to Cypress, Grouse and Seymour |
 | Layer plan | As in `docs/01-product-brief.md` |
+| Kaden's rules by section (from Nov 20) | Each section chat keeps Kaden's rules for its part of the app in `docs/wishes/<section>.md`; integrated so far: Maps (3D by default, terrain from BC's BEC map and glacier outlines only, blue water, peaks with heights, trails and huts, the Map panel's View, Ground and Overlays) and Interface (Notification Centre bell, status line, source button with Auto, gear for settings, search button, pin as name · value · elevation, credits folded, saved data in settings). Those files are the current word; they win over older rows here |
 
 ## 2. Defaults taken on Kaden's behalf
 

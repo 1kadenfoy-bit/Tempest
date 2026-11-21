@@ -87,7 +87,10 @@ test('theme: light from the tokens, remembered; credits from the sources', async
   expect(ground.toLowerCase()).toBe('#e6eae2');
 
   // Credits: generated from each source's metadata.
+  // Folded away at the bottom until asked for.
   const credits = panel.locator('a[data-credit]');
+  await expect(credits.first()).toBeHidden();
+  await panel.getByRole('button', { name: 'Credits and licences' }).click();
   await expect(credits.first()).toBeVisible();
   const text = (await credits.allTextContents()).join(' | ');
   expect(text).toContain('Open-Meteo');
