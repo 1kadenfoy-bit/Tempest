@@ -147,7 +147,10 @@ async function start(): Promise<void> {
   }, 500);
 
   (window as unknown as { tempestEffectsLab: unknown }).tempestEffectsLab = { map, layer: wind, clouds, settings, apply };
-  map.once('idle', () => { document.body.dataset.ready = 'true'; });
+  // "Ready" once the effects have drawn a few frames. They keep the map redrawing, so it never goes idle.
+  let drawn = 0;
+  const markReady = () => { if (++drawn >= 5) { document.body.dataset.ready = 'true'; map.off('render', markReady); } };
+  map.on('render', markReady);
 }
 
 type NumKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
