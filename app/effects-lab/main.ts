@@ -137,7 +137,8 @@ async function start(): Promise<void> {
     const recent = frames.filter((t) => now - t < 1200);
     const fps = recent.length > 2 ? ((recent.length - 1) * 1000) / (recent[recent.length - 1]! - recent[0]!) : 0;
     const s = wind.stats();
-    const parts = [running() ? `${fps ? Math.round(fps) : '–'} fps` : 'paused'];
+    if (!running()) { $('fps').textContent = 'paused'; return; }
+    const parts = [`${fps ? Math.round(fps) : '–'} fps`];
     if (settings.windOn) parts.push(`${s.workMs.toFixed(1)} ms/frame`, `${settings.count} streaks`);
     $('fps').textContent = parts.join(' · ');
   }, 500);
