@@ -65,8 +65,12 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
     // The data's age only: the rest says "next …" online and "offline" without signal (Kaden's interface rule 7a, Nov 20).
     run: (await page.textContent('#run-age'))?.split(' · ')[0],
     // The weather only: the pin's place name comes from the nearest map label, which differs between the
-    // live base map and the saved pieces (Kaden's interface rule 9 put the name first, Nov 20).
-    readout: (await page.textContent('.pin-readout'))?.split(' · ').slice(1).join(' · '),
+    // live base map and the saved pieces, and can be missing (Kaden's interface rule 9 put the name first, Nov 20).
+    readout: await page.locator('.pin-readout .readout-text').evaluate((el) => {
+      const c = el.cloneNode(true) as HTMLElement;
+      c.querySelector('.pin-name')?.remove();
+      return c.textContent?.replace(/^\s*·\s*/, '');
+    }),
     before: await page.textContent('#summary-before'),
     after: await page.textContent('#summary-after'),
   });
