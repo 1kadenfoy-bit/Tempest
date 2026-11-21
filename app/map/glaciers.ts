@@ -8,7 +8,7 @@
 // today; the credits say so.
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import type { Theme } from '../theme/tokens';
-import { mapGround, mix } from './style';
+import { mapGround, mix, ZONES_MAXZOOM } from './style';
 import { terrainColour } from './terrain-colours';
 import { applyMapSettings } from './map-settings';
 
@@ -23,7 +23,7 @@ export function addGlaciers(map: MapLibreMap, theme: Theme): void {
     if (map.getSource(SOURCE)) return;
     // Under the urban layer (so a town beside ice stays crisp) and above the other natural types.
     const before = map.getLayer('terrain_urban') ? 'terrain_urban' : undefined;
-    map.addSource(SOURCE, { type: 'geojson', data: url() });
+    map.addSource(SOURCE, { type: 'geojson', data: url(), maxzoom: ZONES_MAXZOOM });
     map.addLayer({ id: 'glaciers-fill', type: 'fill', source: SOURCE, paint: { 'fill-color': colour(theme), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 1] } }, before);
     applyMapSettings(map);
   };
