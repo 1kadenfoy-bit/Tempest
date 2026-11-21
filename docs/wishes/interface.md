@@ -10,7 +10,7 @@ the old wording moves to "Changed".
 1. (Nov 20) The warning icon is the **Notification Centre**. It shows a notification (bell) icon at rest. While a warning is in force it changes to the warning icon; once the warning has passed it goes back to the bell.
 2. (Nov 20) The **layer name** stays at the top and describes the layer it is on. Below it: how old the data is, and when the next update should arrive. The run number is dropped. Layers we can refresh whenever show when the next refresh will happen.
 3. (Nov 20) The **source button** (right of the layer name) is always shown, even with only one source. It lists the sources that can be used for the layer.
-4. (Nov 20) Where a layer has several sources, the list has an **Auto** choice. Auto picks the best data for each time: high resolution models first, lower resolution once the high resolution ones stop predicting.
+4. (Nov 20, widened Nov 21) The source list **always has Auto** as its first choice, even for layers with one source today. Auto works two ways: (1) it picks the best model for each time (high resolution first, lower resolution once the high resolution ones stop predicting); (2) it uses every source that has good data for the area, so two avalanche forecasts that cover different regions would both show.
 5. (Nov 20) Where it makes sense to combine sources, the list lets him choose one, neither or both (for example a Canadian and an American avalanche source).
 6. (Nov 20) The button at the top right is the **app settings** button, drawn as a **gear**.
 7. (Nov 20) The **status line** gives just the age of the data and when the next update comes. The source button beside it says which data. With Auto, it shows the times of the model currently being viewed.
@@ -23,7 +23,7 @@ the old wording moves to "Changed".
 
 ## Pin
 
-9. (Nov 20) The pin shows, in this order: **location name · layer data value · elevation**. No "You" label.
+9. (Nov 20, tightened Nov 21) The pin shows only, in this order: **location name · layer data value · elevation**. No "You" label, no extra notes (feels-like, snow line and so on). Nothing is shown while the data is still loading: no "…" placeholders.
 
 ## App settings window
 
@@ -37,6 +37,8 @@ the old wording moves to "Changed".
 
 ## Changed
 
+- Rule 9 also showed the layer's own extra notes ("feels −6", "0 °C at 1,150 m", "snow line") and "…" while loading, until Nov 21.
+- Rule 4 said Auto only appears where a layer has several sources, until Nov 21.
 - Rule 8: Boundaries was one tile (with Parks, Provincial and regional, Municipal options in a row that opened under it) until Nov 20; it is now three tiles. Rule 8a also had option rows for trail names, peak heights and boundary kinds that opened under their tiles (until Nov 20).
 - Rule 8 was: "Search sits where the map layers button is. The map layers' settings move into the settings window." (Nov 20, until later the same day)
 - Rule 9 was: "The pin on the user's location shows just the layer's data (temperature, wind speed and so on) and the elevation. No 'You' label." (Nov 20, until later the same day)

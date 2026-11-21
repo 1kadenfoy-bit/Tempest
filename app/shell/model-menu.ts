@@ -27,7 +27,7 @@ export function modelMenuBody(rows: ModelRow[], auto: boolean, onPick: (s: Model
   autoRow.className = 'model-row';
   autoRow.dataset.source = 'auto';
   autoRow.setAttribute('aria-pressed', String(auto));
-  autoRow.innerHTML = `<span class="model-names"><span class="model-name">Auto</span><span class="model-grid">Best model for each time</span></span><span class="model-check">${icons.check}</span>`;
+  autoRow.innerHTML = `<span class="model-names"><span class="model-name">Auto</span><span class="model-grid">Best model for each time, and every model with good data here</span></span><span class="model-check">${icons.check}</span>`;
   autoRow.addEventListener('click', () => onPick(null));
   autoLine.append(autoRow);
   first.append(autoLine);
@@ -134,7 +134,7 @@ export interface SourceRow {
  * The source menu: the model menu's rows for a layer whose data is issued,
  * not modelled. One group; more sources join the list as they are added.
  */
-export function sourceMenuBody(rows: SourceRow[], onPick: (id: string) => void): HTMLElement {
+export function sourceMenuBody(rows: SourceRow[], onPick: (id: string) => void, auto: { current: boolean; onPick: () => void }): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
   const g = document.createElement('div');
@@ -143,6 +143,17 @@ export function sourceMenuBody(rows: SourceRow[], onPick: (id: string) => void):
   t.className = 'group-title';
   t.textContent = 'SOURCES';
   g.append(t);
+  // Auto is always the first choice, even with one source today: it uses every source with good data for the area.
+  const autoLine = document.createElement('div');
+  autoLine.className = 'model-line';
+  const autoRow = document.createElement('button');
+  autoRow.className = 'model-row';
+  autoRow.dataset.source = 'auto';
+  autoRow.setAttribute('aria-pressed', String(auto.current));
+  autoRow.innerHTML = `<span class="model-names"><span class="model-name">Auto</span><span class="model-grid">Every source with good data here</span></span><span class="model-check">${icons.check}</span>`;
+  autoRow.addEventListener('click', () => auto.onPick());
+  autoLine.append(autoRow);
+  g.append(autoLine);
   for (const r of rows) {
     const line = document.createElement('div');
     line.className = 'model-line';

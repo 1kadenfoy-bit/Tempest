@@ -32,31 +32,35 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const marker = new maplibregl.Marker({ element: el, anchor: 'center' });
   let state: PinState | null = null;
   let readoutValue: Readout = { value: '' };
+  let readoutSet = false;
   let seq = 0;
 
   const render = (notify = true) => {
     if (!state) return;
-    // "Location name · layer value · elevation" (Kaden, Nov 20).
+    // "Location name · layer value · elevation", nothing more (Kaden, Nov 21), and
+    // nothing at all while the data is still coming in: no "…" placeholders.
     const name = state.kind === 'you' ? state.name : pinLabel(state).short;
-    const elev = state.elevation === null ? '…' : formatElevation(state.elevation);
-    text.innerHTML = '';
     const r = readoutValue;
-    if (name) {
-      const place = document.createElement('span');
-      place.className = 'pin-name';
-      place.textContent = name;
-      text.append(place, ' · ');
+    const loading = !readoutSet || r.value === '…' || state.elevation === null;
+    readout.hidden = loading;
+    text.innerHTML = '';
+    if (!loading) {
+      if (name) {
+        const place = document.createElement('span');
+        place.className = 'pin-name';
+        place.textContent = name;
+        text.append(place, ' · ');
+      }
+      if (r.value) {
+        const strong = document.createElement('strong');
+        strong.textContent = r.value;
+        text.append(strong, ' · ');
+      }
+      const elev = document.createElement('span');
+      elev.className = 'muted';
+      elev.textContent = formatElevation(state.elevation!);
+      text.append(elev);
     }
-    if (r.value) {
-      const strong = document.createElement('strong');
-      strong.textContent = r.value;
-      text.append(strong, ' · ');
-    }
-    const muted = document.createElement('span');
-    muted.className = 'muted';
-    // "feels −6 · 1,180 m · 0 °C at 1,150 m"
-    muted.textContent = [r.note, elev, r.extra].filter(Boolean).join(' · ');
-    text.append(muted);
     keepInside();
     if (notify) onChange(state);
   };
@@ -97,7 +101,7 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   };
 
   /** The layer's readout for the pin at the cursor: the value in bold, its notes muted. */
-  const setReadout = (r: Readout) => { readoutValue = r; render(false); };
+  const setReadout = (r: Readout) => { readoutValue = r; readoutSet = true; render(false); };
   return { set, setReadout, get: () => state };
 }
 
