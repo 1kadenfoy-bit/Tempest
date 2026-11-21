@@ -92,6 +92,7 @@ def prefetch(level, bbox):
 
 # ---------- web-mercator tile drawn from a WGS84 level
 def merc_tile(z, x, y, level):
+    level = min(level, z + 3)        # zoomed-out tiles use a coarser source level, so the stitch stays small
     n = 2 ** z
     px = (x + (np.arange(256) + 0.5) / 256) / n                        # 0..1 across the world
     py = (y + (np.arange(256) + 0.5) / 256) / n

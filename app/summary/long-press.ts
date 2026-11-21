@@ -69,6 +69,15 @@ export function setupLongPress(map: MapLibreMap, onPress: (point: { x: number; y
   }, { passive: true });
   box.addEventListener('pointermove', (e) => tracker.move(e.pointerId, e.clientX, e.clientY), { passive: true });
   const lift = (e: PointerEvent) => {
+    // A busy page can hand over the lift before the hold timer has decided.
+    // When the finger was down, still, for the full hold (by the lift's own
+    // time stamp), it was a hold: open now. A lift sooner is a tap.
+    const at = tracker.dueAt();
+    if (at !== null && tracker.holding(e.pointerId) && e.timeStamp >= at) {
+      const p = tracker.due(e.timeStamp);
+      clearTimeout(timer);
+      if (p && fire(local(p.x, p.y))) swallowUntil = performance.now() + 400;
+    }
     tracker.up(e.pointerId);
     if (firedPointer === e.pointerId) {
       firedPointer = null;
