@@ -110,6 +110,8 @@ export function renderRunAge() {
   el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
   const name = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
   $('model-pill-label').textContent = choiceOf(S.active.id) === AUTO ? 'Auto' : name;
+  // The model under the cursor, for tests (Auto does not name it on screen).
+  document.body.dataset.modelInView = String(seg?.model ?? r.model);
 }
 export function syncAtesThumb() {
   atesThumb.style.display = S.active.id === 'avalanche' ? '' : 'none';

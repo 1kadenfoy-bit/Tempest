@@ -101,8 +101,10 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   }
 
   // Past HRDPS's end, offline: RDPS's saved hours (the cursor goes there and reads).
-  for (let k = 0; k < 8 && !/^RDPS$/.test((await page.textContent('#model-pill-label')) ?? ''); k++) await drag(0.9);
-  await expect(page.locator('#model-pill-label')).toHaveText('RDPS');
+  // With Auto the button does not name the model; the page marks the one under the cursor.
+  const inView = () => page.locator('body').getAttribute('data-model-in-view');
+  for (let k = 0; k < 8 && (await inView()) !== 'rdps'; k++) await drag(0.9);
+  await expect(page.locator('body')).toHaveAttribute('data-model-in-view', 'rdps');
   await expect(page.locator('.readout-text strong')).toHaveText(/^\d+ km\/h$/);
   await page.screenshot({ path: 'test-results/screens/m8-offline-rdps.png' });
   await context.setOffline(false);
