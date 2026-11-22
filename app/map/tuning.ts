@@ -14,7 +14,7 @@ export interface Tuning {
   bloom: number;
 }
 
-export const DEFAULT_TUNING: Tuning = { haze: 0.5, relief: 1, tint: 1, cast: 1, bloom: 0 };
+export const DEFAULT_TUNING: Tuning = { haze: 0.85, relief: 1.2, tint: 0.55, cast: 0.65, bloom: 0.65 };
 
 type Listener = (t: Tuning) => void;
 

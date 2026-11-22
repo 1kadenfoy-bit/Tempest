@@ -9,6 +9,7 @@ import { maplibregl } from './maplibre';
 import { applyMapSettings } from './map-settings';
 import { registerWaterImages } from './water';
 import { setupTuner } from './tuner';
+import { showShape, startDrawing } from './draw-shape';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
 import { hasBuildingHeights, TILT } from './three-d';
@@ -56,6 +57,8 @@ map.touchZoomRotate.disableRotation();
 map.touchPitch.disable();
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 registerWaterImages(map);
+// A hook for tests of the drawing tool until the save card calls it (docs/plans/offline-save.md).
+(window as unknown as { tempestDraw: { startDrawing: typeof startDrawing; showShape: typeof showShape } }).tempestDraw = { startDrawing, showShape };
 (window as unknown as { tempestMap: typeof map }).tempestMap = map;
   return map;
 }

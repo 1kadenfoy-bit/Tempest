@@ -104,11 +104,13 @@ function bloomOverlay(): void {
     const now = performance.now();
     if (tuning.get().bloom > 0 && now - last > 120) { last = now; copy(); }
   });
-  tuning.onChange((t) => {
+  const apply = (t: Tuning) => {
     el.style.opacity = String(t.bloom);
     el.style.display = t.bloom > 0 ? 'block' : 'none';
     if (t.bloom > 0) map.triggerRepaint(); // one draw to take a copy of
-  });
+  };
+  tuning.onChange(apply);
+  apply(tuning.get());
 }
 
 export function setupTuner(): void {
