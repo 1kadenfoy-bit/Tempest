@@ -51,6 +51,15 @@ the old wording moves to "Changed".
 
 17. (Nov 22) **"Saved data only" is gone** from app settings. Keep the Save data button and the list of what is saved below it.
 
+## Save for offline (planned, nothing built yet)
+
+18. (Nov 22) **Save data** in settings closes settings and returns to the Home screen (the map with the weather card). A "Save for offline" card slides up from the bottom and looks and acts like the weather card: it starts partly showing (selected area size and space for the map), most of the screen is map, and it can be pushed down to see the map.
+19. (Nov 22) **No starting area.** The user traces a closed shape on the map (any shape, not only a rectangle or circle). Map pieces are cut to the outline; the weather covers the shape's bounding box.
+20. (Nov 22) Pulling the card up shows the bottom part of the scrubber (the date and the model's end time for the selected layer). The **white frame** is stretched or squeezed over the time to save, **both ends adjustable** (past data can be included).
+21. (Nov 22) Below the scrubber is a **list of every layer**. A selected layer is saved with the map piece. Beside each layer is its **model choice: a model, or Auto** (Auto saves only the relevant times for each model, the best one for each time). Each layer shows its **size to save**. At the bottom is the final **Save data** button with the **total space**.
+22. (Nov 22) Every layer can be selected. A layer that cannot cover the window (radar, avalanche, air quality) saves as much as exists, up to the end of its data. Each layer shows how old its data is, and the user judges. Offline, the status line says "offline", not a next-refresh time.
+23. (Nov 22) After pressing Save, the user is back on the Home screen. The **Notification Centre** gets "Download started" (with a progress bar if it takes time; just the notification if quick) and another notification when it is **finished**.
+
 ## Changed
 
 - Rule 8: Ground had three tiles, Plain | Shaded terrain | Satellite (Satellite dimmed "Soon" until it worked), and rule 8a greyed the sun toggle out on Plain, until Nov 22.
