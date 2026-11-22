@@ -9,20 +9,19 @@ and iterates quickly. One main chat (the lead) combines the work into the app.
                             │
                     Main chat (the lead)
    combines sections on request · full tests · publishes the app
-     ┌──────────┬──────────┼──────────┬──────────┬──────────┐
-   Maps    Interface    Weather    Effects     Data      Safety
-                        on the map
+       ┌──────────┬──────────┼──────────┬──────────┐
+     Maps    Interface    Weather    Effects     Data
+                          on the map
          (section chats · each owns its own files · own branch)
 ```
 
 | Section | Brief | Covers |
 | --- | --- | --- |
 | Maps | [maps.md](maps.md) | Base map, terrain, 3D terrain and buildings, place names and search, map pieces and downloads, how the map moves |
-| Interface | [interface.md](interface.md) | Everything around the map: top bar, sheet, scrubber, panels, menus, cards, settings, summary window, theme |
-| Weather on the map | [weather.md](weather.md) | Each weather layer from colours to numbers: fills, colour ramps, legends, lines, arrows, radar, stations, readouts, charts, cards |
+| Interface | [interface.md](interface.md) | Everything around the map: top bar, sheet, scrubber, panels, menus, cards, settings, summary window, theme, the Notification Centre and weather alerts |
+| Weather on the map | [weather.md](weather.md) | Each weather layer from colours to numbers: fills, colour ramps, legends, lines, arrows, radar, stations, readouts, charts, cards; avalanche, terrain ratings, air quality and fire, shown exactly as issued |
 | Effects | [effects.md](effects.md) | Animated weather over the map: rain, snow, clouds, wind particles, in 3D |
 | Data | [data.md](data.md) | Where the numbers come from: models, runs, new sources, caching, saved areas, recorded weather |
-| Safety | [safety.md](safety.md) | Shown exactly as issued: avalanche, alerts, fire, air quality |
 | The lead | [lead.md](lead.md) | Combining, the shared files, the full checks, publishing |
 
 Who owns which file is listed in [sections.json](sections.json). The section
@@ -37,7 +36,8 @@ check reads it.
 | What a weather layer shows: its colours on the map, its legend, its chart (for example the temperature graph), its readout, its cards' content, its settings; the freezing and snow lines, wind arrows, radar, weather stations; new weather layers (cloud, sun, snow) | **Weather on the map** |
 | Moving weather drawn over the map: falling rain and snow, drifting cloud, wind particles, 3D effects | **Effects** |
 | Where the numbers come from: models and runs, new data sources (planes, rivers…), caching, saved areas and offline, recorded weather days | **Data** |
-| Avalanche forecasts and terrain ratings, weather alerts, wildfires, air quality and smoke | **Safety** |
+| Avalanche forecasts and terrain ratings, wildfires, air quality and smoke | **Weather on the map** |
+| Weather alerts (the bell and the Notification Centre) | **Interface** |
 | Combining sections into the app, anything that touches several sections at once, the shared files, publishing | **The main chat** |
 
 When it is unclear, the owner of the files that need to change decides: see
@@ -57,6 +57,10 @@ chart or card is that layer's; the frame around it is the Interface's.
    it back with a note), and publishes the app.
 4. **Pull in the new version.** Each section chat brings its branch up to date
    with `main` at the start of every session and after each integration.
+
+There was a Safety chat until Nov 22. Kaden closed it: its layers moved to
+Weather on the map and its weather alerts to Interface, with the rule that
+safety data is shown exactly as issued.
 
 ## Rules for every section chat
 
