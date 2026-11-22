@@ -18,8 +18,8 @@ the old wording moves to "Changed".
 
 ## Map buttons
 
-8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (three big tiles, one at a time: Plain | Shaded terrain | Satellite) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Park boundaries; Regional boundaries; Municipal boundaries; Weather stations; Rain/snow line; Freezing line). Tiles whose data is not built yet are shown dimmed and marked "Soon" (Kaden's choice, an exception to "a switch appears only when it works").
-8a. (Nov 20) Map panel details (from the Maps chat, passed on by Kaden): a **Sun and shadows** toggle sits with the Ground tiles and is greyed out on Plain. **3D buildings** is a small option under the View switch, greyed out in 2D. The panel remembers its choices. Nothing in the panel appears or disappears when a button is pressed.
+8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (big tiles, one at a time: Terrain | Satellite; Plain is gone since Nov 22) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Park boundaries; Regional boundaries; Municipal boundaries; Weather stations; Rain/snow line; Freezing line). Overlay tiles whose data is not built yet are shown dimmed and marked "Soon" (Kaden's choice, an exception to "a switch appears only when it works"). Satellite is shown only once the map has its picture loaded.
+8a. (Nov 20) Map panel details (from the Maps chat, passed on by Kaden): a **Sun and shadows** toggle sits with the Ground tiles (it works on Terrain and on Satellite). **3D buildings** is a small option under the View switch, greyed out in 2D. The panel remembers its choices. Nothing in the panel appears or disappears when a button is pressed.
 
 ## Pin
 
@@ -49,6 +49,7 @@ the old wording moves to "Changed".
 
 ## Changed
 
+- Rule 8: Ground had three tiles, Plain | Shaded terrain | Satellite (Satellite dimmed "Soon" until it worked), and rule 8a greyed the sun toggle out on Plain, until Nov 22.
 - Rule 9 showed nothing at all while loading, for a few hours on Nov 21, before the spinning wheel.
 - Rule 9 also showed the layer's own extra notes ("feels −6", "0 °C at 1,150 m", "snow line") and "…" while loading, until Nov 21.
 - Rule 4 said Auto only appears where a layer has several sources, until Nov 21.

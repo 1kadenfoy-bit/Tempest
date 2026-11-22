@@ -139,9 +139,13 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await page.screenshot({ path: 'test-results/screens/m1-map-panel.png' });
 
   const vis = () => onMap(page, (m) => m.getLayoutProperty('hillshade', 'visibility'));
-  // Ground: Plain has no shading, Shaded terrain is the hillshade.
-  await panel.getByRole('button', { name: 'Plain' }).click();
-  expect(await vis()).toBe('none');
+  // Ground: Terrain is the one choice that always works (Satellite shows once its picture is loaded).
+  await expect(panel.getByRole('button', { name: 'Terrain', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(await vis()).toBe('visible');
+  // An overlay switch: Contour lines off.
+  const contours = () => onMap(page, (m) => m.getLayoutProperty('contour-lines', 'visibility'));
+  await panel.getByRole('button', { name: 'Contour lines' }).click();
+  expect(await contours()).toBe('none');
 
   // Closes with a tap on the scrim (the panel is taller now, so tap its top edge).
   await page.locator('.scrim').click({ position: { x: 8, y: 8 } });
@@ -150,10 +154,11 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   // Remembered after a reload.
   await page.reload();
   await mapReady(page);
-  expect(await vis()).toBe('none');
+  expect(await contours()).toBe('none');
   await page.click('#map-layers');
-  await expect(page.getByRole('button', { name: 'Plain' })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Shaded terrain' }).click();
+  await expect(page.getByRole('button', { name: 'Terrain', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Contour lines' })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Contour lines' }).click();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(panel).toBeHidden();
 });

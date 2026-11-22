@@ -157,10 +157,11 @@ export function setupTopBar(): void {
 {
   const saved: Record<string, string | boolean> = { ...S.prefs.mapSettings };
   if (!Object.keys(saved).length) {
-    if (S.prefs.hillshade === false) saved.ground = 'plain';
     if (S.prefs.contours === false) saved.contours = false;
   }
   if (!S.prefs.hillshade || !S.prefs.contours) { S.prefs.hillshade = true; S.prefs.contours = true; savePrefs(S.prefs); }
+  // Plain is gone (Kaden, Nov 22): a saved Plain is Terrain now.
+  if (saved.ground === 'plain') saved.ground = 'shaded';
   // Trail names and peak heights are always on (Kaden, Nov 20).
   mapSettings.set({ ...(saved as Partial<MapSettings>), trailNames: true, peakHeights: true });
 }

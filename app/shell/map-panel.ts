@@ -7,6 +7,7 @@
 // (Kaden's choice; they do nothing yet). The choices are remembered in
 // prefs.mapSettings. No v8 design: built from the segmented control and tiles.
 import { mapSettings, type MapSettings } from '../map/map-settings';
+import { satelliteReady } from '../map/satellite';
 import { S } from '../state';
 import { icons } from './icons';
 import { savePrefs } from './prefs';
@@ -111,30 +112,27 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   const buildingsChip = buildings ? chip('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }) : null;
   if (buildings && buildingsChip) { buildingsChip.disabled = !state.terrain3d; buildings.append(buildingsChip); }
 
-  // Ground: three big tiles, one selected at a time. Satellite waits for an imagery source.
+  // Ground: big tiles, one selected at a time: Terrain, and Satellite once the map has the picture loaded
+  // (Kaden, Nov 22: Plain is gone, and only what works is shown). 'shaded' is the map settings' name for Terrain.
   const ground = document.createElement('div');
   ground.className = 'ground-grid';
-  const choices = [
-    { id: 'plain', label: 'Plain', soon: false },
-    { id: 'shaded', label: 'Shaded terrain', soon: false },
-    { id: 'satellite', label: 'Satellite', soon: true },
-  ];
-  // Sun and shadows lights the shaded terrain from the real sun (it follows the time scrubber), so it has nothing to light on Plain.
+  const choices: { id: MapSettings['ground']; label: string }[] = [{ id: 'shaded', label: 'Terrain' }];
+  if (satelliteReady()) choices.push({ id: 'satellite', label: 'Satellite' });
+  ground.style.gridTemplateColumns = `repeat(${choices.length}, minmax(0, 1fr))`;
+  const current = m.ground === 'satellite' && satelliteReady() ? 'satellite' : 'shaded';
+  // Sun and shadows lights the terrain from the real sun (it follows the time scrubber), on Terrain and on Satellite.
   const sun = tile('Sun and shadows', m.sun, (on) => setMap({ sun: on }));
   sun.id = 'sun-switch';
-  sun.disabled = m.ground === 'plain';
   const groundBtns = choices.map((c) => {
     const b = document.createElement('button');
     b.className = 'ground-tile';
     b.dataset.ground = c.id;
-    b.setAttribute('aria-pressed', String(!c.soon && c.id === m.ground));
+    b.setAttribute('aria-pressed', String(c.id === current));
     b.innerHTML = '<span></span>';
     b.querySelector('span')!.textContent = c.label;
-    if (c.soon) { b.disabled = true; b.insertAdjacentHTML('beforeend', '<em class="tile-soon">Soon</em>'); return b; }
     b.addEventListener('click', () => {
-      setMap({ ground: c.id as MapSettings['ground'] });
+      setMap({ ground: c.id });
       groundBtns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      sun.disabled = c.id === 'plain';
     });
     return b;
   });
