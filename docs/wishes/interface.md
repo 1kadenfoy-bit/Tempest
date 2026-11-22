@@ -19,7 +19,7 @@ the old wording moves to "Changed".
 ## Map buttons
 
 8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (big tiles, one at a time: Terrain | Satellite; Plain is gone since Nov 22) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Park boundaries; Regional boundaries; Municipal boundaries; Weather stations; Rain/snow line; Freezing line). Overlay tiles whose data is not built yet are shown dimmed and marked "Soon" (Kaden's choice, an exception to "a switch appears only when it works"). Satellite is shown only once the map has its picture loaded.
-8a. (Nov 20) Map panel details (from the Maps chat, passed on by Kaden): a **Sun and shadows** toggle sits with the Ground tiles (it works on Terrain and on Satellite). **3D buildings** is a small option under the View switch, greyed out in 2D. The panel remembers its choices. Nothing in the panel appears or disappears when a button is pressed.
+8a. (Nov 20) Map panel details (from the Maps chat, passed on by Kaden): a **Sync map day/night time** toggle (it was called Sun and shadows) sits with the Ground tiles: the map's sun and shadows follow the time scrubber. It works on Terrain and on Satellite. **3D buildings** is a small option under the View switch, greyed out in 2D. The panel remembers its choices. Nothing in the panel appears or disappears when a button is pressed.
 
 ## Pin
 
@@ -46,6 +46,10 @@ the old wording moves to "Changed".
 ## Search
 
 16. (Nov 21) The search window sits **at the top of the screen**: the round search button turns into the search bar and moves to the top, with the same button-to-window animation. Searching leaves the weather window (the sheet) alone: it does not move when the keyboard comes up.
+
+## App settings (more)
+
+17. (Nov 22) **"Saved data only" is gone** from app settings. Keep the Save data button and the list of what is saved below it.
 
 ## Changed
 

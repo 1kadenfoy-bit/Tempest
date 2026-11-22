@@ -1,6 +1,6 @@
 // The map panel (grows from the map layers button), laid out as Kaden asked
 // (Nov 20): View (2D | 3D), Ground (Plain | Shaded terrain | Satellite, one at
-// a time, and a Sun and shadows toggle) and Overlays (toggle tiles, some with a
+// a time, and a day/night sync toggle) and Overlays (toggle tiles, some with a
 // small options row). What each button does to the map is app/map/map-settings.ts
 // (Maps section); this file only shows the buttons and calls mapSettings.set.
 // Tiles whose map data is not built yet are shown dimmed and marked "Soon"
@@ -120,8 +120,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   if (satelliteReady()) choices.push({ id: 'satellite', label: 'Satellite' });
   ground.style.gridTemplateColumns = `repeat(${choices.length}, minmax(0, 1fr))`;
   const current = m.ground === 'satellite' && satelliteReady() ? 'satellite' : 'shaded';
-  // Sun and shadows lights the terrain from the real sun (it follows the time scrubber), on Terrain and on Satellite.
-  const sun = tile('Sun and shadows', m.sun, (on) => setMap({ sun: on }));
+  // Sync map day/night time: the map's sun and shadows follow the time scrubber, on Terrain and on Satellite.
+  const sun = tile('Sync map day/night time', m.sun, (on) => setMap({ sun: on }));
   sun.id = 'sun-switch';
   const groundBtns = choices.map((c) => {
     const b = document.createElement('button');

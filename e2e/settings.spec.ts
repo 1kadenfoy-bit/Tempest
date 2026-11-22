@@ -98,8 +98,8 @@ test('theme: light from the tokens, remembered; credits from the sources', async
   expect(text).toContain('OpenStreetMap');
   expect(text).toContain('Mapterhorn');
 
-  // The saved-data-only switch is the same pref as in the saved areas list.
-  await expect(panel.getByRole('switch', { name: 'Saved data only' })).toHaveAttribute('aria-checked', 'false');
+  // "Saved data only" is gone from settings (Kaden, Nov 22).
+  await expect(panel.getByRole('switch', { name: 'Saved data only' })).toHaveCount(0);
 
   await page.keyboard.press('Escape');
   await page.reload();

@@ -55,7 +55,7 @@ export function startAppSettings(prefs: Prefs, hooks: AppSettingsHooks): AppSett
       icon: icons.gear,
       title: 'App settings',
       caption: 'Remembered on this phone',
-      body: settingsBody({ units: prefs.units, theme: prefs.theme, savedOnly: prefs.savedOnly }, credits(hooks.basemapAttribution()), {
+      body: settingsBody({ units: prefs.units, theme: prefs.theme }, credits(hooks.basemapAttribution()), {
         setUnits: (u: UnitSystem) => {
           prefs.units = u;
           hooks.savePrefs();
@@ -68,7 +68,6 @@ export function startAppSettings(prefs: Prefs, hooks: AppSettingsHooks): AppSett
           hooks.savePrefs();
           showTheme();
         },
-        setSavedOnly: (on) => hooks.onSavedOnly(on),
         saved: {
           areas: S.savedAreas,
           canSave: navigator.onLine && !!S.run && !S.usingSaved,

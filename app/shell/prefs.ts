@@ -36,7 +36,8 @@ const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, bui
 export function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...defaults, ...(JSON.parse(raw) as Partial<Prefs>) } : { ...defaults };
+    // "Saved data only" is gone from settings (Kaden, Nov 22): a phone that had it on must not stay stuck in it.
+    return raw ? { ...defaults, ...(JSON.parse(raw) as Partial<Prefs>), savedOnly: false } : { ...defaults };
   } catch {
     return { ...defaults };
   }

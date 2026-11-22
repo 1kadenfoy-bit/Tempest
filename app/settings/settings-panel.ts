@@ -1,23 +1,20 @@
 // App settings (grows from the gear in the map panel's header). v8 has no
 // screen for it, so it is built from the existing panel parts: segmented
-// controls for units and theme, the "Saved data only" switch (the same pref
-// as in the saved areas list), and the credits, generated from the sources'
+// controls for units and theme, and the credits, generated from the sources'
 // metadata (app/sources/credits.ts).
 import { icons } from '../shell/icons';
 import type { UnitSystem } from '../../core/units/format';
-import { savedOnlySwitch } from '../offline/offline-panel';
 import type { ThemeChoice } from '../theme/theme';
 import type { Credit } from '../sources/credits';
 import { areaNote } from '../offline/offline-panel';
 import type { SavedArea } from '../../core/offline/saved-area';
 import { swipeRow } from './swipe-row';
 
-export interface SettingsState { units: UnitSystem; theme: ThemeChoice; savedOnly: boolean }
+export interface SettingsState { units: UnitSystem; theme: ThemeChoice }
 
 export interface SettingsHandlers {
   setUnits(u: UnitSystem): void;
   setTheme(t: ThemeChoice): void;
-  setSavedOnly(on: boolean): void;
   /** The saved data: the button, and the list below it. */
   saved: {
     areas: SavedArea[];
@@ -109,9 +106,6 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
   const theme = group('THEME');
   theme.append(segmented<ThemeChoice>('Theme', [{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }, { value: 'system', label: 'Match phone' }], state.theme, h.setTheme));
 
-  const offline = group('OFFLINE');
-  offline.append(...savedOnlySwitch(state.savedOnly, h.setSavedOnly));
-
   // Saved data: one button to save, and what is saved below it; swipe a row left to delete.
   const saved = group('SAVED DATA');
   const save = document.createElement('button');
@@ -165,6 +159,6 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
   });
   credits.append(fold, body);
 
-  wrap.append(units, theme, offline, saved, credits);
+  wrap.append(units, theme, saved, credits);
   return wrap;
 }
