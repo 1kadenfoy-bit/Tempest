@@ -3,23 +3,28 @@
 // does to the map. Nothing here draws a button.
 //
 //   View       2D or 3D: already the 3D terrain switch (app/map/three-d.ts)
-//   Ground     plain, or shaded terrain (terrain colours and hillshade).
-//              Satellite is not here: it needs an imagery source Kaden has not
-//              approved yet, and a switch appears only when it works.
+//   Ground     Terrain (the terrain colours, 'shaded'), or Satellite
+//              (the Sentinel-2 picture built by the Data section; app/map/satellite.ts).
+//              Satellite shows only where the picture's tiles exist.
 //   Overlays   trails, huts, campsites, peaks, contour lines, small roads,
 //              ski lifts, boundaries
 //   Sun        the sun-lit relief and night tint (app/map/sun.ts)
 //
-// Until the panel is wired, a link can set them: ?map=ground:plain,trails:off,sun:on
+// Until the panel is wired, a link can set them: ?map=ground:satellite,trails:off,sun:on
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { L } from './layer-ids';
 import { S } from '../state';
 import { mapSun } from './sun';
 import { setPeakHeights } from './places';
+import { SATELLITE_LAYER } from './satellite';
 
 export interface MapSettings {
-  /** What covers the ground: plain, or terrain colours with hillshade. */
-  ground: 'plain' | 'shaded';
+  /**
+   * What covers the ground: terrain colours ('shaded', shown as "Terrain") or the
+   * satellite picture. 'plain' is no longer offered; anything that still holds it
+   * (an old saved setting, a panel not yet updated) is drawn as 'shaded'.
+   */
+  ground: 'plain' | 'shaded' | 'satellite';
   trails: boolean;
   trailNames: boolean;
   huts: boolean;
@@ -51,13 +56,17 @@ export const DEFAULT_MAP_SETTINGS: MapSettings = {
 
 type Listener = (s: MapSettings) => void;
 
-/** Reads `ground:plain,trails:off,sun:on` into settings changes; unknown names and values are ignored. */
+/** Reads `ground:satellite,trails:off,sun:on` into settings changes; unknown names and values are ignored. */
 export function parseMapSettings(text: string): Partial<MapSettings> {
   const out: Record<string, unknown> = {};
   for (const part of text.split(',')) {
     const [k, v] = part.split(':').map((x) => x.trim());
     if (!k || !(k in DEFAULT_MAP_SETTINGS)) continue;
-    if (k === 'ground') { if (v === 'plain' || v === 'shaded') out.ground = v; continue; }
+    if (k === 'ground') {
+      if (v === 'shaded' || v === 'satellite') out.ground = v;
+      else if (v === 'plain') out.ground = 'shaded'; // plain is gone: it is Terrain now
+      continue;
+    }
     if (v === 'on' || v === 'true') out[k] = true;
     else if (v === 'off' || v === 'false') out[k] = false;
   }
@@ -101,8 +110,13 @@ export function applyMapSettings(map: MapLibreMap): void {
   const showAll = (ids: readonly string[], on: boolean) => ids.forEach((id) => show(id, on));
 
   // Ground
-  showAll(L.groundColour, s.ground === 'shaded');
-  show(L.hillshade, s.ground === 'shaded' && prefOn('hillshade'));
+  showAll(L.groundColour, s.ground !== 'satellite');
+  show(L.hillshade, prefOn('hillshade'));
+  // Satellite: the picture replaces the colours, the sea, and the low-zoom land cover (it already shows them); the relief lighting stays.
+  const sat = s.ground === 'satellite';
+  show(SATELLITE_LAYER, sat);
+  // The water layers stay on over the satellite picture (tinted, with ripples and foam): app/map/water.ts.
+  show('landcover', !sat);
   // Trails, huts, camps
   show(L.trails, s.trails);
   show(L.trailsBase, s.trails);
@@ -138,6 +152,7 @@ export function applyMapSettings(map: MapLibreMap): void {
   }
   // Sun
   mapSun.setEnabled(s.sun);
+  mapSun.update(); // water and sun look follow the ground choice
 }
 
 /** The panel's older hillshade and contour switches (saved preferences) still count while the panel has them. */
