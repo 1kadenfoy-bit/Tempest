@@ -80,8 +80,10 @@ function slider(label: string, key: keyof Tuning, min: number, max: number): HTM
 
 /**
  * The bloom: a small, blurred, brightened copy of the map laid over it with the screen
- * blend, so bright things glow. The copy is taken from the map's own picture a few times
- * a second while it draws; at rest nothing runs.
+ * blend, so bright things glow. The copy is taken after every drawn frame, so it always
+ * matches the map exactly: a copy taken only a few times a second lagged behind a moving
+ * map and showed as a fuzzy white pulse while panning. At rest nothing is drawn, so
+ * nothing is copied.
  */
 function bloomOverlay(): void {
   const map = S.map;
@@ -93,17 +95,16 @@ function bloomOverlay(): void {
   });
   document.getElementById('map')?.append(el);
   const g = el.getContext('2d')!;
-  let last = 0;
+  /** The copy is this many times smaller than the map: the blur hides the difference, and it is cheap to take every frame. */
+  const SHRINK = 8;
   const copy = () => {
     const src = map.getCanvas();
-    const w = Math.max(1, Math.round(src.width / 6)), h = Math.max(1, Math.round(src.height / 6));
+    const w = Math.max(1, Math.round(src.width / SHRINK)), h = Math.max(1, Math.round(src.height / SHRINK));
     if (el.width !== w || el.height !== h) { el.width = w; el.height = h; }
     try { g.drawImage(src, 0, 0, w, h); } catch { /* the picture was not available this frame */ }
   };
-  map.on('render', () => {
-    const now = performance.now();
-    if (tuning.get().bloom > 0 && now - last > 120) { last = now; copy(); }
-  });
+  // `render` fires after each frame is drawn, so the copy is of that same frame.
+  map.on('render', () => { if (tuning.get().bloom > 0) copy(); });
   const apply = (t: Tuning) => {
     el.style.opacity = String(t.bloom);
     el.style.display = t.bloom > 0 ? 'block' : 'none';
