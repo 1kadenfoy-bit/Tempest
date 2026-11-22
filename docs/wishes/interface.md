@@ -60,6 +60,14 @@ the old wording moves to "Changed".
 22. (Nov 22) Every layer can be selected. A layer that cannot cover the window (radar, avalanche, air quality) saves as much as exists, up to the end of its data. Each layer shows how old its data is, and the user judges. Offline, the status line says "offline", not a next-refresh time.
 23. (Nov 22) After pressing Save, the user is back on the Home screen. The **Notification Centre** gets "Download started" (with a progress bar if it takes time; just the notification if quick) and another notification when it is **finished**.
 
+## Save card and panels (Nov 22, round two)
+
+24. (Nov 22) While tracing the area, **two fingers move and zoom the map**; one finger draws.
+25. (Nov 22) The Save for offline card **starts partly up from the bottom**, like the weather card (not all the way down): it shows the title, the area and map size, the time strip, and a **Save data button at the bottom**. The button is there once the area is drawn and layers chosen. **Redraw removes the current tracing**.
+26. (Nov 22) The map panel's Ground has **Terrain and Satellite** (both always offered; Satellite waits for its picture to load). The **phone tests button and feature are gone**.
+27. (Nov 22) The map panel has a **3D ANIMATIONS** section: Clouds, Wind, Saved data wall (a wall that forms around the saved area, like the Great Wall of China), Water (waves and moving water), Trees, and **Sync map day/night time** (moved here). The unbuilt ones show dimmed with "Soon".
+28. (Nov 22) The settings window's buttons have **icons**.
+
 ## Changed
 
 - Rule 8: Ground had three tiles, Plain | Shaded terrain | Satellite (Satellite dimmed "Soon" until it worked), and rule 8a greyed the sun toggle out on Plain, until Nov 22.

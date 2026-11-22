@@ -27,6 +27,8 @@ export interface MapPanelState {
 
 /** Overlay tiles whose data is not on the map yet: shown, dimmed, marked "Soon". */
 const SOON_OVERLAYS = ['Rain/snow line', 'Freezing line'];
+/** The 3D animations Kaden asked for (Nov 22), until each is built. */
+const SOON_ANIMATIONS = ['Clouds', 'Wind', 'Saved data wall', 'Water', 'Trees'];
 
 /** Change map settings, redraw the map, and remember the choice. */
 function setMap(change: Partial<MapSettings>): void {
@@ -112,17 +114,13 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   const buildingsChip = buildings ? chip('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }) : null;
   if (buildings && buildingsChip) { buildingsChip.disabled = !state.terrain3d; buildings.append(buildingsChip); }
 
-  // Ground: big tiles, one selected at a time: Terrain, and Satellite once the map has the picture loaded
-  // (Kaden, Nov 22: Plain is gone, and only what works is shown). 'shaded' is the map settings' name for Terrain.
+  // Ground: big tiles, one selected at a time: Terrain and Satellite (Kaden, Nov 22; Plain is gone).
+  // 'shaded' is the map settings' name for Terrain. Satellite is always offered; while its picture is
+  // still loading it waits, then switches on by itself.
   const ground = document.createElement('div');
   ground.className = 'ground-grid';
-  const choices: { id: MapSettings['ground']; label: string }[] = [{ id: 'shaded', label: 'Terrain' }];
-  if (satelliteReady()) choices.push({ id: 'satellite', label: 'Satellite' });
-  ground.style.gridTemplateColumns = `repeat(${choices.length}, minmax(0, 1fr))`;
+  const choices: { id: MapSettings['ground']; label: string }[] = [{ id: 'shaded', label: 'Terrain' }, { id: 'satellite', label: 'Satellite' }];
   const current = m.ground === 'satellite' && satelliteReady() ? 'satellite' : 'shaded';
-  // Sync map day/night time: the map's sun and shadows follow the time scrubber, on Terrain and on Satellite.
-  const sun = tile('Sync map day/night time', m.sun, (on) => setMap({ sun: on }));
-  sun.id = 'sun-switch';
   const groundBtns = choices.map((c) => {
     const b = document.createElement('button');
     b.className = 'ground-tile';
@@ -137,6 +135,15 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     return b;
   });
   ground.append(...groundBtns);
+  const satTile = groundBtns[1]!;
+  if (!satelliteReady()) {
+    satTile.disabled = true;
+    satTile.insertAdjacentHTML('beforeend', '<em class="tile-soon">Loading…</em>');
+    const poll = window.setInterval(() => {
+      if (!ground.isConnected) { clearInterval(poll); return; }
+      if (satelliteReady()) { clearInterval(poll); satTile.disabled = false; satTile.querySelector('em')?.remove(); }
+    }, 500);
+  }
 
   // Overlays: toggle tiles. Contour lines and weather stations work as they did; the Maps section's overlays call mapSettings.
   const trailsOn = () => { const s = mapSettings.get(); return s.trails || s.huts || s.camps; };
@@ -167,15 +174,16 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     overlays.append(note);
   }
 
-  // Temporary, for building: the phone test page Claude asks for results
-  // from. Plain row from the existing components; remove when no longer needed.
-  const tests = document.createElement('div');
-  tests.className = 'group';
-  tests.innerHTML = '<span class="group-title">FOR TESTING</span><a class="link-row" href="spike.html">Phone tests<span class="link-row-note">Results to send to Claude</span></a>';
+  // 3D animations (Kaden, Nov 22). None are built yet, so they show dimmed and marked "Soon", except the
+  // day/night sync, which works: the map's sun and shadows follow the time scrubber, on Terrain and on Satellite.
+  const sun = tile('Sync map day/night time', m.sun, (on) => setMap({ sun: on }));
+  sun.id = 'sun-switch';
+  const animGrid = document.createElement('div');
+  animGrid.className = 'toggle-grid';
+  animGrid.append(sun, ...SOON_ANIMATIONS.map((l) => tile(l, false, () => undefined, true)));
 
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
-  wrap.append(section('VIEW', view, ...(buildings ? [buildings] : [])), section('GROUND', ground, sun), overlays);
-  wrap.append(tests);
+  wrap.append(section('VIEW', view, ...(buildings ? [buildings] : [])), section('GROUND', ground), overlays, section('3D ANIMATIONS', animGrid));
   return wrap;
 }

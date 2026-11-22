@@ -28,6 +28,13 @@ export const icons = {
   'layer-radar': svg(28, '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l6-6"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
   'layer-avalanche': svg(28, '<path d="M3 19.5 9.5 7.5l3.8 6.5 1.7-2.8 6 8.3H3z"/><path d="M7.4 11.6 9.5 10l1.9 1.4"/><circle cx="15.2" cy="8" r="0.9" fill="currentColor"/><circle cx="18.3" cy="10.3" r="0.9" fill="currentColor"/><circle cx="19.6" cy="6.6" r="0.9" fill="currentColor"/>'),
   'layer-air-quality': svg(28, '<path d="M3.5 12.5c2-2 3.5 2 5.5 0s3.5 2 5.5 0 3.5 2 5.5 0"/><path d="M3.5 17.5c2-2 3.5 2 5.5 0s3.5 2 5.5 0 3.5 2 5.5 0"/><circle cx="6" cy="7" r="1.1" fill="currentColor"/><circle cx="11" cy="5.2" r="1.1" fill="currentColor"/><circle cx="16" cy="7.4" r="1.1" fill="currentColor"/><circle cx="19.5" cy="5" r="1.1" fill="currentColor"/>'),
+  // Settings window icons (Kaden, Nov 22).
+  moon: svg(20, '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
+  sun: svg(20, '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>'),
+  phone: svg(20, '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>'),
+  download: svg(20, '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>'),
+  degC: svg(20, '<circle cx="6" cy="6.5" r="1.6"/><path d="M19 9.5a5.5 5.5 0 1 0 0 8"/>'),
+  degF: svg(20, '<circle cx="6" cy="6.5" r="1.6"/><path d="M18.5 8.5H12v10M12 13h5"/>'),
   info: svg(20, '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.6" fill="currentColor"/>'),
   'pin-small': svg(14, '<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>', 2),
 } as const;

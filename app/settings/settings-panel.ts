@@ -42,14 +42,15 @@ function note(text: string): HTMLParagraphElement {
   return p;
 }
 
-function segmented<T extends string>(name: string, options: { value: T; label: string }[], current: T, onPick: (v: T) => void): HTMLElement {
+function segmented<T extends string>(name: string, options: { value: T; label: string; icon?: string }[], current: T, onPick: (v: T) => void): HTMLElement {
   const seg = document.createElement('div');
   seg.className = 'segmented';
   seg.setAttribute('role', 'group');
   seg.setAttribute('aria-label', name);
   for (const o of options) {
     const b = document.createElement('button');
-    b.textContent = o.label;
+    if (o.icon) b.innerHTML = `<span class="seg-icon" aria-hidden="true">${o.icon}</span>`;
+    b.append(document.createTextNode(o.label));
     b.dataset.value = o.value;
     b.setAttribute('aria-pressed', String(o.value === current));
     b.addEventListener('click', () => {
@@ -98,20 +99,21 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
 
   const units = group('UNITS');
   const unitNote = note(UNIT_NOTE[state.units]);
-  units.append(segmented<UnitSystem>('Units', [{ value: 'metric', label: 'Metric' }, { value: 'imperial', label: 'Imperial' }], state.units, (u) => {
+  units.append(segmented<UnitSystem>('Units', [{ value: 'metric', label: 'Metric', icon: icons.degC }, { value: 'imperial', label: 'Imperial', icon: icons.degF }], state.units, (u) => {
     unitNote.textContent = UNIT_NOTE[u];
     h.setUnits(u);
   }), unitNote);
 
   const theme = group('THEME');
-  theme.append(segmented<ThemeChoice>('Theme', [{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }, { value: 'system', label: 'Match phone' }], state.theme, h.setTheme));
+  theme.append(segmented<ThemeChoice>('Theme', [{ value: 'dark', label: 'Dark', icon: icons.moon }, { value: 'light', label: 'Light', icon: icons.sun }, { value: 'system', label: 'Match phone', icon: icons.phone }], state.theme, h.setTheme));
 
   // Saved data: one button to save, and what is saved below it; swipe a row left to delete.
   const saved = group('SAVED DATA');
   const save = document.createElement('button');
   save.className = 'wide-button';
   save.id = 'save-data';
-  save.textContent = 'Save data';
+  save.innerHTML = `<span class="btn-icon" aria-hidden="true">${icons.download}</span>`;
+  save.append(document.createTextNode('Save data'));
   save.disabled = !h.saved.canSave;
   save.addEventListener('click', () => h.saved.save());
   saved.append(save);
@@ -139,7 +141,7 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
   const fold = document.createElement('button');
   fold.className = 'fold-row';
   fold.setAttribute('aria-expanded', 'false');
-  fold.innerHTML = '<span>Credits and licences</span><span class="fold-chevron" aria-hidden="true"></span>';
+  fold.innerHTML = `<span class="fold-label"><span class="btn-icon" aria-hidden="true">${icons.info}</span>Credits and licences</span><span class="fold-chevron" aria-hidden="true"></span>`;
   fold.querySelector('.fold-chevron')!.innerHTML = icons.chevron;
   const body = document.createElement('div');
   body.className = 'fold-body';

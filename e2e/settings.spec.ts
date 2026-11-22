@@ -135,6 +135,21 @@ test('save for offline: draw the area, pull the card up, save; the bell tells th
   await page.mouse.up();
   await expect(page.locator('.ofl-summary')).toContainText(/Area .* km² · map /);
 
+  // Partly up, like the weather card: the Save button is at the bottom without pulling the card up.
+  await expect(card).toHaveAttribute('data-state', 'peek');
+  await expect(page.locator('.ofl-go')).toBeVisible();
+  await expect(page.locator('.ofl-frame')).toBeVisible();
+
+  // Redraw removes the tracing at once and waits for a new one.
+  await page.locator('.ofl-redraw').click();
+  await expect(page.locator('.ofl-summary')).toContainText('Trace a closed shape');
+  expect(await page.evaluate(() => (window as unknown as { tempestMap: { getSource(id: string): { _data?: { features?: unknown[] } } | undefined } }).tempestMap.getSource('save-shape')?._data?.features?.length ?? 0)).toBe(0);
+  await page.mouse.move(...pts[0]!);
+  await page.mouse.down();
+  for (const p of pts.slice(1)) await page.mouse.move(p[0], p[1], { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.ofl-summary')).toContainText(/Area .* km² · map /);
+
   // Pulled up: the time frame, every layer, and the total on the Save button.
   await page.locator('.ofl-handle').click();
   await expect(card).toHaveAttribute('data-state', 'up');

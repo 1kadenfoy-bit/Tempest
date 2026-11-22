@@ -15,7 +15,11 @@ export interface Drawing { shape: Promise<SaveShape | null>; cancel(): void }
 
 const SHAPE_SOURCE = 'save-shape';
 
-/** One finger traces a closed shape on the map; it closes when the finger lifts. */
+/**
+ * One finger traces a closed shape on the map and it closes when the finger lifts. Two fingers move
+ * and zoom the map instead (the stroke in progress is dropped). The trace is kept in map coordinates,
+ * so it stays on the ground while the map moves.
+ */
 export function startDrawing(map: MapLibreMap): Drawing {
   const pad = document.createElement('canvas');
   pad.className = 'draw-pad';
@@ -25,34 +29,64 @@ export function startDrawing(map: MapLibreMap): Drawing {
   const ctx = pad.getContext('2d')!;
   ctx.scale(ratio, ratio);
   document.body.append(pad);
-  let points: [number, number][] = [];
+  let trace: LngLat[] = [];
   let finish: (s: SaveShape | null) => void = () => undefined;
   const shape = new Promise<SaveShape | null>((res) => { finish = res; });
-  const end = (s: SaveShape | null) => { pad.remove(); finish(s); };
+  const end = (s: SaveShape | null) => { pad.remove(); map.off('move', paint); finish(s); };
 
-  const paint = () => {
+  function paint() {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
-    if (points.length < 2) return;
+    if (trace.length < 2) return;
     ctx.beginPath();
-    points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    trace.forEach((ll, i) => { const p = map.project(ll); if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); });
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 3;
     ctx.setLineDash([8, 6]);
     ctx.stroke();
+  }
+  map.on('move', paint);
+
+  const fingers = new Map<number, { x: number; y: number }>();
+  let gesture: { cx: number; cy: number; dist: number } | null = null;
+  const two = () => {
+    const [a, b] = [...fingers.values()] as [{ x: number; y: number }, { x: number; y: number }];
+    return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, dist: Math.hypot(a.x - b.x, a.y - b.y) };
   };
-  pad.addEventListener('pointerdown', (e) => { pad.setPointerCapture(e.pointerId); points = [[e.clientX, e.clientY]]; });
-  pad.addEventListener('pointermove', (e) => {
-    if (!points.length) return;
-    const last = points[points.length - 1]!;
-    if (Math.hypot(e.clientX - last[0], e.clientY - last[1]) >= 6) { points.push([e.clientX, e.clientY]); paint(); }
+  pad.addEventListener('pointerdown', (e) => {
+    pad.setPointerCapture(e.pointerId);
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size === 1) { const p = map.unproject([e.clientX, e.clientY]); trace = [[p.lng, p.lat]]; }
+    else if (fingers.size === 2) { trace = []; paint(); gesture = two(); }
   });
-  pad.addEventListener('pointerup', () => {
-    if (points.length < 12) { points = []; paint(); return; }
-    const step = Math.max(1, Math.ceil(points.length / 200));
-    const ring: LngLat[] = points.filter((_, i) => i % step === 0).map(([x, y]) => { const p = map.unproject([x, y]); return [p.lng, p.lat]; });
+  pad.addEventListener('pointermove', (e) => {
+    if (!fingers.has(e.pointerId)) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size === 2 && gesture) {
+      // Two fingers: move the map with the middle point, and zoom with the spread.
+      const now = two();
+      map.panBy([gesture.cx - now.cx, gesture.cy - now.cy], { animate: false });
+      if (gesture.dist > 0 && now.dist > 0) map.setZoom(map.getZoom() + Math.log2(now.dist / gesture.dist), {});
+      gesture = now;
+      return;
+    }
+    if (fingers.size === 1 && trace.length) {
+      const last = map.project(trace[trace.length - 1]!);
+      if (Math.hypot(e.clientX - last.x, e.clientY - last.y) >= 6) { const p = map.unproject([e.clientX, e.clientY]); trace.push([p.lng, p.lat]); paint(); }
+    }
+  });
+  const lift = (e: PointerEvent) => {
+    const was = fingers.size;
+    fingers.delete(e.pointerId);
+    gesture = null;
+    if (was !== 1) return; // the end of a two-finger move closes nothing
+    if (trace.length < 12) { trace = []; paint(); return; }
+    const step = Math.max(1, Math.ceil(trace.length / 200));
+    const ring: LngLat[] = trace.filter((_, i) => i % step === 0);
     const lngs = ring.map((p) => p[0]), lats = ring.map((p) => p[1]);
     end({ outline: ring, bbox: [Math.min(...lngs), Math.min(...lats), Math.max(...lngs), Math.max(...lats)] });
-  });
+  };
+  pad.addEventListener('pointerup', lift);
+  pad.addEventListener('pointercancel', (e) => { fingers.delete(e.pointerId); gesture = null; trace = []; paint(); });
   return { shape, cancel: () => end(null) };
 }
 

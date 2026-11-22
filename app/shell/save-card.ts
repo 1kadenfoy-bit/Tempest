@@ -46,12 +46,17 @@ export function openSaveCard(onShowSaved: () => void): void {
       </div>
       <div class="ofl-layers"><span class="group-title">LAYERS</span><div class="ofl-rows"></div></div>
     </div>
-    <div class="ofl-foot"><button class="ofl-go" type="button"></button></div>`;
+    `;
   document.body.append(card);
+  // The Save button sits at the bottom of the screen whenever the card is showing, tucked away or not.
+  const foot = document.createElement('div');
+  foot.className = 'ofl-foot';
+  foot.innerHTML = '<button class="ofl-go" type="button"></button>';
+  document.body.append(foot);
 
   const $q = <T extends HTMLElement>(s: string) => card.querySelector<T>(s)!;
   const summary = $q('.ofl-summary');
-  const go = $q<HTMLButtonElement>('.ofl-go');
+  const go = foot.querySelector<HTMLButtonElement>('.ofl-go')!;
 
   // ── State ───────────────────────────────────────────────────────────
   let shape: SaveShape | null = null;
@@ -70,7 +75,9 @@ export function openSaveCard(onShowSaved: () => void): void {
   document.body.append(probe);
   const heights = () => {
     const inset = probe.offsetHeight;
-    const peekH = $q('.ofl-handle').offsetHeight + $q('.ofl-head').offsetHeight + summary.offsetHeight + 4 + inset;
+    // Partly up, like the weather card: the title, the area and map size, the time strip, and the Save button.
+    const time = $q('.ofl-time');
+    const peekH = time.offsetTop + time.offsetHeight + 8 + foot.offsetHeight;
     return { tucked: $q('.ofl-handle').offsetHeight + 8 + inset, peek: peekH };
   };
   const offsetFor = (s: CardState) => {
@@ -80,6 +87,7 @@ export function openSaveCard(onShowSaved: () => void): void {
   const place = () => {
     if (card.dataset.dragging) return;
     card.style.transform = `translateY(${offsetFor(cardState)}px)`;
+    foot.hidden = cardState === 'tucked';
   };
   const setCard = (s: CardState) => { cardState = s; card.dataset.state = s; place(); };
 
@@ -285,6 +293,10 @@ export function openSaveCard(onShowSaved: () => void): void {
   };
   $q('.ofl-redraw').addEventListener('click', () => {
     if (drawing) { drawing.cancel(); return; }
+    // Redraw removes the current tracing, then waits for a new one.
+    shape = null;
+    est = null;
+    showShape(S.map, null);
     begin();
   });
   const close = () => {
@@ -293,6 +305,7 @@ export function openSaveCard(onShowSaved: () => void): void {
     clearTimeout(estTimer);
     showShape(S.map, null);
     probe.remove();
+    foot.remove();
     card.remove();
     delete document.body.dataset.saving;
   };

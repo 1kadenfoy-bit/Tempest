@@ -627,7 +627,7 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .fold-body[hidden] { display: none; }
 
 /* ── Map panel: Ground tiles and the "Soon" mark on tiles whose data is not built yet. ── */
-.ground-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-controls); }
+.ground-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }
 .ground-tile {
   min-height: 72px; padding: 8px; border-radius: var(--radius-button-tile-row); border: 1px solid var(--stroke);
   background: var(--surface); color: var(--ink); font: var(--type-secondary); font-weight: 600;
@@ -690,7 +690,7 @@ body[data-saving='true'] .sheet, body[data-saving='true'] .thumbs { visibility: 
 .ofl-redraw { min-height: var(--touch-min); padding: 0 12px; font: var(--type-secondary); text-decoration: underline; text-underline-offset: 3px; }
 .ofl-close { width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 .ofl-summary { margin: 0; padding: 0 16px 4px; font: var(--type-caption); color: var(--ink-2); }
-.ofl-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding: 8px 16px 8px; display: flex; flex-direction: column; gap: 16px; scrollbar-width: none; }
+.ofl-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding: 8px 16px calc(var(--bottom-inset) + 84px); display: flex; flex-direction: column; gap: 16px; scrollbar-width: none; }
 .ofl-scroll::-webkit-scrollbar { display: none; }
 .ofl-time { display: flex; flex-direction: column; gap: 8px; }
 .ofl-axis { position: relative; height: 64px; border-radius: var(--radius-button-tile-row); background: var(--fill-control); touch-action: none; }
@@ -716,7 +716,14 @@ body[data-saving='true'] .sheet, body[data-saving='true'] .thumbs { visibility: 
 .ofl-size { grid-column: 3; justify-self: end; font: var(--type-caption); color: var(--ink); }
 .ofl-row[data-on='false'] .ofl-name, .ofl-row[data-on='false'] .ofl-note { color: var(--ink-2); font-weight: 400; }
 .ofl-card[data-estimating='true'] .ofl-size { opacity: 0.5; }
-.ofl-foot { flex: 0 0 auto; padding: 8px 16px calc(var(--bottom-inset) + 4px); border-top: 1px solid var(--stroke); }
+.ofl-foot { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; padding: 8px 16px calc(var(--bottom-inset) + 4px); background: var(--sheet); border-top: 1px solid var(--stroke); }
+.ofl-foot[hidden] { display: none; }
 .ofl-go { width: 100%; height: 56px; border-radius: var(--radius-button-tile-row); background: var(--ink); color: var(--surface); font: var(--type-body); font-weight: 600; }
 .ofl-go:disabled { background: var(--fill-control); color: var(--ink-2); }
-.ofl-card:not([data-state='up']):not([data-dragging]) .ofl-scroll, .ofl-card:not([data-state='up']):not([data-dragging]) .ofl-foot { visibility: hidden; }
+.ofl-card:not([data-state='up']):not([data-dragging]) .ofl-layers { visibility: hidden; }
+
+/* Icons on the settings window's buttons. */
+.seg-icon, .btn-icon { display: inline-flex; vertical-align: middle; margin-right: 6px; }
+.segmented button { display: inline-flex; align-items: center; justify-content: center; }
+.wide-button { display: inline-flex; align-items: center; justify-content: center; }
+.fold-label { display: inline-flex; align-items: center; }
