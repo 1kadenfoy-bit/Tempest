@@ -1,15 +1,12 @@
 // The Notification Centre: the bell's one panel. Weather alerts come first
-// (Safety draws that section, exactly as issued, through renderAlertsSection),
+// (app/alerts draws that section, exactly as issued, through renderAlertsSection),
 // then the app's own notifications, newest first. The alert badge keeps its
 // meaning; unread app notifications add a small dot on the bell.
 import { formatMinutesAgo } from '../../core/units/format';
-import * as alertsModule from '../alerts/alerts';
+import { renderAlertsSection } from '../alerts/alerts';
 import { icons } from '../shell/icons';
 import { isOpenFrom, openPanel } from '../shell/panel';
 import { markAllRead, notifications, onNotificationsChange, unreadCount, dismiss, type AppNotification } from './store';
-
-/** Safety's section for the panel. Until it exists, the centre says so and points at the older alerts panel. */
-const alertsSection = (alertsModule as unknown as { renderAlertsSection?: (container: HTMLElement) => void }).renderAlertsSection;
 
 const DOWNLOAD = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>';
 const INFO = icons.info;
@@ -43,10 +40,7 @@ function row(n: AppNotification, now: Date): HTMLElement {
   return r;
 }
 
-/** Set when the stand-in note's button asks for the older alerts panel: that click is let through. */
-let letThrough = false;
-
-function body(bell: HTMLElement): HTMLElement {
+function body(): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
 
@@ -56,14 +50,7 @@ function body(bell: HTMLElement): HTMLElement {
   const slot = document.createElement('div');
   slot.className = 'alerts-slot';
   alerts.append(slot);
-  if (alertsSection) alertsSection(slot);
-  else {
-    const stand = document.createElement('button');
-    stand.className = 'link-row';
-    stand.innerHTML = '<span>Weather alerts at the pin</span><span class="link-row-note">As issued by Environment Canada</span>';
-    stand.addEventListener('click', () => { letThrough = true; bell.click(); letThrough = false; });
-    slot.append(stand);
-  }
+  const stopAlerts = renderAlertsSection(slot);
 
   const mine = document.createElement('div');
   mine.className = 'group';
@@ -83,13 +70,13 @@ function body(bell: HTMLElement): HTMLElement {
   draw();
   const off = onNotificationsChange(() => { draw(); markAllRead(); });
   // The panel's own close button and scrim end the subscription through onClose (see open()).
-  (wrap as HTMLElement & { stop?: () => void }).stop = off;
+  (wrap as HTMLElement & { stop?: () => void }).stop = () => { off(); stopAlerts(); };
   wrap.append(alerts, mine);
   return wrap;
 }
 
 function open(bell: HTMLElement): void {
-  const b = body(bell);
+  const b = body();
   markAllRead();
   openPanel({
     origin: bell,
@@ -106,13 +93,5 @@ export function setupNotifications(bell: HTMLElement): void {
   const syncDot = () => { bell.dataset.unread = String(unreadCount() > 0); };
   onNotificationsChange(syncDot);
   syncDot();
-  // Ahead of the alerts' own click handler: with Safety's section the centre always opens; until then the older
-  // alerts panel stays the bell's panel unless the app has notifications to show.
-  bell.addEventListener('click', (e) => {
-    if (letThrough) return;
-    if (!alertsSection && notifications().length === 0) return;
-    e.stopImmediatePropagation();
-    if (isOpenFrom(bell)) return;
-    open(bell);
-  }, true);
+  bell.addEventListener('click', () => { if (!isOpenFrom(bell)) open(bell); });
 }
