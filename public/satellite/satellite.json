@@ -16,6 +16,288 @@
  "maxzoom": 14,
  "files": [
   {
+   "file": "bc-overview.pmtiles",
+   "minzoom": 0,
+   "maxzoom": 7,
+   "tile": null,
+   "bytes": 1604674
+  },
+  {
+   "file": "bc-6-10-18.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    10,
+    18
+   ],
+   "bytes": 1420669
+  },
+  {
+   "file": "bc-6-10-19.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    10,
+    19
+   ],
+   "bytes": 3542668
+  },
+  {
+   "file": "bc-6-10-20.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    10,
+    20
+   ],
+   "bytes": 4652150
+  },
+  {
+   "file": "bc-6-10-21.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    10,
+    21
+   ],
+   "bytes": 5297307
+  },
+  {
+   "file": "bc-6-10-22.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    10,
+    22
+   ],
+   "bytes": 1315664
+  },
+  {
+   "file": "bc-6-11-18.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    11,
+    18
+   ],
+   "bytes": 1080583
+  },
+  {
+   "file": "bc-6-11-19.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    11,
+    19
+   ],
+   "bytes": 2685914
+  },
+  {
+   "file": "bc-6-11-20.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    11,
+    20
+   ],
+   "bytes": 3313715
+  },
+  {
+   "file": "bc-6-11-21.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    11,
+    21
+   ],
+   "bytes": 4610082
+  },
+  {
+   "file": "bc-6-11-22.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    11,
+    22
+   ],
+   "bytes": 911095
+  },
+  {
+   "file": "bc-6-7-18.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    7,
+    18
+   ],
+   "bytes": 2175605
+  },
+  {
+   "file": "bc-6-7-19.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    7,
+    19
+   ],
+   "bytes": 1281343
+  },
+  {
+   "file": "bc-6-7-20.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    7,
+    20
+   ],
+   "bytes": 471064
+  },
+  {
+   "file": "bc-6-7-21.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    7,
+    21
+   ],
+   "bytes": 3825
+  },
+  {
+   "file": "bc-6-7-22.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    7,
+    22
+   ],
+   "bytes": 1076
+  },
+  {
+   "file": "bc-6-8-18.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    8,
+    18
+   ],
+   "bytes": 2111445
+  },
+  {
+   "file": "bc-6-8-19.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    8,
+    19
+   ],
+   "bytes": 5045289
+  },
+  {
+   "file": "bc-6-8-20.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    8,
+    20
+   ],
+   "bytes": 2156371
+  },
+  {
+   "file": "bc-6-8-21.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    8,
+    21
+   ],
+   "bytes": 519261
+  },
+  {
+   "file": "bc-6-8-22.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    8,
+    22
+   ],
+   "bytes": 1079
+  },
+  {
+   "file": "bc-6-9-18.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    9,
+    18
+   ],
+   "bytes": 1506748
+  },
+  {
+   "file": "bc-6-9-19.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    9,
+    19
+   ],
+   "bytes": 5370905
+  },
+  {
+   "file": "bc-6-9-20.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    9,
+    20
+   ],
+   "bytes": 4824753
+  },
+  {
+   "file": "bc-6-9-21.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    9,
+    21
+   ],
+   "bytes": 3962887
+  },
+  {
+   "file": "bc-6-9-22.pmtiles",
+   "minzoom": 8,
+   "maxzoom": 10,
+   "tile": [
+    6,
+    9,
+    22
+   ],
+   "bytes": 279540
+  },
+  {
    "file": "close-cypress-seymour.pmtiles",
    "minzoom": 11,
    "maxzoom": 14,

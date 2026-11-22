@@ -43,12 +43,21 @@ export function setupLongPress(map: MapLibreMap, onPress: (point: { x: number; y
     const at = tracker.dueAt();
     if (at === null) return;
     timer = window.setTimeout(() => {
-      // The tracker works in page pixels; the map's points are inside its box.
-      const p = tracker.due(performance.now());
-      if (!p) { arm(id); return; }
-      // Set before the window opens: its scrim takes the lift.
-      firedPointer = id;
-      if (!fire(local(p.x, p.y))) firedPointer = null;
+      // Let the finger's waiting moves and lift arrive first. On a busy page
+      // the browser holds moves back to the next frame, and a lift can queue
+      // behind this timer: a pan or a quick tap would then read as a hold
+      // (Nov 21, seen on GitHub's slow test machines). Decide after the next
+      // frame, once those have been handled.
+      requestAnimationFrame(() => {
+        timer = window.setTimeout(() => {
+          // The tracker works in page pixels; the map's points are inside its box.
+          const p = tracker.due(performance.now());
+          if (!p) { arm(id); return; }
+          // Set before the window opens: its scrim takes the lift.
+          firedPointer = id;
+          if (!fire(local(p.x, p.y))) firedPointer = null;
+        }, 0);
+      });
     }, Math.max(0, at - performance.now()) + 5);
   };
 
@@ -60,6 +69,15 @@ export function setupLongPress(map: MapLibreMap, onPress: (point: { x: number; y
   }, { passive: true });
   box.addEventListener('pointermove', (e) => tracker.move(e.pointerId, e.clientX, e.clientY), { passive: true });
   const lift = (e: PointerEvent) => {
+    // A busy page can hand over the lift before the hold timer has decided.
+    // When the finger was down, still, for the full hold (by the lift's own
+    // time stamp), it was a hold: open now. A lift sooner is a tap.
+    const at = tracker.dueAt();
+    if (at !== null && tracker.holding(e.pointerId) && e.timeStamp >= at) {
+      const p = tracker.due(e.timeStamp);
+      clearTimeout(timer);
+      if (p && fire(local(p.x, p.y))) swallowUntil = performance.now() + 400;
+    }
     tracker.up(e.pointerId);
     if (firedPointer === e.pointerId) {
       firedPointer = null;

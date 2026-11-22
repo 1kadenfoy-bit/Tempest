@@ -52,3 +52,17 @@ describe('press-and-hold on the map', () => {
     expect(p.due(1000 + HOLD_MS)).toEqual({ x: 50, y: 60 });
   });
 });
+
+describe('holding', () => {
+  it('names the pointer held still, until it moves away or lifts', () => {
+    const t = new PressTracker(500, 10);
+    t.down(1, 100, 100, 0);
+    expect(t.holding(1)).toBe(true);
+    expect(t.holding(2)).toBe(false);
+    t.move(1, 130, 100);
+    expect(t.holding(1)).toBe(false);
+    t.down(3, 0, 0, 1000);
+    t.up(3);
+    expect(t.holding(3)).toBe(false);
+  });
+});
