@@ -26,6 +26,7 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         spike: resolve(import.meta.dirname, 'spike.html'),
+        dataViewer: resolve(import.meta.dirname, 'data-viewer.html'),
       },
     },
   },

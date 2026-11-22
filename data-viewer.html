@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tempest data viewer</title>
+    <link rel="stylesheet" href="/app/data-viewer/viewer.css" />
+  </head>
+  <body>
+    <main>
+      <a href="./">‹ Back to the map</a>
+      <h1>Data viewer</h1>
+      <p>What the data section has, as plain tables. Nothing here is fetched until you tap a button.</p>
+      <form id="place">
+        <label>Latitude <input id="lat" inputmode="decimal" value="49.3895" /></label>
+        <label>Longitude <input id="lon" inputmode="decimal" value="-122.948" /></label>
+      </form>
+
+      <h2>Cloud forecast at this place</h2>
+      <p>Percent of the sky covered, hour by hour, from each model through the point forecast. Cloud base and top are not offered by any of these models.</p>
+      <button id="clouds">Load clouds</button>
+      <div id="clouds-out"></div>
+
+      <h2>Cloud fields in each model's map files</h2>
+      <p>Which cloud values a whole map view can be read from, taken from the models' own file lists.</p>
+      <button id="fields">Check map files</button>
+      <div id="fields-out"></div>
+
+      <h2>Save size estimate</h2>
+      <p>For a box around this place, 0.3 degrees wide, every layer, 24 hours from now. The base map size is counted from the box, not an outline.</p>
+      <button id="estimate">Estimate</button>
+      <div id="estimate-out"></div>
+    </main>
+    <script type="module" src="/app/data-viewer/main.ts"></script>
+  </body>
+</html>
