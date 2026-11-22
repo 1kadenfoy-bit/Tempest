@@ -22,7 +22,9 @@ The exact list is `weather` in `docs/sections/sections.json`.
 | Lines and wind on the terrain | `app/map/freezing-line.ts`, `app/map/wind-field.ts` |
 | Weather maths | `core/temperature/`, `core/wind/`, `core/precip/`, `core/elevation/`, `core/color/` |
 | Weather stations | `app/stations/`, `core/stations/`, `adapters/eccc-swob/`, `adapters/avcan-weather/` |
-| Browser tests | `e2e/temperature.spec.ts`, `wind.spec.ts`, `radar.spec.ts`, `stations.spec.ts` |
+| Avalanche: regions, bulletins, reports, ATES terrain ratings (from the Safety chat, Nov 22) | `app/avalanche/`, `layers/avalanche/`, `core/avalanche/`, `adapters/avalanche-canada/`, `adapters/avalanche-org/` (US, new), `public/ates/`, `tools/ates-index.mjs` |
+| Air quality and fires (from the Safety chat, Nov 22) | `app/air/`, `layers/air-quality/`, `core/air/`, `adapters/eccc-aqhi/`, `adapters/bc-wildfire/`, `adapters/openmeteo-air/`, `adapters/eccc-geomet/raqdps*` and `geotiff*` |
+| Browser tests | `e2e/temperature.spec.ts`, `wind.spec.ts`, `radar.spec.ts`, `stations.spec.ts`, `avalanche.spec.ts`, `ates.spec.ts`, `air-quality.spec.ts` |
 
 ## Connection points
 
@@ -52,8 +54,36 @@ The exact list is `weather` in `docs/sections/sections.json`.
 - **Sun and UV, and a new-snow totals map.**
 - **Colour scheme options** for Kaden to compare, from the same recorded day.
 - **Compare two models,** in `docs/04-milestones.md` and waiting for a design.
+- **From the Safety chat** (ask Kaden which comes first):
+  - **Avalanche Canada's daily forecasts** started Nov 25. Check the layer
+    against the first real ones.
+  - **US avalanche forecasts** (avalanche.org, the National Avalanche Center)
+    as a second source in the avalanche source menu. They are readable from
+    the browser. NWAC's observations are not: they need permission. Do not
+    build those without it.
+  - **BC Wildfire overlays:** fire danger rating, bans and restricted areas.
+  - **Air quality's open questions:** keep CAMS in the source menu? Smoke
+    only, or all PM2.5, by default?
 
 ## Rules for this section
+
+**Safety data is shown exactly as issued** (avalanche, terrain ratings, air
+quality, fire):
+- with its source, issue time and link;
+- never re-scored, recoloured or summarised by the app;
+- official danger and alert colours stay as issued, outside the app's ramps;
+- an expired bulletin says so, and its age is always shown.
+
+When a source's words or colours look odd, show them anyway and tell Kaden.
+For these sources, permission and terms come first:
+- read each source's terms before using it, and record them;
+- where a source asks to be contacted (Avalanche Canada), Kaden writes and you
+  draft;
+- never work around a source that refuses access;
+- online only unless the source allows saving. The latest bulletins and fires
+  may be kept automatically, with their fetch time.
+
+**For every layer:**
 
 - **Values reach the GPU as numbers** and are coloured on the device. Never
   bake colour into data.

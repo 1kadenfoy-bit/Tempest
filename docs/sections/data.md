@@ -35,7 +35,8 @@ Data work often has nothing to see in the app yet. Show Kaden:
 Drawing a new source nicely in the app is another section's job:
 - Weather on the map for weather;
 - Maps for places and routes;
-- Safety for issued bulletins.
+- Weather on the map for avalanche, air quality and fire bulletins;
+- Interface for weather alerts.
 
 They can start from your recorded sample before your work is integrated.
 

@@ -43,8 +43,7 @@ reads this file. The types they hand each other are in
 | --- | --- | --- |
 | Maps | Drawing tool: one finger traces, two fingers pan and zoom; closes the shape on lift; smooths and simplifies; shows the outline; Redraw and Clear. Also which map pieces cover a shape. | `app/map/draw-shape.ts`, `core/geo/shape-tiles.ts` (pure, tested) |
 | Data | The saving engine: estimate, save in the background with progress, saved list, delete. Auto picks each hour's model. Map pieces cut with Maps' `tilesForShape`. Removes the old save box, old list and leftover "saved data only" code once the new flow works. | `app/offline/**`, `core/offline/**` |
-| Interface | The card, the scrubber's save mode (frame with two handles), layer rows, the "Save data" entry in settings, the saved-areas list in settings (via Data's calls), and the Notification Centre. | `app/shell/**`, `app/settings/**`, new `app/notify/**` |
-| Safety | Weather alerts become one section of the Notification Centre, shown exactly as issued. The alert badge rules do not change. | `app/alerts/**` |
+| Interface | The card, the scrubber's save mode (frame with two handles), layer rows, the "Save data" entry in settings, the saved-areas list in settings (via Data's calls), the Notification Centre, and the weather alerts section in it, shown exactly as issued (the alerts were Safety's until Nov 22). | `app/shell/**`, `app/settings/**`, new `app/notify/**`, `app/alerts/**` |
 | Lead | This plan, `core/offline/save-request.ts`, `app/state.ts`, and combining. | |
 
 ## The calls between them
@@ -71,8 +70,8 @@ reads this file. The types they hand each other are in
   - `updateNotification(id, patch)`;
   - `dismiss(id)`.
 - The bell opens one panel:
-  1. Weather alerts first. Safety renders that section through
-     `renderAlertsSection(container)`, exactly as issued.
+  1. Weather alerts first, exactly as issued (`renderAlertsSection(container)`
+     in `app/alerts/`).
   2. Then the app's own notifications, newest first.
 - The badge:
   - The alert badge keeps its current meaning: the alert count, or the warning
@@ -93,8 +92,7 @@ engine's internals.
      shown on the data viewer page.
    - Interface: the Notification Centre and the card, built against the types
      with stand-in data.
-   - Safety: the alerts section.
-2. Each section hands off as usual.
+ 2. Each section hands off as usual.
 3. The lead combines them and wires the calls.
 4. Data removes the old save box and list, and the lead removes their wiring
    from `app/main.ts`.

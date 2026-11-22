@@ -1,7 +1,7 @@
 // The section check: what a section chat runs when Kaden is happy with its
 // work, before it writes its handoff note (docs/sections/README.md).
 //
-//   npm run check:section -- <section>        (maps, interface, weather, effects, data, safety)
+//   npm run check:section -- <section>        (maps, interface, weather, effects, data)
 //   npm run check:section -- <section> --area (the area check only, in seconds)
 //   npm run check:section -- <section> --no-browser
 //
