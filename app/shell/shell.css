@@ -656,3 +656,21 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 }
 @keyframes pin-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .pin-spinner { animation-duration: 3s; } }
+
+/* ── Notification Centre: the bell's dot, and the app's own notifications. ── */
+.alert-badge[data-unread='true']::after {
+  content: ''; position: absolute; right: 2px; bottom: 2px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ink); border: 2px solid var(--surface);
+}
+.notice-list { display: flex; flex-direction: column; }
+.notice-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.notice-row + .notice-row { border-top: 1px solid var(--stroke); }
+.notice-icon { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.notice-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 10px; }
+.notice-words { font: var(--type-body); }
+.notice-time { font: var(--type-caption); color: var(--ink-2); }
+.notice-bar { display: block; height: 6px; margin-top: 6px; border-radius: 3px; background: var(--fill-control); overflow: hidden; }
+.notice-bar[hidden] { display: none; }
+.notice-bar span { display: block; height: 100%; background: var(--ink); border-radius: 3px; transition: width 200ms ease; }
+.notice-action { align-self: flex-start; min-height: var(--touch-min); display: flex; align-items: center; color: var(--ink); font: var(--type-secondary); text-decoration: underline; text-underline-offset: 3px; }
+.notice-dismiss { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
