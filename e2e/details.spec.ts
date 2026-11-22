@@ -35,17 +35,15 @@ test('temperature details: the standard cards in order, and settings remembered'
   await expect(d.locator('.details-footer')).toContainText('Corrected to terrain from pressure levels');
   await page.screenshot({ path: 'test-results/screens/m5-temperature-up.png' });
 
-  // Settings: Feels-like map and the freezing level line, remembered.
+  // Settings: the Feels-like map, remembered (the lines have their own buttons in the map panel).
   await page.click('#layer-settings');
   const panel = page.getByRole('dialog', { name: 'Temperature settings' });
   await panel.getByRole('button', { name: 'Feels-like' }).click();
-  await panel.getByRole('switch', { name: 'Freezing level line' }).click();
-  await expect(panel.getByRole('switch', { name: 'Freezing level line' })).toHaveAttribute('aria-checked', 'false');
   await page.screenshot({ path: 'test-results/screens/m5-temperature-settings.png' });
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerSettings: Record<string, Record<string, unknown>> }).layerSettings.temperature);
-  expect(saved).toEqual({ map: 'feels', freezingLine: false });
+  expect(saved).toEqual({ map: 'feels' });
   expect(errors).toEqual([]);
 });
 
