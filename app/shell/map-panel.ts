@@ -57,20 +57,6 @@ function tile(label: string, on: boolean, onChange: (on: boolean) => void, soon 
   return b;
 }
 
-/** A small option: a chip that is on or off, shown under its tile while the tile is on. */
-function chip(label: string, on: boolean, onChange: (on: boolean) => void): HTMLButtonElement {
-  const b = document.createElement('button');
-  b.className = 'option-chip';
-  b.setAttribute('aria-pressed', String(on));
-  b.textContent = label;
-  b.addEventListener('click', () => {
-    const next = b.getAttribute('aria-pressed') !== 'true';
-    b.setAttribute('aria-pressed', String(next));
-    onChange(next);
-  });
-  return b;
-}
-
 function section(title: string, ...kids: HTMLElement[]): HTMLElement {
   const g = document.createElement('div');
   g.className = 'group';
@@ -90,7 +76,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   view.className = 'segmented';
   view.setAttribute('role', 'group');
   view.setAttribute('aria-label', 'View');
-  const buildings = state.buildings3d === undefined ? null : Object.assign(document.createElement('div'), { className: 'option-row' });
+  // 3D buildings is a tile in the 3D animations section, greyed out in 2D.
+  let buildingsTile: HTMLButtonElement | null = null;
   const viewBtns = (['2D', '3D'] as const).map((v) => {
     const b = document.createElement('button');
     b.textContent = v;
@@ -103,17 +90,12 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
       if (three === Boolean(state.terrain3d)) return;
       state.terrain3d = three;
       viewBtns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      buildingsChip?.setAttribute('aria-disabled', String(!three));
-      if (buildingsChip) buildingsChip.disabled = !three;
+      if (buildingsTile) buildingsTile.disabled = !three;
       onChange({ ...state });
     });
     return b;
   });
   view.append(...viewBtns);
-  // Nothing appears or disappears: the option is always there, greyed out in 2D.
-  const buildingsChip = buildings ? chip('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }) : null;
-  if (buildings && buildingsChip) { buildingsChip.disabled = !state.terrain3d; buildings.append(buildingsChip); }
-
   // Ground: big tiles, one selected at a time: Terrain and Satellite (Kaden, Nov 22; Plain is gone).
   // 'shaded' is the map settings' name for Terrain. Satellite is always offered; while its picture is
   // still loading it waits, then switches on by itself.
@@ -180,10 +162,14 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   sun.id = 'sun-switch';
   const animGrid = document.createElement('div');
   animGrid.className = 'toggle-grid';
-  animGrid.append(sun, ...SOON_ANIMATIONS.map((l) => tile(l, false, () => undefined, true)));
+  if (state.buildings3d !== undefined) {
+    buildingsTile = tile('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); });
+    buildingsTile.disabled = !state.terrain3d;
+  }
+  animGrid.append(sun, ...(buildingsTile ? [buildingsTile] : []), ...SOON_ANIMATIONS.map((l) => tile(l, false, () => undefined, true)));
 
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
-  wrap.append(section('VIEW', view, ...(buildings ? [buildings] : [])), section('GROUND', ground), overlays, section('3D ANIMATIONS', animGrid));
+  wrap.append(section('VIEW', view), section('GROUND', ground), overlays, section('3D ANIMATIONS', animGrid));
   return wrap;
 }
