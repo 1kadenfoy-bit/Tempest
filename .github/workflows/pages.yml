@@ -53,7 +53,7 @@ jobs:
         env:
           REPO: ${{ github.event.repository.name }}
         run: |
-          for s in maps interface weather effects data safety; do
+          for s in maps interface weather effects data; do
             b="claude/tempest-$s"
             git fetch --depth=1 origin "$b" 2>/dev/null || { echo "no branch $b yet"; continue; }
             rm -rf "../wt-$s"

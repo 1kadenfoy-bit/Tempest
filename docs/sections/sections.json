@@ -23,7 +23,8 @@
         "docs/reports/maps-*/**",
         "docs/handoffs/maps/**",
         "docs/reports/3d/**",
-        "docs/wishes/maps.md"
+        "docs/wishes/maps.md",
+        "core/geo/shape-tiles*"
       ],
       "except": [
         "app/map/freezing-line.ts",
@@ -57,13 +58,19 @@
         "docs/reports/interface-*/**",
         "docs/handoffs/interface/**",
         "docs/reports/summary/**",
-        "docs/wishes/interface.md"
+        "docs/wishes/interface.md",
+        "app/notify/**",
+        "app/alerts/**",
+        "core/alerts/**",
+        "adapters/eccc-alerts/**",
+        "e2e/alerts.spec.ts"
       ],
       "specs": [
         "e2e/shell.spec.ts",
         "e2e/settings.spec.ts",
         "e2e/summary.spec.ts",
-        "e2e/details.spec.ts"
+        "e2e/details.spec.ts",
+        "e2e/alerts.spec.ts"
       ]
     },
     "weather": {
@@ -98,13 +105,41 @@
         "docs/handoffs/weather/**",
         "docs/reports/stations/**",
         "docs/reports/radar/**",
-        "docs/wishes/weather.md"
+        "docs/wishes/weather.md",
+        "app/avalanche/**",
+        "app/air/**",
+        "layers/avalanche/**",
+        "layers/air-quality/**",
+        "core/avalanche/**",
+        "core/air/**",
+        "adapters/avalanche-canada/**",
+        "adapters/eccc-aqhi/**",
+        "adapters/bc-wildfire/**",
+        "adapters/openmeteo-air/**",
+        "adapters/eccc-geomet/raqdps*",
+        "adapters/eccc-geomet/geotiff*",
+        "adapters/eccc-geomet/fixtures/raqdps*",
+        "adapters/avalanche-org/**",
+        "public/ates/**",
+        "tools/ates-index.mjs",
+        "e2e/avalanche.spec.ts",
+        "e2e/ates.spec.ts",
+        "e2e/air-quality.spec.ts",
+        "e2e/avalanche-test-photo.png",
+        "docs/reports/safety-*/**",
+        "docs/handoffs/safety/**",
+        "docs/reports/air-quality/**",
+        "docs/reports/ates/**",
+        "docs/reports/avalanche/**"
       ],
       "specs": [
         "e2e/temperature.spec.ts",
         "e2e/wind.spec.ts",
         "e2e/radar.spec.ts",
-        "e2e/stations.spec.ts"
+        "e2e/stations.spec.ts",
+        "e2e/avalanche.spec.ts",
+        "e2e/ates.spec.ts",
+        "e2e/air-quality.spec.ts"
       ]
     },
     "effects": {
@@ -147,8 +182,8 @@
         "public/recorded-sw.js",
         "recorded/**",
         "tools/record-weather.mjs",
-  "tools/build-satellite.py",
-  "public/satellite/**",
+        "tools/build-satellite.py",
+        "public/satellite/**",
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts",
         "docs/reports/data-*/**",
@@ -158,48 +193,6 @@
       "specs": [
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts"
-      ]
-    },
-    "safety": {
-      "title": "Safety",
-      "brief": "docs/sections/safety.md",
-      "paths": [
-        "app/avalanche/**",
-        "app/alerts/**",
-        "app/air/**",
-        "layers/avalanche/**",
-        "layers/air-quality/**",
-        "core/avalanche/**",
-        "core/alerts/**",
-        "core/air/**",
-        "adapters/avalanche-canada/**",
-        "adapters/eccc-alerts/**",
-        "adapters/eccc-aqhi/**",
-        "adapters/bc-wildfire/**",
-        "adapters/openmeteo-air/**",
-        "adapters/eccc-geomet/raqdps*",
-        "adapters/eccc-geomet/geotiff*",
-        "adapters/eccc-geomet/fixtures/raqdps*",
-        "adapters/avalanche-org/**",
-        "public/ates/**",
-        "tools/ates-index.mjs",
-        "e2e/avalanche.spec.ts",
-        "e2e/ates.spec.ts",
-        "e2e/alerts.spec.ts",
-        "e2e/air-quality.spec.ts",
-        "e2e/avalanche-test-photo.png",
-        "docs/reports/safety-*/**",
-        "docs/handoffs/safety/**",
-        "docs/reports/air-quality/**",
-        "docs/reports/ates/**",
-        "docs/reports/avalanche/**",
-        "docs/wishes/safety.md"
-      ],
-      "specs": [
-        "e2e/avalanche.spec.ts",
-        "e2e/ates.spec.ts",
-        "e2e/alerts.spec.ts",
-        "e2e/air-quality.spec.ts"
       ]
     }
   },
