@@ -68,7 +68,7 @@ the old wording moves to "Changed".
 27. (Nov 22) The map panel has a **3D ANIMATIONS** section: Clouds, Wind, Saved data wall (a wall that forms around the saved area, like the Great Wall of China), Water (waves and moving water), Trees, and **Sync map day/night time** (moved here). The unbuilt ones show dimmed with "Soon".
 28. (Nov 22) The settings window's buttons have **icons**.
 
-29. (Nov 22) In the map panel, **3D buildings is a tile in the 3D ANIMATIONS section** (greyed out in 2D), not under View. The Terrain and Satellite tiles are the same compact size as the other tiles. Every panel has extra room at the bottom so the last row can always be scrolled into view. (Icons beside every map panel button: designs sent for Kaden's approval, not built yet.)
+29. (Nov 22) In the map panel, **3D buildings is a tile in the 3D ANIMATIONS section** (greyed out in 2D), not under View. The Terrain and Satellite tiles are the same compact size as the other tiles. Every panel has extra room at the bottom so the last row can always be scrolled into view. Every map panel button has an icon beside its name (approved Nov 22): 2D folded map, 3D cube, Terrain mountain, Satellite globe with orbit, Trails/huts/camps tent, Peaks flagged mountain, Contour lines rings, Small roads dashed road, Ski resorts gondola, Park boundaries pine in a dashed ring, Regional boundaries dashed region, Municipal boundaries city skyline, Weather stations mast with wind cups, Rain/snow line (snowflake above, drop below), Freezing line, Day/night sync half sun half moon, 3D buildings, Clouds, Wind, Saved data wall, Water, Trees.
 
 ## Changed
 

@@ -381,8 +381,8 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   font: 500 13px var(--font-body);
 }
 .toggle-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
-.toggle-tile svg { visibility: hidden; }
-.toggle-tile[aria-pressed='true'] svg { visibility: visible; }
+.toggle-tile > svg { visibility: hidden; }
+.toggle-tile[aria-pressed='true'] > svg { visibility: visible; }
 /* A note beside a switch that cannot work now (map panel: Weather stations offline). */
 .toggle-tile:disabled { opacity: 0.5; }
 .toggle-note { align-self: center; font: var(--type-caption); color: var(--ink-2); }
@@ -727,3 +727,13 @@ body[data-saving='true'] .sheet, body[data-saving='true'] .thumbs { visibility: 
 .segmented button { display: inline-flex; align-items: center; justify-content: center; }
 .wide-button { display: inline-flex; align-items: center; justify-content: center; }
 .fold-label { display: inline-flex; align-items: center; }
+
+/* Icons beside the map panel's buttons. */
+.tile-icon { flex: 0 0 auto; display: inline-flex; color: var(--ink); }
+.toggle-tile { justify-content: flex-start; }
+.toggle-tile > svg { margin-left: auto; flex: 0 0 auto; }
+.toggle-tile .tile-soon { margin-left: auto; }
+.toggle-tile[data-soon='true'] .tile-icon { color: var(--ink-2); }
+.ground-tile { flex-direction: row; justify-content: flex-start; gap: 10px; text-align: left; }
+.ground-tile .tile-soon { margin-left: auto; }
+.segmented .seg-icon svg { width: 18px; height: 18px; }

@@ -26,9 +26,9 @@ export interface MapPanelState {
 }
 
 /** Overlay tiles whose data is not on the map yet: shown, dimmed, marked "Soon". */
-const SOON_OVERLAYS = ['Rain/snow line', 'Freezing line'];
+const SOON_OVERLAYS: [string, string][] = [['Rain/snow line', icons.mapRainSnow], ['Freezing line', icons.mapFreezing]];
 /** The 3D animations Kaden asked for (Nov 22), until each is built. */
-const SOON_ANIMATIONS = ['Clouds', 'Wind', 'Saved data wall', 'Water', 'Trees'];
+const SOON_ANIMATIONS: [string, string][] = [['Clouds', icons.mapCloud], ['Wind', icons.mapWind], ['Saved data wall', icons.mapWall], ['Water', icons.mapWater], ['Trees', icons.mapTrees]];
 
 /** Change map settings, redraw the map, and remember the choice. */
 function setMap(change: Partial<MapSettings>): void {
@@ -37,16 +37,17 @@ function setMap(change: Partial<MapSettings>): void {
   savePrefs(S.prefs);
 }
 
-function tile(label: string, on: boolean, onChange: (on: boolean) => void, soon = false): HTMLButtonElement {
+function tile(label: string, on: boolean, onChange: (on: boolean) => void, soon = false, icon?: string): HTMLButtonElement {
   const b = document.createElement('button');
   b.className = 'toggle-tile';
   b.setAttribute('aria-pressed', String(on && !soon));
-  b.innerHTML = soon ? '<span></span>' : `<span></span>${icons.check}`;
-  b.querySelector('span')!.textContent = label;
+  const lead = icon ? `<span class="tile-icon" aria-hidden="true">${icon}</span>` : '';
+  b.innerHTML = soon ? `${lead}<span></span>` : `${lead}<span></span>${icons.check}`;
+  b.querySelector('span:not(.tile-icon)')!.textContent = label;
   if (soon) {
     b.disabled = true;
     b.dataset.soon = 'true';
-    b.querySelector('span')!.insertAdjacentHTML('afterend', '<em class="tile-soon">Soon</em>');
+    b.querySelector('span:not(.tile-icon)')!.insertAdjacentHTML('afterend', '<em class="tile-soon">Soon</em>');
     return b;
   }
   b.addEventListener('click', () => {
@@ -80,7 +81,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
   let buildingsTile: HTMLButtonElement | null = null;
   const viewBtns = (['2D', '3D'] as const).map((v) => {
     const b = document.createElement('button');
-    b.textContent = v;
+    b.innerHTML = `<span class="seg-icon" aria-hidden="true">${v === '3D' ? icons.mapCube : icons.mapFlat}</span>`;
+    b.append(document.createTextNode(v));
     b.dataset.value = v;
     b.setAttribute('aria-pressed', String((v === '3D') === Boolean(state.terrain3d)));
     if (v === '3D') b.setAttribute('aria-label', '3D terrain');
@@ -108,8 +110,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     b.className = 'ground-tile';
     b.dataset.ground = c.id;
     b.setAttribute('aria-pressed', String(c.id === current));
-    b.innerHTML = '<span></span>';
-    b.querySelector('span')!.textContent = c.label;
+    b.innerHTML = `<span class="tile-icon" aria-hidden="true">${c.id === 'satellite' ? icons.mapSatellite : icons.mapTerrain}</span><span></span>`;
+    b.querySelector('span:not(.tile-icon)')!.textContent = c.label;
     b.addEventListener('click', () => {
       setMap({ ground: c.id });
       groundBtns.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
@@ -129,24 +131,24 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
 
   // Overlays: toggle tiles. Contour lines and weather stations work as they did; the Maps section's overlays call mapSettings.
   const trailsOn = () => { const s = mapSettings.get(); return s.trails || s.huts || s.camps; };
-  const stations = tile('Weather stations', state.stations, (on) => { state.stations = on; onChange({ ...state }); });
+  const stations = tile('Weather stations', state.stations, (on) => { state.stations = on; onChange({ ...state }); }, false, icons.mapStation);
   stations.id = 'stations-switch';
   if (state.stationsOffline) stations.disabled = true;
-  const one = (label: string, key: keyof MapSettings) => tile(label, Boolean(mapSettings.get()[key]), (on) => setMap({ [key]: on }));
+  const one = (label: string, key: keyof MapSettings, icon: string) => tile(label, Boolean(mapSettings.get()[key]), (on) => setMap({ [key]: on }), false, icon);
   const grid = document.createElement('div');
   grid.className = 'toggle-grid';
   // Trail names and peak heights are always on, so they are not choices here. Each boundary kind is its own tile.
   grid.append(
-    tile('Trails, huts and campsites', trailsOn(), (on) => setMap({ trails: on, huts: on, camps: on })),
-    one('Peaks', 'peaks'),
-    one('Contour lines', 'contours'),
-    one('Small roads', 'smallRoads'),
-    one('Ski resorts', 'skiLifts'),
-    one('Park boundaries', 'parkBoundaries'),
-    one('Regional boundaries', 'regionBoundaries'),
-    one('Municipal boundaries', 'municipalBoundaries'),
+    tile('Trails, huts and campsites', trailsOn(), (on) => setMap({ trails: on, huts: on, camps: on }), false, icons.mapTrails),
+    one('Peaks', 'peaks', icons.mapPeaks),
+    one('Contour lines', 'contours', icons.mapContours),
+    one('Small roads', 'smallRoads', icons.mapRoads),
+    one('Ski resorts', 'skiLifts', icons.mapSki),
+    one('Park boundaries', 'parkBoundaries', icons.mapPark),
+    one('Regional boundaries', 'regionBoundaries', icons.mapRegion),
+    one('Municipal boundaries', 'municipalBoundaries', icons.mapCity),
     stations,
-    ...SOON_OVERLAYS.map((l) => tile(l, false, () => undefined, true)),
+    ...SOON_OVERLAYS.map(([l, ic]) => tile(l, false, () => undefined, true, ic)),
   );
   const overlays = section('OVERLAYS', grid);
   if (state.stationsOffline) {
@@ -158,15 +160,15 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
 
   // 3D animations (Kaden, Nov 22). None are built yet, so they show dimmed and marked "Soon", except the
   // day/night sync, which works: the map's sun and shadows follow the time scrubber, on Terrain and on Satellite.
-  const sun = tile('Sync map day/night time', m.sun, (on) => setMap({ sun: on }));
+  const sun = tile('Sync map day/night time', m.sun, (on) => setMap({ sun: on }), false, icons.mapDayNight);
   sun.id = 'sun-switch';
   const animGrid = document.createElement('div');
   animGrid.className = 'toggle-grid';
   if (state.buildings3d !== undefined) {
-    buildingsTile = tile('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); });
+    buildingsTile = tile('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }, false, icons.mapBuildings);
     buildingsTile.disabled = !state.terrain3d;
   }
-  animGrid.append(sun, ...(buildingsTile ? [buildingsTile] : []), ...SOON_ANIMATIONS.map((l) => tile(l, false, () => undefined, true)));
+  animGrid.append(sun, ...(buildingsTile ? [buildingsTile] : []), ...SOON_ANIMATIONS.map(([l, ic]) => tile(l, false, () => undefined, true, ic)));
 
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
