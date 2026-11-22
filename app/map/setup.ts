@@ -8,6 +8,7 @@ import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
 import { applyMapSettings } from './map-settings';
 import { registerWaterImages } from './water';
+import { setupTuner } from './tuner';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
 import { hasBuildingHeights, TILT } from './three-d';
@@ -101,6 +102,8 @@ export function recolourMap(t: Theme): void {
 
 /** The locate button, the place line and the map panel. */
 export function setupMapControls(): void {
+// TEMPORARY: the design tuning panel (app/map/tuner.ts); delete with it.
+setupTuner();
 $('locate').addEventListener('click', () => locate(true));
 
 $('place-line').addEventListener('click', () => {

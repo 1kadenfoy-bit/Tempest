@@ -1,0 +1,136 @@
+// TEMPORARY design tuning panel (Maps section), only for judging the map's look on a
+// phone: a small "Tune" button opens a panel of switches and sliders. Delete this file
+// and its one call in setup.ts once the look is settled.
+//
+//   Overlays off   hides the map's overlays (peaks, trails, huts and so on)
+//   Weather off    hides the weather fill under them
+//   Satellite      the Satellite ground
+//   Sun & shadows  the time of day from the scrubber, with mountain shadows
+//   Haze           background haze and fog in 3D
+//   Relief, Shadow tint, Mountain shadows   how strong the lighting is
+//   Bloom          a soft glow on bright things (a blurred, brightened copy of the map laid over it)
+import { S } from '../state';
+import { mapSettings, type MapSettings } from './map-settings';
+import { tuning, type Tuning } from './tuning';
+
+const OVERLAY_KEYS: (keyof MapSettings)[] = ['trails', 'trailNames', 'huts', 'camps', 'peaks', 'peakHeights', 'contours', 'smallRoads', 'skiLifts', 'parkBoundaries', 'regionBoundaries', 'municipalBoundaries'];
+const WEATHER_LAYERS = ['precip-grid', 'temperature-grid', 'wind-grid'];
+
+const css = (el: HTMLElement, styles: Record<string, string>) => Object.assign(el.style, styles);
+
+function button(label: string, onClick: (b: HTMLButtonElement) => void): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.type = 'button';
+  css(b, { minHeight: '44px', padding: '0 12px', border: '1px solid var(--stroke-strong)', borderRadius: 'var(--radius-button-tile-row)', background: 'var(--fill-control)', color: 'var(--ink)', font: 'var(--type-body)', cursor: 'pointer' });
+  b.addEventListener('click', () => onClick(b));
+  return b;
+}
+
+function pressed(b: HTMLButtonElement, on: boolean) {
+  b.setAttribute('aria-pressed', String(on));
+  b.style.background = on ? 'var(--ink)' : 'var(--fill-control)';
+  b.style.color = on ? 'var(--surface)' : 'var(--ink)';
+}
+
+function slider(label: string, key: keyof Tuning, min: number, max: number): HTMLElement {
+  const row = document.createElement('label');
+  css(row, { display: 'grid', gridTemplateColumns: '1fr auto', gap: '2px 8px', font: 'var(--type-secondary)', color: 'var(--ink-2)' });
+  const value = document.createElement('span');
+  const input = document.createElement('input');
+  input.type = 'range'; input.min = String(min); input.max = String(max); input.step = '0.05';
+  input.value = String(tuning.get()[key]);
+  css(input, { gridColumn: '1 / 3', width: '100%', minHeight: '32px' });
+  const show = () => { value.textContent = Number(input.value).toFixed(2); };
+  input.addEventListener('input', () => { show(); tuning.set({ [key]: Number(input.value) }); });
+  tuning.onChange((t) => { input.value = String(t[key]); show(); });
+  show();
+  row.append(label, value, input);
+  return row;
+}
+
+/**
+ * The bloom: a small, blurred, brightened copy of the map laid over it with the screen
+ * blend, so bright things glow. The copy is taken from the map's own picture a few times
+ * a second while it draws; at rest nothing runs.
+ */
+function bloomOverlay(): void {
+  const map = S.map;
+  const el = document.createElement('canvas');
+  css(el, {
+    position: 'absolute', inset: '0', width: '100%', height: '100%', pointerEvents: 'none', zIndex: '1', display: 'none',
+    // Keep only the bright parts (darken, push contrast), blur them, and add them back.
+    filter: 'brightness(0.62) contrast(2.6) blur(9px) saturate(1.3)', mixBlendMode: 'screen',
+  });
+  document.getElementById('map')?.append(el);
+  const g = el.getContext('2d')!;
+  let last = 0;
+  const copy = () => {
+    const src = map.getCanvas();
+    const w = Math.max(1, Math.round(src.width / 6)), h = Math.max(1, Math.round(src.height / 6));
+    if (el.width !== w || el.height !== h) { el.width = w; el.height = h; }
+    try { g.drawImage(src, 0, 0, w, h); } catch { /* the picture was not available this frame */ }
+  };
+  map.on('render', () => {
+    const now = performance.now();
+    if (tuning.get().bloom > 0 && now - last > 120) { last = now; copy(); }
+  });
+  tuning.onChange((t) => {
+    el.style.opacity = String(t.bloom);
+    el.style.display = t.bloom > 0 ? 'block' : 'none';
+    if (t.bloom > 0) map.triggerRepaint(); // one draw to take a copy of
+  });
+}
+
+export function setupTuner(): void {
+  const open = button('Tune', () => { panel.style.display = panel.style.display === 'none' ? 'grid' : 'none'; });
+  css(open, { position: 'fixed', left: '8px', top: 'calc(env(safe-area-inset-top, 0px) + 150px)', zIndex: '30', minWidth: '44px', background: 'var(--surface)' });
+  const panel = document.createElement('div');
+  css(panel, {
+    position: 'fixed', left: '8px', top: 'calc(env(safe-area-inset-top, 0px) + 200px)', zIndex: '30', width: 'min(260px, calc(100vw - 16px))', maxHeight: '40vh', overflowY: 'auto',
+    display: 'none', gap: '8px', padding: '12px', background: 'var(--panel)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-grow-panel)', color: 'var(--ink)', font: 'var(--type-body)',
+  });
+  const title = document.createElement('div');
+  title.textContent = 'Map tuning (temporary)';
+  css(title, { font: 'var(--type-panel-title)' });
+
+  // Switches
+  let savedOverlays: Partial<MapSettings> | null = null;
+  const overlays = button('Overlays off', (b) => {
+    if (!savedOverlays) {
+      const now = mapSettings.get();
+      savedOverlays = Object.fromEntries(OVERLAY_KEYS.map((k) => [k, now[k]]));
+      mapSettings.set(Object.fromEntries(OVERLAY_KEYS.map((k) => [k, false])));
+    } else { mapSettings.set(savedOverlays); savedOverlays = null; }
+    pressed(b, savedOverlays !== null);
+  });
+  let weatherHidden = false;
+  const weather = button('Weather off', (b) => {
+    weatherHidden = !weatherHidden;
+    for (const id of WEATHER_LAYERS) if (S.map.getLayer(id)) S.map.setLayoutProperty(id, 'visibility', weatherHidden ? 'none' : 'visible');
+    S.map.triggerRepaint();
+    pressed(b, weatherHidden);
+  });
+  const satellite = button('Satellite', (b) => {
+    const on = mapSettings.get().ground !== 'satellite';
+    mapSettings.set({ ground: on ? 'satellite' : 'shaded' });
+    pressed(b, on);
+  });
+  pressed(satellite, mapSettings.get().ground === 'satellite');
+  const sun = button('Sun & shadows', (b) => { const on = !mapSettings.get().sun; mapSettings.set({ sun: on }); pressed(b, on); });
+  pressed(sun, mapSettings.get().sun);
+  const switches = document.createElement('div');
+  css(switches, { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' });
+  switches.append(overlays, weather, satellite, sun);
+
+  const reset = button('Reset sliders', () => tuning.reset());
+  panel.append(title, switches,
+    slider('Haze (3D background)', 'haze', 0, 1),
+    slider('Relief strength', 'relief', 0, 1.8),
+    slider('Shadow and light tint', 'tint', 0, 2.5),
+    slider('Mountain shadows', 'cast', 0, 1.5),
+    slider('Bloom', 'bloom', 0, 1),
+    reset);
+  document.body.append(open, panel);
+  bloomOverlay();
+}

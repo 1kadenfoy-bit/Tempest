@@ -4,6 +4,7 @@
 // map is tilted, in 3D). The same for every ground choice. The hues are proposals.
 import type { Map as MapLibreMap } from 'maplibre-gl';
 import { mix } from './style-mix';
+import { tuning } from './tuning';
 
 interface Stop { alt: number; sky: string; horizon: string; fog: string; blend: number }
 
@@ -33,7 +34,9 @@ let last = '';
 
 /** Sets the map's sky for the sun's height (null for none). Cheap to call again: nothing changes unless the colours do. */
 export function applySky(map: MapLibreMap, altitude: number | null): void {
-  const sky = { ...skyFor(altitude), 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.4 };
+  // The haze setting (0 to 1) thickens the fog on the ground and at the horizon.
+  const haze = tuning.get().haze;
+  const sky = { ...skyFor(altitude), 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.2 + 0.8 * haze, 'fog-ground-blend': 0.8 * haze };
   const key = JSON.stringify(sky);
   if (key === last) return;
   last = key;

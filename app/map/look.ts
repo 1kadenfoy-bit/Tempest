@@ -6,6 +6,7 @@
 //
 // All the hues here are proposals for Kaden to judge on his phone, not tokens.
 import type { Theme } from '../theme/tokens';
+import { tuning } from './tuning';
 
 /** The hillshade's strength with the fixed light (the sun toggle off). */
 export const PLAIN_RELIEF = 0.5;
@@ -23,15 +24,21 @@ const OVERHEAD_LIGHT = 'rgba(255, 255, 255, 0.04)';
 
 export type Paint = Record<string, unknown>;
 
+/** The same rgba colour with its opacity scaled (clamped to 0..1). */
+function scaleAlpha(rgba: string, k: number): string {
+  const m = /rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/.exec(rgba);
+  return m ? `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${Math.min(1, Math.max(0, Number(m[4]) * k)).toFixed(3)})` : rgba;
+}
+
 /** The hillshade with the fixed light from the north-west: the look when the sun is off, and at night. */
 export function plainHillshade(theme: Theme): Paint {
   return {
     'hillshade-method': 'standard',
-    'hillshade-exaggeration': PLAIN_RELIEF,
+    'hillshade-exaggeration': Math.min(1, PLAIN_RELIEF * tuning.get().relief),
     'hillshade-illumination-direction': 335,
     'hillshade-illumination-anchor': 'viewport',
-    'hillshade-shadow-color': SHADOW[theme],
-    'hillshade-highlight-color': WARM[theme],
+    'hillshade-shadow-color': scaleAlpha(SHADOW[theme], tuning.get().tint),
+    'hillshade-highlight-color': scaleAlpha(WARM[theme], tuning.get().tint),
   };
 }
 
@@ -39,12 +46,12 @@ export function plainHillshade(theme: Theme): Paint {
 export function sunHillshade(theme: Theme, azimuth: number, altitude: number): Paint {
   return {
     'hillshade-method': 'multidirectional',
-    'hillshade-exaggeration': SUN_RELIEF,
+    'hillshade-exaggeration': Math.min(1, SUN_RELIEF * tuning.get().relief),
     'hillshade-illumination-anchor': 'map',
     'hillshade-illumination-direction': [azimuth, azimuth],
     'hillshade-illumination-altitude': [Math.max(MIN_LIGHT, Math.min(90, altitude)), OVERHEAD],
-    'hillshade-shadow-color': [SHADOW[theme], SHADOW_SOFT[theme]],
-    'hillshade-highlight-color': [WARM[theme], OVERHEAD_LIGHT],
+    'hillshade-shadow-color': [scaleAlpha(SHADOW[theme], tuning.get().tint), scaleAlpha(SHADOW_SOFT[theme], tuning.get().tint)],
+    'hillshade-highlight-color': [scaleAlpha(WARM[theme], tuning.get().tint), OVERHEAD_LIGHT],
   };
 }
 

@@ -16,6 +16,8 @@ import { mix } from './style-mix';
 import { mapWater } from './style';
 import { applySky } from './atmosphere';
 import { applyWater } from './water';
+import { castShadows } from './shadows';
+import { tuning } from './tuning';
 import { plainHillshade, satelliteLook, sunHillshade, type Paint } from './look';
 import { SATELLITE_LAYER } from './satellite';
 
@@ -60,8 +62,6 @@ class MapSun {
   private on = false;
   private map: MapLibreMap | null = null;
   private listeners = new Set<Listener>();
-  /** True while the sun's lighting is on the hillshade, so it is put back once, not on every redraw. */
-  private applied = false;
 
   enabled(): boolean { return this.on; }
   onChange(fn: Listener): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
@@ -79,8 +79,11 @@ class MapSun {
     if (!map.getLayer(NIGHT_LAYER)) {
       map.addLayer({ id: NIGHT_LAYER, type: 'background', layout: { visibility: 'none' }, paint: { 'background-color': '#000000', 'background-opacity': 0 } }, map.getLayer('hillshade') ? 'hillshade' : undefined);
     }
+    // Mountain shadows sit just above the night wash, still under the weather fills.
+    castShadows.attach(map, map.getLayer('hillshade') ? 'hillshade' : undefined);
     const refresh = () => this.update();
     map.on('moveend', refresh);
+    tuning.onChange(refresh);
     // Pages without the app's time cursor (the phone test page) have no time to follow.
     S.cursor?.subscribe(refresh);
     this.update();
@@ -102,16 +105,14 @@ class MapSun {
     applyWater(map, theme, this.on ? altitude : null, Boolean(satellite));
     const set = (paint: Paint) => { for (const [k, v] of Object.entries(paint)) map.setPaintProperty('hillshade', k as 'hillshade-method', v as never); };
     const setSat = (paint: Paint) => { if (map.getLayer(SATELLITE_LAYER)) for (const [k, v] of Object.entries(paint)) map.setPaintProperty(SATELLITE_LAYER, k as 'raster-contrast', v as never); };
+    // Mountain shadows: only with the sun switch on and the sun up.
+    castShadows.set(this.on && altitude > 0 ? { azimuth, altitude } : null);
     if (!this.on) {
       map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'none');
-      if (this.applied) {
-        this.applied = false;
-        set(plainHillshade(theme));
-      }
+      set(plainHillshade(theme)); // always: the tuning sliders change it too
       setSat(satelliteLook(0));
       return;
     }
-    this.applied = true;
     if (altitude > 0) set(sunHillshade(theme, azimuth, altitude));
     else set(plainHillshade(theme)); // sun down: nothing lights the slopes, so the even light (a sun below the horizon drew streaks)
     const night = nightAmount(altitude);
