@@ -347,11 +347,13 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   position: fixed; z-index: 11;
   left: var(--screen-edge); right: var(--screen-edge);
   max-height: calc(100% - var(--safe-top) - var(--bottom-inset) - 32px);
+  /* The phone app's visible height can be shorter than 100%; never let the panel's end hang past it. */
+  max-height: calc(min(100%, 100dvh) - var(--safe-top) - var(--bottom-inset) - 32px);
   border-radius: var(--radius-grow-panel);
   background: var(--panel); border: 1px solid var(--stroke);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   display: flex; flex-direction: column; overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
   transform: scale(0.15); opacity: 0;
   transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
 }
@@ -369,7 +371,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .panel-title-icon { display: inline-flex; vertical-align: middle; margin-left: 4px; }
 .panel-caption { font: var(--type-caption); color: var(--ink-2); }
 .panel-close, .panel-action { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.panel-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 4px 16px calc(var(--bottom-inset) + 16px); display: flex; flex-direction: column; gap: 14px; }
+.panel-body { flex: 0 1 auto; min-height: 0; overflow-y: scroll; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding: 4px 16px calc(var(--bottom-inset) + 16px); display: flex; flex-direction: column; gap: 14px; }
 .group { display: flex; flex-direction: column; gap: var(--gap-controls); }
 .group-title { font: var(--type-micro); font-weight: 600; letter-spacing: 0.06em; color: var(--ink-2); }
 .toggle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }

@@ -18,7 +18,7 @@ the old wording moves to "Changed".
 
 ## Map buttons
 
-8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (big tiles, one at a time: Terrain | Satellite; Plain is gone since Nov 22) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Park boundaries; Regional boundaries; Municipal boundaries; Weather stations; Rain/snow line; Freezing line). Overlay tiles whose data is not built yet are shown dimmed and marked "Soon" (Kaden's choice, an exception to "a switch appears only when it works"). Satellite is shown only once the map has its picture loaded.
+8. (Nov 20) **Search** is its own map button above locate. The **map layers button stays**, with a panel of three parts: **View** (2D | 3D switch), **Ground** (big tiles, one at a time: Terrain | Satellite; Plain is gone since Nov 22) and **Overlays** (toggle tiles: Trails, huts and campsites; Peaks; Contour lines; Small roads; Ski resorts; Park boundaries; Regional boundaries; Municipal boundaries; Weather stations; Rain/snow line; Freezing line). The Rain/snow line and Freezing line tiles are real switches since Nov 22 (no "Soon"); Weather listens to them. Satellite is shown only once the map has its picture loaded.
 8a. (Nov 20) Map panel details (from the Maps chat, passed on by Kaden): a **Sync map day/night time** toggle (it was called Sun and shadows) sits with the Ground tiles: the map's sun and shadows follow the time scrubber. It works on Terrain and on Satellite. **3D buildings** is a small option under the View switch, greyed out in 2D. The panel remembers its choices. Nothing in the panel appears or disappears when a button is pressed.
 
 ## Pin
@@ -65,12 +65,13 @@ the old wording moves to "Changed".
 24. (Nov 22) While tracing the area, **two fingers move and zoom the map**; one finger draws.
 25. (Nov 22) The Save for offline card **starts partly up from the bottom**, like the weather card (not all the way down): it shows the title, the area and map size, the time strip, and a **Save data button at the bottom**. The button is there once the area is drawn and layers chosen. **Redraw removes the current tracing**.
 26. (Nov 22) The map panel's Ground has **Terrain and Satellite** (both always offered; Satellite waits for its picture to load). The **phone tests button and feature are gone**.
-27. (Nov 22) The map panel has a **3D ANIMATIONS** section: Clouds, Wind, Saved data wall (a wall that forms around the saved area, like the Great Wall of China), Water (waves and moving water), Trees, and **Sync map day/night time** (moved here). The unbuilt ones show dimmed with "Soon".
+27. (Nov 22) The map panel has a **3D ANIMATIONS** section: Clouds, Wind, Saved data wall (a wall that forms around the saved area, like the Great Wall of China), Water (waves and moving water), Trees, and **Sync map day/night time** (moved here). No "Soon" labels (Nov 22): each is a real switch (`app/shell/feature-switches.ts`) that the Effects chat listens to and draws; until it does, the tap only turns the button on and off.
 28. (Nov 22) The settings window's buttons have **icons**.
 
 29. (Nov 22) In the map panel, **3D buildings is a tile in the 3D ANIMATIONS section** (greyed out in 2D), not under View. The Terrain and Satellite tiles are the same compact size as the other tiles. Every panel has extra room at the bottom so the last row can always be scrolled into view. Every map panel button has an icon beside its name (approved Nov 22): 2D folded map, 3D cube, Terrain mountain, Satellite globe with orbit, Trails/huts/camps tent, Peaks flagged mountain, Contour lines rings, Small roads dashed road, Ski resorts gondola, Park boundaries pine in a dashed ring, Regional boundaries dashed region, Municipal boundaries city skyline, Weather stations mast with wind cups, Rain/snow line (snowflake above, drop below), Freezing line, Day/night sync half sun half moon, 3D buildings, Clouds, Wind, Saved data wall, Water, Trees.
 
 ## Changed
+- Rules 8 and 27: unbuilt tiles were shown dimmed and marked "Soon", until Nov 22.
 
 - Rule 8: Ground had three tiles, Plain | Shaded terrain | Satellite (Satellite dimmed "Soon" until it worked), and rule 8a greyed the sun toggle out on Plain, until Nov 22.
 - Rule 9 showed nothing at all while loading, for a few hours on Nov 21, before the spinning wheel.

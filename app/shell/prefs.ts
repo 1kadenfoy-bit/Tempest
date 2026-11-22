@@ -28,6 +28,8 @@ export interface Prefs {
   summaryLayers: Record<string, boolean>;
   /** The map panel's choices (ground, overlays, sun), as app/map/map-settings.ts names them; what is not listed takes the map's default. */
   mapSettings: Record<string, string | boolean>;
+  /** The map panel's weather lines and 3D animations (app/shell/feature-switches.ts), by id. */
+  features?: Record<string, boolean>;
 }
 
 const KEY = 'tempest.prefs.v1';

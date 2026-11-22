@@ -3,14 +3,15 @@
 // a time, and a day/night sync toggle) and Overlays (toggle tiles, some with a
 // small options row). What each button does to the map is app/map/map-settings.ts
 // (Maps section); this file only shows the buttons and calls mapSettings.set.
-// Tiles whose map data is not built yet are shown dimmed and marked "Soon"
-// (Kaden's choice; they do nothing yet). The choices are remembered in
+// The weather lines and 3D animations are switches other sections listen to
+// (feature-switches.ts). The choices are remembered in
 // prefs.mapSettings. No v8 design: built from the segmented control and tiles.
 import { mapSettings, type MapSettings } from '../map/map-settings';
 import { satelliteReady } from '../map/satellite';
 import { S } from '../state';
 import { icons } from './icons';
 import { savePrefs } from './prefs';
+import { features, type FeatureId } from './feature-switches';
 
 export interface MapPanelState {
   hillshade: boolean;
@@ -25,10 +26,14 @@ export interface MapPanelState {
   stationsOffline?: boolean | undefined;
 }
 
-/** Overlay tiles whose data is not on the map yet: shown, dimmed, marked "Soon". */
-const SOON_OVERLAYS: [string, string][] = [['Rain/snow line', icons.mapRainSnow], ['Freezing line', icons.mapFreezing]];
-/** The 3D animations Kaden asked for (Nov 22), until each is built. */
-const SOON_ANIMATIONS: [string, string][] = [['Clouds', icons.mapCloud], ['Wind', icons.mapWind], ['Saved data wall', icons.mapWall], ['Water', icons.mapWater], ['Trees', icons.mapTrees]];
+/** Weather lines and 3D animations: the buttons are here; Weather and Effects listen (app/shell/feature-switches.ts). */
+const LINE_FEATURES: [FeatureId, string, string][] = [['snowLine', 'Rain/snow line', icons.mapRainSnow], ['freezingLine', 'Freezing line', icons.mapFreezing]];
+const ANIM_FEATURES: [FeatureId, string, string][] = [['clouds', 'Clouds', icons.mapCloud], ['wind', 'Wind', icons.mapWind], ['savedDataWall', 'Saved data wall', icons.mapWall], ['water', 'Water', icons.mapWater], ['trees', 'Trees', icons.mapTrees]];
+const featureTile = ([id, label, icon]: [FeatureId, string, string]) => {
+  const t = tile(label, features.get(id), (on) => features.set(id, on), false, icon);
+  t.dataset.feature = id;
+  return t;
+};
 
 /** Change map settings, redraw the map, and remember the choice. */
 function setMap(change: Partial<MapSettings>): void {
@@ -148,7 +153,7 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     one('Regional boundaries', 'regionBoundaries', icons.mapRegion),
     one('Municipal boundaries', 'municipalBoundaries', icons.mapCity),
     stations,
-    ...SOON_OVERLAYS.map(([l, ic]) => tile(l, false, () => undefined, true, ic)),
+    ...LINE_FEATURES.map(featureTile),
   );
   const overlays = section('OVERLAYS', grid);
   if (state.stationsOffline) {
@@ -158,8 +163,8 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     overlays.append(note);
   }
 
-  // 3D animations (Kaden, Nov 22). None are built yet, so they show dimmed and marked "Soon", except the
-  // day/night sync, which works: the map's sun and shadows follow the time scrubber, on Terrain and on Satellite.
+  // 3D animations (Kaden, Nov 22). Clouds, wind, saved data wall, water and trees are switches the Effects section
+  // listens to; the day/night sync works now: the map's sun and shadows follow the time scrubber, on Terrain and on Satellite.
   const sun = tile('Sync map day/night time', m.sun, (on) => setMap({ sun: on }), false, icons.mapDayNight);
   sun.id = 'sun-switch';
   const animGrid = document.createElement('div');
@@ -168,7 +173,7 @@ export function mapPanelBody(state: MapPanelState, onChange: (s: MapPanelState) 
     buildingsTile = tile('3D buildings', Boolean(state.buildings3d), (on) => { state.buildings3d = on; onChange({ ...state }); }, false, icons.mapBuildings);
     buildingsTile.disabled = !state.terrain3d;
   }
-  animGrid.append(sun, ...(buildingsTile ? [buildingsTile] : []), ...SOON_ANIMATIONS.map(([l, ic]) => tile(l, false, () => undefined, true, ic)));
+  animGrid.append(sun, ...(buildingsTile ? [buildingsTile] : []), ...ANIM_FEATURES.map(featureTile));
 
   const wrap = document.createElement('div');
   wrap.className = 'panel-groups';
