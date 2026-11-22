@@ -7,6 +7,7 @@ import type { LayerSpecification, Map as MapLibreMap, StyleSpecification, Vector
 import { colorToken, type Theme } from '../theme/tokens';
 
 import { mix } from './style-mix';
+import { waterLayers } from './water';
 import { NATURAL, TERRAIN, UNDER_ZONES, kindColourExpression, terrainColour, type TerrainClass } from './terrain-colours';
 export { mix };
 
@@ -165,16 +166,9 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     { id: 'glaciers-fill', type: 'fill', source: ZONES_SOURCE, 'source-layer': 'glaciers', paint: { 'fill-color': tint('ice', theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 1] } } as LayerSpecification,
     fill('terrain_urban', ['urban']),
     cliffs);
-  // The land is matte; water gets a soft sheen: a light, blurred line along its shores.
+  // Water: ripples, sparkles and foam over its fill (app/map/water.ts).
   const waterAt = all.findIndex((l) => l.id === 'water');
-  if (waterAt >= 0) {
-    all.splice(waterAt + 1, 0, {
-      id: 'water_shine', type: 'line', source: 'protomaps', 'source-layer': 'water', minzoom: 8,
-      filter: ['==', ['geometry-type'], 'Polygon'],
-      layout: { 'line-join': 'round' },
-      paint: { 'line-color': mix(mapWater(theme), '#FFFFFF', theme === 'dark' ? 0.4 : 0.5), 'line-width': 4, 'line-blur': 4, 'line-opacity': 0.55 },
-    } as LayerSpecification);
-  }
+  if (waterAt >= 0) all.splice(waterAt + 1, 0, ...waterLayers(theme));
   // Roads a little narrower.
   for (const l of all) {
     if (l.type === 'line' && l.id.startsWith('roads_') && l.paint && 'line-width' in l.paint) (l.paint as Record<string, unknown>)['line-width'] = scaleWidth((l.paint as Record<string, unknown>)['line-width'], ROAD_WIDTH);

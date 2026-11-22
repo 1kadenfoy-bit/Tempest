@@ -7,6 +7,7 @@ import type { LngLatLike, Map as MapLibreMap } from 'maplibre-gl';
 import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
 import { applyMapSettings } from './map-settings';
+import { registerWaterImages } from './water';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
 import { hasBuildingHeights, TILT } from './three-d';
@@ -53,6 +54,7 @@ export function createMap(): MapLibreMap {
 map.touchZoomRotate.disableRotation();
 map.touchPitch.disable();
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+registerWaterImages(map);
 (window as unknown as { tempestMap: typeof map }).tempestMap = map;
   return map;
 }

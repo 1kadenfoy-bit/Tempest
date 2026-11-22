@@ -115,8 +115,7 @@ export function applyMapSettings(map: MapLibreMap): void {
   // Satellite: the picture replaces the colours, the sea, and the low-zoom land cover (it already shows them); the relief lighting stays.
   const sat = s.ground === 'satellite';
   show(SATELLITE_LAYER, sat);
-  show('water', !sat);
-  show('water_shine', !sat);
+  // The water layers stay on over the satellite picture (tinted, with ripples and foam): app/map/water.ts.
   show('landcover', !sat);
   // Trails, huts, camps
   show(L.trails, s.trails);
@@ -153,6 +152,7 @@ export function applyMapSettings(map: MapLibreMap): void {
   }
   // Sun
   mapSun.setEnabled(s.sun);
+  mapSun.update(); // water and sun look follow the ground choice
 }
 
 /** The panel's older hillshade and contour switches (saved preferences) still count while the panel has them. */

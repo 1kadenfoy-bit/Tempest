@@ -15,6 +15,7 @@ import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style-mix';
 import { mapWater } from './style';
 import { applySky } from './atmosphere';
+import { applyWater } from './water';
 import { plainHillshade, satelliteLook, sunHillshade, type Paint } from './look';
 import { SATELLITE_LAYER } from './satellite';
 
@@ -92,13 +93,15 @@ class MapSun {
     const map = this.map;
     if (!map || !map.getLayer('hillshade')) return;
     const theme: Theme = S.settings.theme();
+    const satellite = map.getLayer(SATELLITE_LAYER) && map.getLayoutProperty(SATELLITE_LAYER, 'visibility') === 'visible' ? SATELLITE_LAYER : null;
     const c = map.getCenter();
     const { azimuth, altitude } = sunPosition(this.time(), c.lat, c.lng);
     // The sky follows the sun only while the sun switch is on; otherwise it is the plain day sky.
     applySky(map, this.on ? altitude : null);
+    // Water: its blue and shine follow the sun's height while the sun switch is on; over the satellite picture it is only tinted.
+    applyWater(map, theme, this.on ? altitude : null, Boolean(satellite));
     const set = (paint: Paint) => { for (const [k, v] of Object.entries(paint)) map.setPaintProperty('hillshade', k as 'hillshade-method', v as never); };
-    const satellite = map.getLayer(SATELLITE_LAYER);
-    const setSat = (paint: Paint) => { if (satellite) for (const [k, v] of Object.entries(paint)) map.setPaintProperty(SATELLITE_LAYER, k as 'raster-contrast', v as never); };
+    const setSat = (paint: Paint) => { if (map.getLayer(SATELLITE_LAYER)) for (const [k, v] of Object.entries(paint)) map.setPaintProperty(SATELLITE_LAYER, k as 'raster-contrast', v as never); };
     if (!this.on) {
       map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'none');
       if (this.applied) {
