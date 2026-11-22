@@ -6,7 +6,8 @@ import { setUnitSystem, type UnitSystem } from '../../core/units/format';
 import { icons } from '../shell/icons';
 import { closePanel, openPanel } from '../shell/panel';
 import { S } from '../state';
-import { afterSavedChange, openSaveBox } from '../offline/wiring';
+import { afterSavedChange } from '../offline/wiring';
+import { openSaveCard } from '../shell/save-card';
 import { deleteArea } from '../offline/saved-areas';
 import type { Prefs } from '../shell/prefs';
 import { credits } from '../sources/credits';
@@ -71,8 +72,8 @@ export function startAppSettings(prefs: Prefs, hooks: AppSettingsHooks): AppSett
         saved: {
           areas: S.savedAreas,
           canSave: navigator.onLine && !!S.run && !S.usingSaved,
-          // The settings give way to the save box, which draws on the map.
-          save: () => { closePanel(); openSaveBox(); },
+          // Settings close and the Save for offline card comes up over the home screen (Kaden, Nov 22).
+          save: () => { closePanel(); openSaveCard(() => open(document.getElementById('settings-button')!)); },
           remove: async (a) => { await deleteArea(a); await afterSavedChange(); },
         },
       }),
