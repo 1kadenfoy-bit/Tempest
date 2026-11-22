@@ -8,9 +8,9 @@ panel only shows the buttons and calls these. Everything is in `app/map/`.
   switch (`S.prefs.terrain3d` and `S.threeD.apply`). In 3D the map opens tilted.
   3D buildings stay a small option under it.
 
-## 2. Ground (one of three, tiles)
-- **Plain** and **Shaded terrain**: `mapSettings.set({ ground: 'plain' | 'shaded' })`.
-  Shaded is the default: terrain colours plus hillshade.
+## 2. Ground (one of two, tiles)
+- **Terrain** and **Satellite**: `mapSettings.set({ ground: 'shaded' | 'satellite' })` ('shaded' is the Terrain tile).
+  Terrain is the default: terrain colours plus hillshade. Plain is gone (an old saved 'plain' is read as Terrain; the type still allows it until the panel stops mentioning it).
 - **Satellite**: not offered yet. It needs an imagery source Kaden has not approved.
   Show the tile only when it works (`docs` rule: a switch appears only when it works).
 - **Sun and shadows** (a toggle beside the tiles): `mapSun.setEnabled(on)` or

@@ -3,8 +3,12 @@ import { DEFAULT_MAP_SETTINGS, parseMapSettings } from './map-settings';
 
 describe('map settings from a link', () => {
   it('reads on, off and the ground choice', () => {
-    expect(parseMapSettings('ground:plain,trails:off,sun:on')).toEqual({ ground: 'plain', trails: false, sun: true });
+    expect(parseMapSettings('ground:shaded,trails:off,sun:on')).toEqual({ ground: 'shaded', trails: false, sun: true });
     expect(parseMapSettings('ground:satellite')).toEqual({ ground: 'satellite' });
+  });
+
+  it('reads the old Plain choice as Terrain', () => {
+    expect(parseMapSettings('ground:plain')).toEqual({ ground: 'shaded' });
   });
 
   it('ignores names and values it does not know', () => {

@@ -34,6 +34,8 @@ export function createMap(): MapLibreMap {
   zoom: 11,
   // Start tilted when a 3D switch is on, so 3D is what you see on opening.
   pitch: S.prefs.terrain3d || (buildingsOk() && S.prefs.buildings3d) ? TILT : 0,
+  // Tilt far enough in 3D for the sky and haze to show (app/map/atmosphere.ts).
+  maxPitch: 80,
   minZoom: 4,
   maxZoom: 16,
   maxBounds: [[-145, 44], [-108, 63]],

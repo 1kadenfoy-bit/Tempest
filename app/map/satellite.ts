@@ -13,6 +13,7 @@ import { filesForTile, type BBox, type BasemapFile, type BasemapManifest } from 
 import { maplibregl } from './maplibre';
 import { RangeOrWholeSource } from './range-source';
 import { applyMapSettings } from './map-settings';
+import { satelliteLook } from './look';
 
 export const SATELLITE_LAYER = 'satellite-ground';
 const SOURCE = 'satellite';
@@ -81,8 +82,8 @@ export function addSatellite(map: MapLibreMap): void {
     }
     map.addSource(SOURCE, { type: 'raster', tiles: [`${PROTOCOL}://{z}/{x}/{y}`], tileSize: m.manifest.tileSize, minzoom: 0, maxzoom: m.manifest.maxzoom, attribution: m.manifest.attribution });
     const below = map.getLayer('terrain_under') ? 'terrain_under' : undefined;
-    // A little less saturated and bright than the raw picture, so weather colours (drawn above) stay the loudest thing.
-    map.addLayer({ id: SATELLITE_LAYER, type: 'raster', source: SOURCE, layout: { visibility: 'none' }, paint: { 'raster-saturation': -0.2, 'raster-brightness-max': 0.9 } }, below);
+    // The game-style colour (app/map/look.ts); the sun look dims it at night.
+    map.addLayer({ id: SATELLITE_LAYER, type: 'raster', source: SOURCE, layout: { visibility: 'none' }, paint: satelliteLook(0) as never }, below);
     ready = true;
     applyMapSettings(map);
   });
