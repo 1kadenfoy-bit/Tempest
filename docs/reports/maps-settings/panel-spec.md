@@ -15,7 +15,7 @@ panel only shows the buttons and calls these. Everything is in `app/map/`.
   Show the tile only when it works (`docs` rule: a switch appears only when it works).
 - **Sun and shadows** (a toggle beside the tiles): `mapSun.setEnabled(on)` or
   `mapSettings.set({ sun: on })`. The sun follows the time scrubber. It lights the
-  hillshade from the real sun and darkens the map at night. Grey it out in Plain.
+  hillshade from the real sun and darkens the map at night. It works on both Terrain and Satellite.
 
 ## 3. Overlays (toggles; each may open a small options row)
 All through `mapSettings.set({...})` (`app/map/map-settings.ts`):
@@ -39,7 +39,7 @@ panel follow them. Saving them between sessions is the panel's (preferences are
 the Interface chat's).
 
 Until the panel is wired, a link can set them for testing:
-`?map=ground:plain,trails:off,sun:on`.
+`?map=ground:satellite,trails:off,sun:on`.
 
 ## Not the Maps chat's
 - The rain/snow line and freezing line should hold still when zooming, like contour
