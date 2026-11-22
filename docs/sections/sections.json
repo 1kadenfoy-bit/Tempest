@@ -23,7 +23,8 @@
         "docs/reports/maps-*/**",
         "docs/handoffs/maps/**",
         "docs/reports/3d/**",
-        "docs/wishes/maps.md"
+        "docs/wishes/maps.md",
+        "core/geo/shape-tiles*"
       ],
       "except": [
         "app/map/freezing-line.ts",
@@ -57,7 +58,8 @@
         "docs/reports/interface-*/**",
         "docs/handoffs/interface/**",
         "docs/reports/summary/**",
-        "docs/wishes/interface.md"
+        "docs/wishes/interface.md",
+        "app/notify/**"
       ],
       "specs": [
         "e2e/shell.spec.ts",
@@ -147,8 +149,8 @@
         "public/recorded-sw.js",
         "recorded/**",
         "tools/record-weather.mjs",
-  "tools/build-satellite.py",
-  "public/satellite/**",
+        "tools/build-satellite.py",
+        "public/satellite/**",
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts",
         "docs/reports/data-*/**",
