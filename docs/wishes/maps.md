@@ -25,7 +25,7 @@ the old wording moves to "Changed".
 18. Sun and shadows must never wash the map out, on the light theme or the dark one: at night the map takes an even, bluish dusk with its colours kept. (Nov 21, 2026)
 19. The map looks like Sebastian Lague's game Geographical Adventures, on our real BC data: soft sun, warm-to-cool tinted shadows (never grey), contrast, relief that still shows on flat-lit ground, a hazy sky and fading distance in 3D, and glinting water. Both Terrain and Satellite get it; Terrain keeps its terrain-type colours, Satellite uses the picture. The sky is the same for both. (Nov 22, 2026)
 20. The sun and shadows button sets the map to the time of day on the scrubber. At night (say 3 am) the map is dark but still readable. By day it looks as it does now, plus the mountains' cast shadows, in the direction the sun is. (Nov 22, 2026)
-21. There is a temporary tuning panel on the map page (a Tune button) with: overlays off, weather off, satellite on, sun and shadows, and sliders for haze, lighting and bloom, so Kaden can play with the design. It goes away once the look is settled. (Nov 22, 2026)
+21. There is a temporary tuning panel on the map page (a Tune button) with: overlays off (the map's peaks, trails and so on), weather layers off (the weather fills, wind flow, lines, avalanche, smoke and radar), satellite on, sun and shadows, and sliders for haze, lighting and bloom, so Kaden can play with the design. It goes away once the look is settled. (Nov 22, 2026)
 
 ## The Map panel
 

@@ -3,18 +3,47 @@
 // and its one call in setup.ts once the look is settled.
 //
 //   Overlays off   hides the map's overlays (peaks, trails, huts and so on)
-//   Weather off    hides the weather fill under them
+//   Weather layers off   hides the weather: fills, wind flow, lines, avalanche, smoke, radar
 //   Satellite      the Satellite ground
 //   Sun & shadows  the time of day from the scrubber, with mountain shadows
 //   Haze           background haze and fog in 3D
 //   Relief, Shadow tint, Mountain shadows   how strong the lighting is
 //   Bloom          a soft glow on bright things (a blurred, brightened copy of the map laid over it)
 import { S } from '../state';
+import { precipLayer, tempLayer, windLayer } from '../weather/fills';
 import { mapSettings, type MapSettings } from './map-settings';
 import { tuning, type Tuning } from './tuning';
 
 const OVERLAY_KEYS: (keyof MapSettings)[] = ['trails', 'trailNames', 'huts', 'camps', 'peaks', 'peakHeights', 'contours', 'smallRoads', 'skiLifts', 'parkBoundaries', 'regionBoundaries', 'municipalBoundaries'];
-const WEATHER_LAYERS = ['precip-grid', 'temperature-grid', 'wind-grid'];
+/** Map layers the weather and safety sections draw, by id: lines, fills and radar pictures. */
+const WEATHER_STYLE = /^(avy-|ates-|air-|freezing-line|radar-)/;
+
+/**
+ * Hides every weather drawing: the colour fills (custom layers that decide their own
+ * visibility, so it is overridden on the layer itself), the wind flow canvas, and the
+ * lines, avalanche, smoke and radar layers. Kept hidden while on, even if the weather
+ * code shows one again, by checking after each draw.
+ */
+let weatherHidden = false;
+function setWeatherHidden(hide: boolean): void {
+  weatherHidden = hide;
+  for (const layer of [precipLayer, tempLayer, windLayer] as unknown as { visible: boolean; __real?: boolean }[]) {
+    if (!('__real' in layer)) {
+      layer.__real = layer.visible;
+      Object.defineProperty(layer, 'visible', { get: () => (weatherHidden ? false : layer.__real!), set: (v: boolean) => { layer.__real = v; }, configurable: true });
+    }
+  }
+  const flowCanvas = document.querySelector<HTMLElement>('.flow-canvas');
+  if (flowCanvas) flowCanvas.style.visibility = hide ? 'hidden' : '';
+  enforce();
+  S.map.triggerRepaint();
+}
+function enforce(): void {
+  if (!weatherHidden) return;
+  for (const l of S.map.getStyle().layers) {
+    if (WEATHER_STYLE.test(l.id) && (S.map.getLayoutProperty(l.id, 'visibility') ?? 'visible') !== 'none') S.map.setLayoutProperty(l.id, 'visibility', 'none');
+  }
+}
 
 const css = (el: HTMLElement, styles: Record<string, string>) => Object.assign(el.style, styles);
 
@@ -104,13 +133,11 @@ export function setupTuner(): void {
     } else { mapSettings.set(savedOverlays); savedOverlays = null; }
     pressed(b, savedOverlays !== null);
   });
-  let weatherHidden = false;
-  const weather = button('Weather off', (b) => {
-    weatherHidden = !weatherHidden;
-    for (const id of WEATHER_LAYERS) if (S.map.getLayer(id)) S.map.setLayoutProperty(id, 'visibility', weatherHidden ? 'none' : 'visible');
-    S.map.triggerRepaint();
+  const weather = button('Weather layers off', (b) => {
+    setWeatherHidden(!weatherHidden);
     pressed(b, weatherHidden);
   });
+  S.map.on('render', enforce);
   const satellite = button('Satellite', (b) => {
     const on = mapSettings.get().ground !== 'satellite';
     mapSettings.set({ ground: on ? 'satellite' : 'shaded' });
