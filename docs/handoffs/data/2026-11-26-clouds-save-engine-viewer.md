@@ -28,7 +28,7 @@
 - **Shared files changed** (the lead's), and why:
   - `core/vocabulary.ts`: four new names, all in %: `cloud_cover`, `cloud_cover_low`, `cloud_cover_mid`, `cloud_cover_high`. Needs the lead's approval as the connection point.
   - `vite.config.ts`: one line adding `data-viewer.html` to the build, so the page exists in the built app and the previews.
-- **New files no section owns yet:** none (`data-viewer.html`, `app/data-viewer/**`, `app/offline/**` are Data's; `docs/sections/sections.json` already lists the first two? If `data-viewer.html` and `app/data-viewer/**` are not in it, they are in the data section's list in the brief).
+- **New files no section owns yet:** none. Everything is under paths `docs/sections/sections.json` already gives to Data (`data-viewer.html`, `app/data-viewer/**`, `app/offline/**`, `core/offline/**`, `adapters/openmeteo-maps/**`).
 
 ## Connection points
 - **Used:** `layers`' `saveNeeds` (to know which values each layer saves); the model chain HRDPS, RDPS, GDPS.
