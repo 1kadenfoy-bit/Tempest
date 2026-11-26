@@ -235,6 +235,8 @@ setupMapControls();
 S.map.on('click', (e) => {
   // The lift that ends a press-and-hold is not a tap (the summary window is opening).
   if (consumeLongPressClick()) return;
+  // While an area is chosen for saving, a finger on the map traces it: no pin moves.
+  if (document.body.dataset.saving === 'true') return;
   // A tap on a weather station opens it; the pin stays.
   if (S.stations.hit(e.originalEvent.target)) return;
   // Air quality: a tap on a fire opens it; the pin stays.

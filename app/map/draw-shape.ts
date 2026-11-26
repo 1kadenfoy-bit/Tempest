@@ -115,6 +115,9 @@ export function startDrawing(map: MapLibreMap): Drawing {
     }
     claim(true);
     tracing = e.pointerId;
+    // Keep the stroke's moves and lift even when it passes over the pin, its label or
+    // another marker (a mouse sends them to whatever is under it; a finger does not).
+    try { container.setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
     const p = at(e);
     last = p;
     const ll = map.unproject([p.x, p.y]);
