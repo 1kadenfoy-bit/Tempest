@@ -116,13 +116,17 @@ of it**. The ten things most likely to be lost or overwritten in a conflict:
 
 ## Checks
 
-`npm run check:section -- maps` in a clean copy of the committed branch (the working
-copy holds 25 redrawn pictures under `docs/reports/` that a full test run rewrote;
-they are other sections' and are not committed): see the result in the pull request.
-- Unit tests: 325 pass (new: `shape-tiles` 11, `shadow-mask` 4, `style` 3, `map-settings`).
-- Open question: a full `npx playwright test` earlier gave 4 failures (air quality
-  ECCC, radar frame count, two in the forecast summary). They look unrelated (a clock
-  or loading difference), but I could not run them on a clean `main` to prove it.
+`npm run check:section -- maps`, run in a clean copy of the committed branch (the working
+copy holds 25 redrawn pictures under `docs/reports/` that a full test run rewrote; they
+are other sections' and are not committed, and they would fail the area check):
+**every check passed**: area OK, typecheck, lint, 325 unit tests, and the section's
+browser tests on recorded weather (search 2, 3D terrain, 3D buildings: 4 passed, 1
+skipped: the 3D frame-time report, skipped on CI).
+- New tests: `core/geo/shape-tiles` 11, `shadow-mask` 4, `style` 3, `map-settings` (ground choice).
+- Open question: an earlier full `npx playwright test` gave 4 failures in other sections'
+  tests (air quality ECCC, radar frame count, two in the forecast summary). They look
+  unrelated (a clock or loading difference), but I could not run them on a clean `main`
+  to prove it. The lead's full run will show.
 
 ## Kaden's rules added or changed
 
