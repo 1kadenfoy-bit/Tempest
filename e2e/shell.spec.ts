@@ -297,7 +297,10 @@ test.describe('shell pixels (map hidden)', () => {
     await ready(page);
     await hideMap(page);
     await page.click('#map-layers');
-    await page.waitForTimeout(500);
+    // The panel grows open (Kaden's interface rules, Nov 26): wait until its animations end,
+    // which takes longer than half a second on GitHub's slower machines.
+    await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+    await page.waitForTimeout(200);
     await expect(page).toHaveScreenshot('shell-map-panel.png', live(page));
   });
   test('pulled up', async ({ page }) => {
