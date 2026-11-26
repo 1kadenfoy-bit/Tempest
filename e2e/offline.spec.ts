@@ -85,7 +85,8 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   await drag(0.5);
   await expect(page.locator('#cursor-note')).toHaveText(/in [5-7] h/);
   // The save used the service's per-minute allowance: the pin's profile (snow line) may come a minute later.
-  await expect(page.locator('.pin-readout')).toContainText('snow line', { timeout: 120_000 });
+  // The pin shows only name · value · elevation (Kaden's interface rule, Nov 21): wait until it has loaded.
+  await expect(page.locator('.pin-readout')).toHaveAttribute('data-loading', 'false', { timeout: 120_000 });
   const online = await read();
 
   await context.setOffline(true);
