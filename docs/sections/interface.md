@@ -37,7 +37,7 @@ The exact list is `interface` in `docs/sections/sections.json`.
   You decide how they look. A new kind of card, or a new slot, is a template
   change: ask the lead and say why in the handoff.
 - **Every layer's numbers and words come from its own folder,** owned by
-  Weather on the map or Safety. Do not change what a layer says; change how
+  Weather on the map. Do not change what a layer says; change how
   the interface shows it.
 - **Shared app state** (`app/state.ts`): read it freely. Ask before adding to
   it.
@@ -73,3 +73,10 @@ The exact list is `interface` in `docs/sections/sections.json`.
 - **One time cursor for the whole app.** Never give a panel its own clock.
 - **Safety data is shown exactly as issued.** You can lay it out, never
   restyle its colours or words.
+- **Weather alerts are yours** (from Nov 22, when the Safety chat closed): the
+  ECCC alert badge and the alerts section of the Notification Centre
+  (`app/alerts/`, `core/alerts/`, `adapters/eccc-alerts/`,
+  `e2e/alerts.spec.ts`). Shown exactly as issued: ECCC's words, its colour
+  level, issue and expiry times, the link, and the age when offline. Never
+  re-scored, recoloured or summarised. Online only; the last answer stays with
+  its age.
