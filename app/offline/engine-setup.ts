@@ -10,8 +10,8 @@ import { S } from '../state';
 import { configureSaveEngine } from './engine';
 import { afterSavedChange } from './wiring';
 
-/** The chain "auto" follows: the sharpest model first, then the longer ones. */
-const CHAIN: ModelId[] = ['hrdps', 'rdps', 'gdps'];
+/** The chain "auto" follows: HRDPS, then RDPS past its end. GDPS waits: its saved steps do not match ("step size mismatch", Nov 26); Data to add it. */
+const CHAIN: ModelId[] = ['hrdps', 'rdps'];
 
 export function setupSaveEngine(): void {
   configureSaveEngine({

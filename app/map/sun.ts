@@ -95,7 +95,8 @@ class MapSun {
   update(): void {
     const map = this.map;
     if (!map || !map.getLayer('hillshade')) return;
-    const theme: Theme = S.settings.theme();
+    // Pages without the app's settings (the effects and phone test pages) use the dark theme.
+    const theme: Theme = S.settings?.theme() ?? 'dark';
     const satellite = map.getLayer(SATELLITE_LAYER) && map.getLayoutProperty(SATELLITE_LAYER, 'visibility') === 'visible' ? SATELLITE_LAYER : null;
     const c = map.getCenter();
     const { azimuth, altitude } = sunPosition(this.time(), c.lat, c.lng);

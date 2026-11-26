@@ -81,7 +81,7 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
 
   // The value at the pin, as ECCC classes it (the stub answers light rain next to the pin).
   await expect(page.locator('.pin-readout strong')).toHaveText('Light rain', { timeout: 15_000 });
-  await expect(page.locator('.pin-readout .muted')).toContainText('radar ·');
+  // The pin shows only name · value · elevation, no source note (Kaden's interface rule, Nov 21).
 
   // Tiles: ECCC's own WMS pictures, at the cursor's frame, in 3857.
   const map = asked.filter((u) => u.searchParams.get('request') === 'GetMap' && u.searchParams.get('layers') === 'Radar_1km_SfcPrecipType');
