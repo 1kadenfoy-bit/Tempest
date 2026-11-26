@@ -80,6 +80,19 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
   let moved = false;
   let pointerId = 0;
 
+  // The thumb buttons ride on the sheet's top edge while it is dragged, and fade out as it nears full height.
+  const follow = (offset: number) => {
+    const visible = screenHeight() - (parseFloat(getComputedStyle(sheet).top) || 0) - offset;
+    const v = visibleHeights();
+    const progress = Math.min(1, Math.max(0, (visible - v.collapsed) / Math.max(1, offsetFor('collapsed') - offsetFor('up'))));
+    document.body.dataset.sheetDragging = 'true';
+    root.style.setProperty('--sheet-visible', `${visible}px`);
+    root.style.setProperty('--thumbs-fade', String(1 - Math.min(1, progress * 2.5)));
+  };
+  const unfollow = () => {
+    delete document.body.dataset.sheetDragging;
+    root.style.removeProperty('--thumbs-fade');
+  };
   const onDown = (e: PointerEvent) => {
     // When pulled up, only the handle drags; the details scroll.
     if (state === 'up' && !handle.contains(e.target as Node)) return;
@@ -106,6 +119,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     sheet.dataset.dragging = 'true';
     const offset = Math.min(offsetFor('tucked'), Math.max(0, startOffset + dy));
     sheet.style.transform = `translateY(${offset}px)`;
+    follow(offset);
     velocity = (e.clientY - lastY) / Math.max(1, e.timeStamp - lastT);
     lastY = e.clientY;
     lastT = e.timeStamp;
@@ -114,6 +128,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     if (!dragging) return;
     dragging = false;
     delete sheet.dataset.dragging;
+    unfollow();
     if (!moved) { place(); return; }
     const o: Record<SheetState, number> = { up: 0, collapsed: offsetFor('collapsed'), tucked: offsetFor('tucked') };
     const offset = Math.min(o.tucked, Math.max(0, startOffset + (e.clientY - startY)));

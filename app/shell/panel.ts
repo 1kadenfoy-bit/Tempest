@@ -102,7 +102,8 @@ export function openPanel(opts: PanelOptions): void {
   const fromBottom = r.top > window.innerHeight / 2;
   // A button can ask for its window at the top of the screen (the search button's data-panel-anchor).
   if (opts.origin.dataset.panelAnchor === 'top') panel.style.top = 'calc(var(--safe-top) + 8px)';
-  else if (fromBottom) panel.style.bottom = 'calc(var(--bottom-inset) + 16px - var(--viewport-gap))';
+  // The map layers button asks for the bottom, so the panel opens the same wherever the sheet has put the button.
+  else if (fromBottom || opts.origin.dataset.panelAnchor === 'bottom') panel.style.bottom = 'calc(var(--bottom-inset) + 16px - var(--viewport-gap))';
   else panel.style.top = `${r.top}px`;
   const shape = opts.shape ?? opts.origin;
   const morph = opts.morph !== false && !matchMedia('(prefers-reduced-motion: reduce)').matches && growsFrom(shape);
