@@ -8,6 +8,7 @@ import { ancestorOf, baseMaxZoom, filesForTile, type BasemapFile, type BasemapMa
 import { maplibregl } from './maplibre';
 import { overzoomTile } from './overzoom';
 import { RangeOrWholeSource } from './range-source';
+import { ensureTerrainProtocol } from './terrain-tiles';
 
 const PROTOCOL = 'basemap';
 /** Labels and lines keep sharpening by enlarging up to this zoom. */
@@ -38,6 +39,8 @@ class FileSliceSource implements Source {
 }
 
 export async function loadBasemap(baseUrl: string): Promise<Basemap> {
+  // The BC terrain zones and glaciers read from their own tile file.
+  ensureTerrainProtocol();
   // A section preview (docs/sections/README.md) reads the published app's base
   // map instead of carrying its own copy: VITE_TILES_BASE at build time.
   const tiles = new URL((import.meta.env.VITE_TILES_BASE as string | undefined) ?? 'tiles/', baseUrl).href;

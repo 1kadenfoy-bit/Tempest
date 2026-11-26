@@ -36,3 +36,14 @@ wetland and sand, their soft edges, urban, cliff lines.
 Water: lakes, rivers and the sea are a clear blue (`#2B6CA3` dark, `#9CC6E3` light), a proposal for Kaden to change. The near-black water token stays only as the halo under labels.
 
 Glaciers: the province's Freshwater Atlas outlines (patches under 15 hectares left out), simplified and rounded. They come from the province's base mapping and may be older than today's ice.
+
+## How the zones and glaciers are stored (Nov 21, 2026)
+
+They ship as one tile file, `public/zones/terrain.pmtiles` (4.6 MB), cut into vector tiles
+from zoom 0 to 11 and enlarged beyond that. The app reads only the tiles on screen: 26 KB at
+start instead of the 12 MB of outlines it loaded before, about 10 KB more on zooming to a
+mountain. Rebuild with
+`node --experimental-strip-types tools/build-terrain-tiles.mjs` (it asks the BC government's
+public map server for the zones and glaciers, then cuts the tiles). The soft edges between
+natural types only draw from zoom 10: below that they cost about 50 ms a frame in a software
+test and showed little.
