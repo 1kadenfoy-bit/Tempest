@@ -1,23 +1,20 @@
 // App settings (grows from the gear in the map panel's header). v8 has no
 // screen for it, so it is built from the existing panel parts: segmented
-// controls for units and theme, the "Saved data only" switch (the same pref
-// as in the saved areas list), and the credits, generated from the sources'
+// controls for units and theme, and the credits, generated from the sources'
 // metadata (app/sources/credits.ts).
 import { icons } from '../shell/icons';
 import type { UnitSystem } from '../../core/units/format';
-import { savedOnlySwitch } from '../offline/offline-panel';
 import type { ThemeChoice } from '../theme/theme';
 import type { Credit } from '../sources/credits';
 import { areaNote } from '../offline/offline-panel';
 import type { SavedArea } from '../../core/offline/saved-area';
 import { swipeRow } from './swipe-row';
 
-export interface SettingsState { units: UnitSystem; theme: ThemeChoice; savedOnly: boolean }
+export interface SettingsState { units: UnitSystem; theme: ThemeChoice }
 
 export interface SettingsHandlers {
   setUnits(u: UnitSystem): void;
   setTheme(t: ThemeChoice): void;
-  setSavedOnly(on: boolean): void;
   /** The saved data: the button, and the list below it. */
   saved: {
     areas: SavedArea[];
@@ -45,14 +42,15 @@ function note(text: string): HTMLParagraphElement {
   return p;
 }
 
-function segmented<T extends string>(name: string, options: { value: T; label: string }[], current: T, onPick: (v: T) => void): HTMLElement {
+function segmented<T extends string>(name: string, options: { value: T; label: string; icon?: string }[], current: T, onPick: (v: T) => void): HTMLElement {
   const seg = document.createElement('div');
   seg.className = 'segmented';
   seg.setAttribute('role', 'group');
   seg.setAttribute('aria-label', name);
   for (const o of options) {
     const b = document.createElement('button');
-    b.textContent = o.label;
+    if (o.icon) b.innerHTML = `<span class="seg-icon" aria-hidden="true">${o.icon}</span>`;
+    b.append(document.createTextNode(o.label));
     b.dataset.value = o.value;
     b.setAttribute('aria-pressed', String(o.value === current));
     b.addEventListener('click', () => {
@@ -101,23 +99,21 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
 
   const units = group('UNITS');
   const unitNote = note(UNIT_NOTE[state.units]);
-  units.append(segmented<UnitSystem>('Units', [{ value: 'metric', label: 'Metric' }, { value: 'imperial', label: 'Imperial' }], state.units, (u) => {
+  units.append(segmented<UnitSystem>('Units', [{ value: 'metric', label: 'Metric', icon: icons.degC }, { value: 'imperial', label: 'Imperial', icon: icons.degF }], state.units, (u) => {
     unitNote.textContent = UNIT_NOTE[u];
     h.setUnits(u);
   }), unitNote);
 
   const theme = group('THEME');
-  theme.append(segmented<ThemeChoice>('Theme', [{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }, { value: 'system', label: 'Match phone' }], state.theme, h.setTheme));
-
-  const offline = group('OFFLINE');
-  offline.append(...savedOnlySwitch(state.savedOnly, h.setSavedOnly));
+  theme.append(segmented<ThemeChoice>('Theme', [{ value: 'dark', label: 'Dark', icon: icons.moon }, { value: 'light', label: 'Light', icon: icons.sun }, { value: 'system', label: 'Match phone', icon: icons.phone }], state.theme, h.setTheme));
 
   // Saved data: one button to save, and what is saved below it; swipe a row left to delete.
   const saved = group('SAVED DATA');
   const save = document.createElement('button');
   save.className = 'wide-button';
   save.id = 'save-data';
-  save.textContent = 'Save data';
+  save.innerHTML = `<span class="btn-icon" aria-hidden="true">${icons.download}</span>`;
+  save.append(document.createTextNode('Save data'));
   save.disabled = !h.saved.canSave;
   save.addEventListener('click', () => h.saved.save());
   saved.append(save);
@@ -145,7 +141,7 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
   const fold = document.createElement('button');
   fold.className = 'fold-row';
   fold.setAttribute('aria-expanded', 'false');
-  fold.innerHTML = '<span>Credits and licences</span><span class="fold-chevron" aria-hidden="true"></span>';
+  fold.innerHTML = `<span class="fold-label"><span class="btn-icon" aria-hidden="true">${icons.info}</span>Credits and licences</span><span class="fold-chevron" aria-hidden="true"></span>`;
   fold.querySelector('.fold-chevron')!.innerHTML = icons.chevron;
   const body = document.createElement('div');
   body.className = 'fold-body';
@@ -165,6 +161,6 @@ export function settingsBody(state: SettingsState, list: Credit[], h: SettingsHa
   });
   credits.append(fold, body);
 
-  wrap.append(units, theme, offline, saved, credits);
+  wrap.append(units, theme, saved, credits);
   return wrap;
 }

@@ -26,12 +26,20 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     // v8 leaves 9 px of room under the legend (320 px tall at one line).
     return { collapsed: Math.round(top + 9 + inset), tucked: Math.round(handleH + 8 + inset) };
   };
+  // While a text field is being typed in, the phone's keyboard shrinks the visible area. The sheet
+  // must leave that alone (Kaden, Nov 21): it keeps the height it had before the keyboard came up.
+  let stableHeight = window.visualViewport?.height ?? innerHeight;
+  const typing = () => document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
+  const screenHeight = () => {
+    if (!typing()) stableHeight = window.visualViewport?.height ?? innerHeight;
+    return stableHeight;
+  };
   /** How far down to move the sheet for a position, from the screen's real height. */
   const offsetFor = (s: SheetState) => {
     if (s === 'up') return 0;
     const v = visibleHeights();
     const sheetTop = parseFloat(getComputedStyle(sheet).top) || 0;
-    const screenH = window.visualViewport?.height ?? innerHeight;
+    const screenH = screenHeight();
     return Math.max(0, screenH - v[s] - sheetTop);
   };
 

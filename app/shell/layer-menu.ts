@@ -1,7 +1,9 @@
-// The layer menu (v8 03-LayerMenu): tiles in two columns under CORE LAYERS.
+// The layer menu (v8 03-LayerMenu): tiles in two columns under CORE LAYERS, each with
+// the layer's icon on the left and its name on the right (Kaden, Nov 21).
 // Only built layers are listed; the board's dashed "planned" tiles appear in
 // the app once each layer works.
 import type { LayerSlots } from '../../layers/contract';
+import { icons, type IconName } from './icons';
 
 export function layerMenuBody(layers: LayerSlots[], activeId: string, onPick: (l: LayerSlots) => void): HTMLElement {
   const group = document.createElement('div');
@@ -12,17 +14,13 @@ export function layerMenuBody(layers: LayerSlots[], activeId: string, onPick: (l
     const b = document.createElement('button');
     b.className = 'layer-tile';
     b.setAttribute('aria-pressed', String(l.id === activeId));
-    const bars = document.createElement('span');
-    bars.className = 'layer-swatches';
-    for (const bg of l.swatches) {
-      const bar = document.createElement('span');
-      bar.style.background = bg;
-      bars.append(bar);
-    }
+    const icon = document.createElement('span');
+    icon.className = 'layer-tile-icon';
+    icon.innerHTML = icons[`layer-${l.id}` as IconName] ?? '';
     const name = document.createElement('span');
     name.className = 'layer-tile-name';
     name.textContent = l.title;
-    b.append(bars, name);
+    b.append(icon, name);
     b.addEventListener('click', () => onPick(l));
     grid.append(b);
   }

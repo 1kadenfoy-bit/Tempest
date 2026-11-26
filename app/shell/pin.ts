@@ -6,6 +6,7 @@ import { formatElevation } from '../../core/units/format';
 import type { Readout } from '../../layers/contract';
 import { elevationAt } from '../map/elevation';
 import { maplibregl } from '../map/maplibre';
+import { terrainAt } from './pin-terrain';
 
 export type PinKind = 'you' | 'dropped' | 'last';
 
@@ -32,31 +33,44 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const marker = new maplibregl.Marker({ element: el, anchor: 'center' });
   let state: PinState | null = null;
   let readoutValue: Readout = { value: '' };
+  let readoutSet = false;
+  /** What the ground is here ("Alpine", "Glacier"), for when there is no place name. */
+  let terrain: string | null = null;
   let seq = 0;
 
   const render = (notify = true) => {
     if (!state) return;
-    // "Location name · layer value · elevation" (Kaden, Nov 20).
-    const name = state.kind === 'you' ? state.name : pinLabel(state).short;
-    const elev = state.elevation === null ? '…' : formatElevation(state.elevation);
-    text.innerHTML = '';
+    // "Location name · layer value · elevation", nothing more (Kaden, Nov 21). While
+    // the data is still coming in, just a small spinning wheel: no "…" placeholders.
+    // The place's name if there is one; otherwise what the ground is; otherwise the plain label (a dropped pin's "Pin").
+    const name = state.name ?? terrain ?? (state.kind === 'you' ? null : pinLabel(state).short);
     const r = readoutValue;
-    if (name) {
-      const place = document.createElement('span');
-      place.className = 'pin-name';
-      place.textContent = name;
-      text.append(place, ' · ');
+    const loading = !readoutSet || r.value === '…' || state.elevation === null;
+    readout.dataset.loading = String(loading);
+    text.innerHTML = '';
+    if (loading) {
+      const wheel = document.createElement('span');
+      wheel.className = 'pin-spinner';
+      wheel.setAttribute('role', 'progressbar');
+      wheel.setAttribute('aria-label', 'Loading');
+      text.append(wheel);
+    } else {
+      if (name) {
+        const place = document.createElement('span');
+        place.className = 'pin-name';
+        place.textContent = name;
+        text.append(place, ' · ');
+      }
+      if (r.value) {
+        const strong = document.createElement('strong');
+        strong.textContent = r.value;
+        text.append(strong, ' · ');
+      }
+      const elev = document.createElement('span');
+      elev.className = 'muted';
+      elev.textContent = formatElevation(state.elevation!);
+      text.append(elev);
     }
-    if (r.value) {
-      const strong = document.createElement('strong');
-      strong.textContent = r.value;
-      text.append(strong, ' · ');
-    }
-    const muted = document.createElement('span');
-    muted.className = 'muted';
-    // "feels −6 · 1,180 m · 0 °C at 1,150 m"
-    muted.textContent = [r.note, elev, r.extra].filter(Boolean).join(' · ');
-    text.append(muted);
     keepInside();
     if (notify) onChange(state);
   };
@@ -82,22 +96,30 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
   const set = (next: Omit<PinState, 'elevation'>) => {
     state = { ...next, elevation: null };
     marker.setLngLat([next.lng, next.lat]).addTo(map);
-    // Your own location is named from the closest labelled place on the map, once the map has drawn it.
-    const nameYou = () => {
-      if (!state || state.kind !== 'you' || state.name) return;
-      const found = nameNear(map, map.project([state.lng, state.lat]), 160);
-      if (found) { state.name = found; render(false); }
+    terrain = null;
+    const mine = ++seq;
+    // The pin is named from a labelled place right next to it, once the map has drawn it; if there is none, by what the ground is.
+    const nameIt = () => {
+      if (!state || seq !== mine) return;
+      if (!state.name && state.kind === 'you') {
+        const found = nameNear(map, map.project([state.lng, state.lat]), 50);
+        if (found) { state.name = found; render(false); return; }
+      }
+      if (!state.name && !terrain) {
+        const t = terrainAt(map, state.lng, state.lat);
+        if (t) { terrain = t; render(false); }
+      }
     };
     render();
-    if (next.kind === 'you' && !next.name) { nameYou(); map.once('idle', nameYou); }
-    const mine = ++seq;
+    nameIt();
+    if (!next.name) map.once('idle', nameIt);
     elevationAt(next.lng, next.lat)
       .then((m) => { if (mine === seq && state) { state.elevation = m; render(); } })
       .catch(() => { /* offline or no terrain: elevation stays unknown */ });
   };
 
   /** The layer's readout for the pin at the cursor: the value in bold, its notes muted. */
-  const setReadout = (r: Readout) => { readoutValue = r; render(false); };
+  const setReadout = (r: Readout) => { readoutValue = r; readoutSet = true; render(false); };
   return { set, setReadout, get: () => state };
 }
 
