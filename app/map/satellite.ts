@@ -32,7 +32,8 @@ const archives = new Map<string, PMTiles>();
 let protocolOn = false;
 let ready = false;
 
-const base = () => new URL('satellite/', document.baseURI).href;
+/** Where the picture's files are. A section preview reads them from the main site (the publish removes its own copy to stay under the site's size limit): VITE_SATELLITE_BASE at build time. */
+const base = () => new URL((import.meta.env.VITE_SATELLITE_BASE as string | undefined) ?? 'satellite/', document.baseURI).href;
 
 function load() {
   loaded ??= fetch(new URL('satellite.json', base()).href)
@@ -54,6 +55,25 @@ function archive(file: string): PMTiles {
   return a;
 }
 
+/**
+ * One tile of an enlarged picture: the (dx, dy) piece out of `scale` x `scale` pieces of
+ * `parent`, drawn at full size. Soft, as an enlarged picture is, but never blank.
+ */
+async function enlarge(parent: ArrayBuffer, scale: number, dx: number, dy: number, size: number): Promise<ArrayBuffer | null> {
+  try {
+    const bmp = await createImageBitmap(new Blob([parent]));
+    const piece = bmp.width / scale;
+    const canvas = new OffscreenCanvas(size, size);
+    const g = canvas.getContext('2d')!;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(bmp, dx * piece, dy * piece, piece, piece, 0, 0, size, size);
+    bmp.close();
+    return await (await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 })).arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
 /** True once the satellite picture is in the map and can be shown. */
 export const satelliteReady = () => ready;
 
@@ -71,11 +91,27 @@ export function addSatellite(map: MapLibreMap): void {
         const t = /(\d+)\/(\d+)\/(\d+)$/.exec(params.url);
         if (!t) throw new Error(`bad tile url ${params.url}`);
         const [z, x, y] = [Number(t[1]), Number(t[2]), Number(t[3])];
-        for (const f of filesForTile({ files: m.entries } as unknown as BasemapManifest, z, x, y)) {
-          try {
-            const tile = await archive(f.file).getZxy(z, x, y, abort.signal);
-            if (tile?.data) return { data: tile.data };
-          } catch { /* a missing file reads as no picture here */ }
+        const manifest = { files: m.entries } as unknown as BasemapManifest;
+        const stored = async (zz: number, xx: number, yy: number): Promise<ArrayBuffer | undefined> => {
+          for (const f of filesForTile(manifest, zz, xx, yy)) {
+            try {
+              const tile = await archive(f.file).getZxy(zz, xx, yy, abort.signal);
+              if (tile?.data) return tile.data;
+            } catch { /* a missing file reads as no picture here */ }
+          }
+          return undefined;
+        };
+        const direct = await stored(z, x, y);
+        if (direct) return { data: direct };
+        // Past the deepest picture held here (zoom 10 in most of BC), enlarge the nearest one up the pyramid.
+        for (let az = z - 1; az >= Math.max(0, z - 4); az--) {
+          const scale = 2 ** (z - az);
+          const parent = await stored(az, x >> (z - az), y >> (z - az));
+          if (parent) {
+            const data = await enlarge(parent, scale, x - ((x >> (z - az)) << (z - az)), y - ((y >> (z - az)) << (z - az)), m.manifest.tileSize);
+            if (data) return { data };
+            break;
+          }
         }
         return { data: new ArrayBuffer(0) };
       });
