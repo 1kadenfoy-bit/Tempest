@@ -56,6 +56,8 @@ test('search: type a name, pick the peak, the pin moves there and takes its name
 
   await peak.click();
   await expect(panel).toBeHidden();
+  // The pin shows only a loading wheel until its data is in (Kaden's interface rule, Nov 21).
+  await expect(page.locator('.pin-readout')).toHaveAttribute('data-loading', 'false', { timeout: 60_000 });
   await expect(page.locator('.pin .readout-text')).toContainText('Mount Seymour');
   await expect(page.locator('#place-text')).toHaveText(/^Mount Seymour/);
   await expect.poll(async () => {
