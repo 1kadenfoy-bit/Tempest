@@ -164,6 +164,7 @@ test('save for offline: draw the area, pull the card up, save; the bell tells th
   await expect(page.locator('#alert-badge')).toHaveAttribute('data-unread', 'true');
   await page.click('#alert-badge');
   const centre = page.getByRole('dialog', { name: 'Notification Centre' });
+  // A real save takes minutes; its end, and the saved area working with no
+  // signal, are checked in e2e/offline.spec.ts.
   await expect(centre.locator('.notice-words').first()).toContainText(/Download started|Saved for offline/);
-  await expect(centre.locator('.notice-words', { hasText: 'Saved for offline' })).toBeVisible({ timeout: 20_000 });
 });

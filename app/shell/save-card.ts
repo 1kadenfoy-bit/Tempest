@@ -5,7 +5,7 @@
 // the map first; there is no starting area.
 //
 // The drawing tool (Maps) and the saving engine (Data) are called through
-// save-stubs.ts, so this file does not change when the real ones arrive.
+// app/map/draw-shape.ts (Maps) and app/offline/engine.ts (Data), wired by the lead.
 import type { LayerChoice, LayerEstimate, LayerTimeRange, SaveEstimate, SaveRequest, SaveShape } from '../../core/offline/save-request';
 import { formatCursorTime } from '../../core/units/format';
 import { MODELS as REGISTRY } from '../../adapters/openmeteo-maps/models';
@@ -14,7 +14,8 @@ import { trackSave } from '../notify/track-save';
 import { S } from '../state';
 import { icons } from './icons';
 import { clampFrame, dragFrame, formatArea, formatBytes, ringAreaKm2, type Frame } from './save-math';
-import { estimateSave, layerTimeRange, showShape, startDrawing, startSave, type Drawing } from './save-stubs';
+import { showShape, startDrawing, type Drawing } from '../map/draw-shape';
+import { estimateSave, layerTimeRange, startSave } from '../offline/engine';
 
 const H = 3_600_000;
 const MIN_SPAN = 2 * H;
@@ -236,9 +237,11 @@ export function openSaveCard(onShowSaved: () => void): void {
   const rowsEl = $q('.ofl-rows');
   const loadRange = async (r: RowState) => {
     const range = await layerTimeRange(r.layer, r.model);
-    ranges.set(r.layer, range);
+    // A layer with no data yet has no reach (the engine says null).
+    if (range) ranges.set(r.layer, range); else ranges.delete(r.layer);
     // The axis spans every layer's reach; the frame stays inside it.
     const all = [...ranges.values()];
+    if (!all.length) return;
     axis = { from: Math.min(...all.map((x) => x.earliest.getTime())), to: Math.max(...all.map((x) => x.latest.getTime())) };
     frame = clampFrame(frame, axis, MIN_SPAN);
     paintDays();

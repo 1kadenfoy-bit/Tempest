@@ -114,19 +114,15 @@ test('radar: ECCC frames on the one cursor, loop, legend, value at the pin, onli
   await page.click('#now-button');
   await expect(page.locator('body')).toHaveAttribute('data-radar-frame', typeNewest);
 
-  // Save for offline: radar is listed greyed out, with the reason (v8 08-SaveArea).
-  // Saving lives in app settings (Kaden's interface rule 11, Nov 20).
+  // Save for offline: radar can be ticked like any layer and saves what its
+  // source allows, with a note (the card, Kaden Nov 22).
   await page.click('#settings-button');
   await page.locator('#save-data').click();
-  const box = page.getByRole('dialog', { name: 'Save for offline' });
-  await expect(box).toBeVisible();
-  const row = box.locator('.check-row', { hasText: 'Radar' });
-  await expect(row.locator('.check-note')).toContainText('Radar: its source does not allow saving');
-  await expect(row.locator('input')).toBeDisabled();
-  await expect(row.locator('input')).not.toBeChecked();
-  // The layer on screen is radar, so the first layer that can be saved is ticked instead.
-  await expect(box.locator('.check-row', { hasText: 'Precipitation' }).locator('input')).toBeChecked();
+  await expect(page.locator('.ofl-card')).toBeVisible();
+  await page.locator('.ofl-handle').click();
+  await expect(page.locator('.ofl-row', { hasText: 'Radar' })).toBeVisible();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screens/radar-save.png' });
-  await box.getByRole('button', { name: 'Close' }).click();
+  await page.locator('.ofl-close').click();
+  await expect(page.locator('.ofl-card')).toBeHidden();
 });
