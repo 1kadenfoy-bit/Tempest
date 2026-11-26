@@ -68,8 +68,34 @@ jobs:
       - name: Install browser for screenshot tests
         run: npx playwright install --with-deps chromium
 
+      # Failed tests first (Kaden, Nov 26): each machine keeps the list of
+      # tests that failed on its last run of this branch and runs those
+      # before anything else. If they still fail, the run stops in minutes
+      # instead of after the whole set; if they pass, the whole set runs.
+      - name: Failures from this branch's last run
+        uses: actions/cache/restore@v6
+        with:
+          path: .last-run
+          key: last-run-${{ github.head_ref || github.ref_name }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: last-run-${{ github.head_ref || github.ref_name }}-${{ matrix.shard }}-
+
+      - name: Last run's failed tests, first
+        if: hashFiles('.last-run/last-run.json') != ''
+        run: npx playwright test --trace off --workers=1 --last-failed --last-failed-file=.last-run/last-run.json --pass-with-no-tests
+
       - name: Screenshot tests (390 x 844)
         run: npm run screenshots -- --shard=${{ matrix.shard }}/3 --workers=1
+
+      - name: Remember this run's failed tests
+        if: always() && hashFiles('test-results/.last-run.json') != ''
+        run: mkdir -p .last-run && cp test-results/.last-run.json .last-run/last-run.json
+
+      - name: Keep the list for the next run
+        if: always() && hashFiles('.last-run/last-run.json') != ''
+        uses: actions/cache/save@v6
+        with:
+          path: .last-run
+          key: last-run-${{ github.head_ref || github.ref_name }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Where pixel tests differ
         if: failure()
