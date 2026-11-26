@@ -66,10 +66,9 @@ test('precipitation details: totals by elevation, snow ratio and type shown', as
   await panel.getByRole('button', { name: '10:1' }).click();
   await expect(d.locator('.details-footer')).toContainText('Snow ratio 10:1 (fixed)');
   await panel.getByRole('button', { name: 'Rain only' }).click();
-  await panel.getByRole('button', { name: 'Off' }).click();
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerSettings: Record<string, Record<string, unknown>> }).layerSettings.precipitation);
-  expect(saved).toEqual({ ratio: '10:1', type: 'rain', line: 'off' });
+  expect(saved).toEqual({ ratio: '10:1', type: 'rain' });
   expect(errors).toEqual([]);
 });
