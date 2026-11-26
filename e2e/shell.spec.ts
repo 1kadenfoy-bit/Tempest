@@ -117,15 +117,12 @@ test('window control sets the chart span and the week box together', async ({ pa
   await expect(page.locator('#window-label')).toHaveText('24 h');
 });
 
-test('the map panel links to the phone tests and back', async ({ page }) => {
+test('the map panel has no phone tests button (Kaden, Nov 22)', async ({ page }) => {
   await page.goto(HOME);
   await ready(page);
   await page.click('#map-layers');
-  await page.getByRole('link', { name: /Phone tests/ }).click();
-  await expect(page).toHaveURL(/spike\.html$/);
-  await expect(page.getByRole('button', { name: 'Run tests' })).toBeVisible();
-  await page.getByRole('link', { name: /Back to the map/ }).click();
-  await expect(page.locator('#layer-name')).toHaveText('Precipitation');
+  await expect(page.getByRole('dialog', { name: 'Map' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Phone tests/ })).toHaveCount(0);
 });
 
 test('map panel grows from its button, switches terrain, and remembers', async ({ page }) => {
@@ -139,9 +136,13 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   await page.screenshot({ path: 'test-results/screens/m1-map-panel.png' });
 
   const vis = () => onMap(page, (m) => m.getLayoutProperty('hillshade', 'visibility'));
-  // Ground: Plain has no shading, Shaded terrain is the hillshade.
-  await panel.getByRole('button', { name: 'Plain' }).click();
-  expect(await vis()).toBe('none');
+  // Ground: Terrain is the one choice that always works (Satellite shows once its picture is loaded).
+  await expect(panel.getByRole('button', { name: 'Terrain', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(await vis()).toBe('visible');
+  // An overlay switch: Contour lines off.
+  const contours = () => onMap(page, (m) => m.getLayoutProperty('contour-lines', 'visibility'));
+  await panel.getByRole('button', { name: 'Contour lines' }).click();
+  expect(await contours()).toBe('none');
 
   // Closes with a tap on the scrim (the panel is taller now, so tap its top edge).
   await page.locator('.scrim').click({ position: { x: 8, y: 8 } });
@@ -150,10 +151,11 @@ test('map panel grows from its button, switches terrain, and remembers', async (
   // Remembered after a reload.
   await page.reload();
   await mapReady(page);
-  expect(await vis()).toBe('none');
+  expect(await contours()).toBe('none');
   await page.click('#map-layers');
-  await expect(page.getByRole('button', { name: 'Plain' })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Shaded terrain' }).click();
+  await expect(page.getByRole('button', { name: 'Terrain', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Contour lines' })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Contour lines' }).click();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(panel).toBeHidden();
 });
@@ -236,7 +238,8 @@ test.describe('without location permission', () => {
     await page.goto(HOME);
     await ready(page);
     await expect(page.locator('#place-text')).toContainText('Last pin used');
-    await expect(page.locator('.pin-readout')).toContainText('Last pin');
+    // The pin names a place or the ground (rule 9), not "Last pin"; the sheet's place line carries the label.
+    await expect(page.locator('.pin-readout')).toContainText(/[\d,]+ m/);
   });
 });
 
@@ -294,7 +297,10 @@ test.describe('shell pixels (map hidden)', () => {
     await ready(page);
     await hideMap(page);
     await page.click('#map-layers');
-    await page.waitForTimeout(500);
+    // The panel grows open (Kaden's interface rules, Nov 26): wait until its animations end,
+    // which takes longer than half a second on GitHub's slower machines.
+    await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+    await page.waitForTimeout(200);
     await expect(page).toHaveScreenshot('shell-map-panel.png', live(page));
   });
   test('pulled up', async ({ page }) => {

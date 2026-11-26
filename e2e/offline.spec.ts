@@ -25,31 +25,39 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForTimeout(2000);
 
-  // Choose the area with the save box (08-SaveArea): every layer, 3 days.
-  // Saving lives in app settings (Kaden's interface rule 11, Nov 20).
+  // Save for offline (the card, Kaden Nov 22): trace the area, tick all three
+  // layers, and stretch the time frame to its end so it reaches past HRDPS.
   await page.click('#settings-button');
   await page.locator('#save-data').click();
-  const box = page.getByRole('dialog', { name: 'Save for offline' });
-  await expect(box).toBeVisible();
-  for (const name of ['Temperature', 'Wind']) await box.locator('.check-row', { hasText: name }).click();
-  await box.getByRole('button', { name: '3 days' }).click();
-  await expect(page.locator('.save-go')).toHaveText(/Save area · about \d+/, { timeout: 60_000 });
-  await page.screenshot({ path: 'test-results/screens/m8-save-box.png' });
+  const card = page.locator('.ofl-card');
+  await expect(card).toBeVisible();
+  const pts: [number, number][] = [[120, 300], [200, 260], [280, 300], [300, 380], [240, 440], [160, 430], [110, 370], [118, 305]];
+  await page.mouse.move(...pts[0]!);
+  await page.mouse.down();
+  for (const p of pts.slice(1)) await page.mouse.move(p[0], p[1], { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.ofl-summary')).toContainText(/Area .* km²/);
+  await page.locator('.ofl-handle').click();
+  await expect(card).toHaveAttribute('data-state', 'up');
+  for (const name of ['Temperature', 'Wind']) await page.locator('.ofl-row', { hasText: name }).locator('.ofl-tick').click();
+  const end = (await page.locator('.ofl-frame [data-part="to"]').boundingBox())!;
+  const axis = (await page.locator('.ofl-axis').boundingBox())!;
+  await page.mouse.move(end.x + end.width / 2, end.y + end.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(axis.x + axis.width - 1, end.y + end.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.ofl-go')).toContainText(/Save data · [\d.]+ [kM]B/, { timeout: 60_000 });
+  await page.screenshot({ path: 'test-results/screens/m8-save-card.png' });
   const started = Date.now();
-  await page.click('.save-go');
-  await expect(page.locator('body')).toHaveAttribute('data-saved', 'true', { timeout: 720_000 });
+  await page.locator('.ofl-go').click();
+  await expect(card).toBeHidden();
+  // The Notification Centre says when it is done.
+  await page.click('#alert-badge');
+  const centre = page.getByRole('dialog', { name: 'Notification Centre' });
+  await expect(centre.locator('.notice-words', { hasText: 'Saved for offline' })).toBeVisible({ timeout: 720_000 });
   console.log(`saved in ${Math.round((Date.now() - started) / 1000)} s`);
-  await expect(page.locator('.save-mode')).toHaveCount(0);
-
-  // The list: name, size, both models, how far it reaches.
-  await page.click('#settings-button');
-  const row = page.locator('[data-area]');
-  await expect(row).toHaveCount(1);
-  await expect(row.locator('.icon-row-note')).toContainText(/MB · HRDPS \+ RDPS \d\dZ run, .* · to \w{3} \d/);
-  console.log('saved area:', await row.textContent());
-  await page.waitForTimeout(600); // the panel finishes growing
-  await page.screenshot({ path: 'test-results/screens/m8-saved-list.png' });
-  await page.getByRole('button', { name: 'Close' }).click();
+  await page.keyboard.press('Escape');
+  await expect(centre).toBeHidden();
 
   // Move the cursor 6 hours ahead (drag the chart left by half its width), so
   // the half before the needle starts at now, inside the run.
@@ -77,7 +85,8 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   await drag(0.5);
   await expect(page.locator('#cursor-note')).toHaveText(/in [5-7] h/);
   // The save used the service's per-minute allowance: the pin's profile (snow line) may come a minute later.
-  await expect(page.locator('.pin-readout')).toContainText('snow line', { timeout: 120_000 });
+  // The pin shows only name · value · elevation (Kaden's interface rule, Nov 21): wait until it has loaded.
+  await expect(page.locator('.pin-readout')).toHaveAttribute('data-loading', 'false', { timeout: 120_000 });
   const online = await read();
 
   await context.setOffline(true);
@@ -112,19 +121,4 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   await expect(page.locator('.readout-text strong')).toHaveText(/^\d+ km\/h$/);
   await page.screenshot({ path: 'test-results/screens/m8-offline-rdps.png' });
   await context.setOffline(false);
-});
-
-test('"saved data only" uses saved areas with signal, and turns off again', async ({ page }) => {
-  test.setTimeout(120_000);
-  await page.goto('/?insets=47,34');
-  await expect(page.locator('body')).toHaveAttribute('data-run', 'ready', { timeout: 60_000 });
-  await page.click('#settings-button');
-  const only = page.getByRole('switch', { name: 'Saved data only' });
-  await expect(only).toHaveAttribute('aria-checked', 'false');
-  // No saved area in this fresh browser: the switch is kept, the network is still used.
-  await only.click();
-  await expect(only).toHaveAttribute('aria-checked', 'true');
-  await page.reload();
-  await expect(page.locator('body')).toHaveAttribute('data-run', 'ready', { timeout: 60_000 });
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tempest.prefs.v1') ?? '{}').savedOnly)).toBe(true);
 });

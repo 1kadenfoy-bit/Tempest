@@ -26,12 +26,20 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     // v8 leaves 9 px of room under the legend (320 px tall at one line).
     return { collapsed: Math.round(top + 9 + inset), tucked: Math.round(handleH + 8 + inset) };
   };
+  // While a text field is being typed in, the phone's keyboard shrinks the visible area. The sheet
+  // must leave that alone (Kaden, Nov 21): it keeps the height it had before the keyboard came up.
+  let stableHeight = window.visualViewport?.height ?? innerHeight;
+  const typing = () => document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
+  const screenHeight = () => {
+    if (!typing()) stableHeight = window.visualViewport?.height ?? innerHeight;
+    return stableHeight;
+  };
   /** How far down to move the sheet for a position, from the screen's real height. */
   const offsetFor = (s: SheetState) => {
     if (s === 'up') return 0;
     const v = visibleHeights();
     const sheetTop = parseFloat(getComputedStyle(sheet).top) || 0;
-    const screenH = window.visualViewport?.height ?? innerHeight;
+    const screenH = screenHeight();
     return Math.max(0, screenH - v[s] - sheetTop);
   };
 
@@ -72,6 +80,19 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
   let moved = false;
   let pointerId = 0;
 
+  // The thumb buttons ride on the sheet's top edge while it is dragged, and fade out as it nears full height.
+  const follow = (offset: number) => {
+    const visible = screenHeight() - (parseFloat(getComputedStyle(sheet).top) || 0) - offset;
+    const v = visibleHeights();
+    const progress = Math.min(1, Math.max(0, (visible - v.collapsed) / Math.max(1, offsetFor('collapsed') - offsetFor('up'))));
+    document.body.dataset.sheetDragging = 'true';
+    root.style.setProperty('--sheet-visible', `${visible}px`);
+    root.style.setProperty('--thumbs-fade', String(1 - Math.min(1, progress * 2.5)));
+  };
+  const unfollow = () => {
+    delete document.body.dataset.sheetDragging;
+    root.style.removeProperty('--thumbs-fade');
+  };
   const onDown = (e: PointerEvent) => {
     // When pulled up, only the handle drags; the details scroll.
     if (state === 'up' && !handle.contains(e.target as Node)) return;
@@ -98,6 +119,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     sheet.dataset.dragging = 'true';
     const offset = Math.min(offsetFor('tucked'), Math.max(0, startOffset + dy));
     sheet.style.transform = `translateY(${offset}px)`;
+    follow(offset);
     velocity = (e.clientY - lastY) / Math.max(1, e.timeStamp - lastT);
     lastY = e.clientY;
     lastT = e.timeStamp;
@@ -106,6 +128,7 @@ export function setupSheet(sheet: HTMLElement, handle: HTMLElement, onChange: (s
     if (!dragging) return;
     dragging = false;
     delete sheet.dataset.dragging;
+    unfollow();
     if (!moved) { place(); return; }
     const o: Record<SheetState, number> = { up: 0, collapsed: offsetFor('collapsed'), tucked: offsetFor('tucked') };
     const offset = Math.min(o.tucked, Math.max(0, startOffset + (e.clientY - startY)));

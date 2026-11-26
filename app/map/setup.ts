@@ -7,6 +7,9 @@ import type { LngLatLike, Map as MapLibreMap } from 'maplibre-gl';
 import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
 import { applyMapSettings } from './map-settings';
+import { registerWaterImages } from './water';
+import { setupTuner } from './tuner';
+import { showShape, startDrawing } from './draw-shape';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
 import { hasBuildingHeights, TILT } from './three-d';
@@ -34,6 +37,8 @@ export function createMap(): MapLibreMap {
   zoom: 11,
   // Start tilted when a 3D switch is on, so 3D is what you see on opening.
   pitch: S.prefs.terrain3d || (buildingsOk() && S.prefs.buildings3d) ? TILT : 0,
+  // Tilt far enough in 3D for the sky and haze to show (app/map/atmosphere.ts).
+  maxPitch: 80,
   minZoom: 4,
   maxZoom: 16,
   maxBounds: [[-145, 44], [-108, 63]],
@@ -51,6 +56,9 @@ export function createMap(): MapLibreMap {
 map.touchZoomRotate.disableRotation();
 map.touchPitch.disable();
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+registerWaterImages(map);
+// A hook for tests of the drawing tool until the save card calls it (docs/plans/offline-save.md).
+(window as unknown as { tempestDraw: { startDrawing: typeof startDrawing; showShape: typeof showShape } }).tempestDraw = { startDrawing, showShape };
 (window as unknown as { tempestMap: typeof map }).tempestMap = map;
   return map;
 }
@@ -97,6 +105,8 @@ export function recolourMap(t: Theme): void {
 
 /** The locate button, the place line and the map panel. */
 export function setupMapControls(): void {
+// TEMPORARY: the design tuning panel (app/map/tuner.ts); delete with it.
+setupTuner();
 $('locate').addEventListener('click', () => locate(true));
 
 $('place-line').addEventListener('click', () => {

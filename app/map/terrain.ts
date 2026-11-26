@@ -5,10 +5,10 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { maplibregl } from './maplibre';
 import mlcontour from 'maplibre-contour';
 import { colorToken, type Theme } from '../theme/tokens';
-import { mix } from './style';
+import { plainHillshade } from './look';
 import { addPlaces, applyPlacesTheme } from './places';
 import { mapSun } from './sun';
-import { addGlaciers, applyGlaciersTheme } from './glaciers';
+import { addSatellite } from './satellite';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -21,17 +21,12 @@ const TERRAIN_MAXZOOM = 12;
 export const TERRAIN_3D_SOURCE = 'terrain-3d';
 
 /**
- * Hillshade and contour colours for a theme. Dark: shadows in the water
- * colour, highlights a white tint. Light: shadows the ground darkened toward
- * the ink, highlights the white surface, so relief reads the same way round.
+ * Hillshade and contour colours for a theme. The hillshade takes the game-style
+ * lighting (app/map/look.ts): warm lit slopes, cool blue-violet shadows.
  */
-export function terrainPaint(theme: Theme): { hillshade: Record<string, string>; contours: Record<string, string> } {
-  const dark = theme === 'dark';
+export function terrainPaint(theme: Theme): { hillshade: Record<string, unknown>; contours: Record<string, string> } {
   return {
-    hillshade: {
-      'hillshade-shadow-color': dark ? mix(colorToken('water'), colorToken('map-ground'), 0.75) : mix(colorToken('map-ground', 'light'), colorToken('ink', 'light'), 0.55),
-      'hillshade-highlight-color': dark ? colorToken('stroke-strong') : colorToken('surface', 'light'),
-    },
+    hillshade: plainHillshade(theme),
     contours: { 'line-color': colorToken('stroke-strong', theme) },
   };
 }
@@ -39,10 +34,11 @@ export function terrainPaint(theme: Theme): { hillshade: Record<string, string>;
 /** Recolour hillshade and contours for a theme. */
 export function applyTerrainTheme(map: MapLibreMap, theme: Theme): void {
   const p = terrainPaint(theme);
-  if (map.getLayer('hillshade')) for (const [k, v] of Object.entries(p.hillshade)) map.setPaintProperty('hillshade', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
+  if (map.getLayer('hillshade')) for (const [k, v] of Object.entries(p.hillshade)) map.setPaintProperty('hillshade', k as Parameters<MapLibreMap['setPaintProperty']>[1], v as never);
   if (map.getLayer('contour-lines')) for (const [k, v] of Object.entries(p.contours)) map.setPaintProperty('contour-lines', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
   applyPlacesTheme(map, theme);
-  applyGlaciersTheme(map, theme);
+  // The sun's lighting, if on, goes back over the plain one.
+  mapSun.update();
 }
 
 export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Theme = 'dark'): void {
@@ -79,7 +75,6 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
     type: 'hillshade',
     source: 'terrain-dem',
     paint: {
-      'hillshade-exaggeration': 0.4,
       ...paint.hillshade,
     },
   }, beforeLayerId);
@@ -104,6 +99,6 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
   addPlaces(map, beforeLayerId, theme);
   // The sun's night wash goes under the hillshade, so under the weather fills too.
   mapSun.attach(map);
-  // The BC glaciers, fetched once the map is idle.
-  addGlaciers(map, theme);
+  // The satellite picture, hidden until the ground setting is Satellite.
+  addSatellite(map);
 }

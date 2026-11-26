@@ -4,13 +4,16 @@
 // openmaps.gov.bc.ca). Simplified to about 70 m and the corners rounded, then
 // written as one file the map draws: public/zones/glaciers.json.
 //
-//   node tools/build-glaciers.mjs
+//   node tools/build-glaciers.mjs [--out=FILE]   (tools/build-terrain-tiles.mjs turns the result into map tiles)
 //
 // Licence: Open Government Licence - British Columbia (to be confirmed against
 // the data catalogue, which this machine cannot reach). The outlines come from
 // the province's base mapping and may be older than today's ice; the map says so
 // in its credits (see the handoff).
 import { mkdirSync, writeFileSync } from 'node:fs';
+
+const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => { const [k, v] = a.slice(2).split('='); return [k, v ?? true]; }));
+const OUT_FILE = typeof args.out === 'string' ? args.out : 'public/zones/glaciers.json';
 import { rounded, simplify, roundPoint, ringArea } from './lib/geometry.mjs';
 
 const WFS = 'https://openmaps.gov.bc.ca/geo/pub/WHSE_BASEMAPPING.FWA_GLACIERS_POLY/ows';
@@ -55,8 +58,8 @@ for (let start = 0; ; start += PAGE) {
   if (fc.features.length < PAGE) break;
 }
 
-mkdirSync('public/zones', { recursive: true });
-writeFileSync('public/zones/glaciers.json', JSON.stringify({
+mkdirSync(OUT_FILE.slice(0, OUT_FILE.lastIndexOf('/')), { recursive: true });
+writeFileSync(OUT_FILE, JSON.stringify({
   type: 'FeatureCollection',
   name: 'BC glaciers',
   source: 'DataBC WHSE_BASEMAPPING.FWA_GLACIERS_POLY (openmaps.gov.bc.ca)',

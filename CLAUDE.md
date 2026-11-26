@@ -88,6 +88,7 @@ Node 22.12 or newer.
 | Lint (also enforces the architecture import rules) | `npm run lint` |
 | Build to `dist/` | `npm run build` |
 | Screenshot tests at 390 × 844 (Playwright; starts `vite preview` on 4173), on recorded weather (`e2e/fixtures.ts`; `WEATHER=live` for live data). Shell pixel baselines live in `e2e/shell.spec.ts-snapshots`; refresh with `npx playwright test --update-snapshots` after an intended change | `npm run screenshots` |
+| Only the browser tests that failed last time on this machine (run them first, then the rest) | `npm run screenshots:failed` |
 | Everything CI runs | `npm run check` |
 | Size or cut any PMTiles box | `node tools/pmtiles-extract.mjs <url> <out> --bbox=w,s,e,n --maxzoom=N [--dry-run]` |
 

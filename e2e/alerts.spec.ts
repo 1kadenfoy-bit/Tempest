@@ -51,7 +51,7 @@ test('alerts at the pin: badge with the count, panel with one row per alert as i
   await page.waitForTimeout(1500);
   await page.screenshot({ path: 'test-results/screens/m9-alert-badge.png' });
   await badge.click();
-  const panel = page.getByRole('dialog', { name: 'Weather alerts' });
+  const panel = page.getByRole('dialog', { name: 'Notification Centre' });
   await expect(panel).toBeVisible();
   const rows = panel.locator('.alert-row');
   await expect(rows).toHaveCount(2);
@@ -82,7 +82,7 @@ test('no alerts at the pin: a plain badge with no count, and a panel that says s
   await expect(badge).toHaveAttribute('data-count', '0');
   await expect(badge.locator('.alert-count')).toBeHidden();
   await badge.click();
-  const panel = page.getByRole('dialog', { name: 'Weather alerts' });
+  const panel = page.getByRole('dialog', { name: 'Notification Centre' });
   await expect(panel.locator('.alert-none')).toHaveText('No alerts in force at the pin.');
   await expect(panel.locator('.alert-source')).toContainText('Environment and Climate Change Canada');
   await page.waitForTimeout(400);

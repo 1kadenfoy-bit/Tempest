@@ -45,6 +45,18 @@ export function tokenCss(theme: Theme = 'dark'): string {
     `--accent-rain: ${theme === 'dark' ? precip.textAccent.rain : precip.rain.light.at(-1)};`,
     `--accent-snow: ${theme === 'dark' ? precip.textAccent.snow : precip.snow.light.at(-1)};`,
   );
+  // Each layer's colour for its icon chip: the layer's own ramp from the tokens, as a gradient. Radar is
+  // precipitation. Layers with no ramp in the tokens (avalanche, air quality) stay neutral until Kaden picks colours.
+  const grad = (stops: readonly string[]) => `linear-gradient(135deg, ${stops.join(', ')})`;
+  const rain = precip.rain[theme];
+  const ramps: Record<string, string> = {
+    precipitation: grad(rain),
+    radar: grad(rain),
+    temperature: grad(tokens.data.temperature[theme]),
+    wind: grad(tokens.data.wind[theme]),
+  };
+  for (const [id, g] of Object.entries(ramps)) lines.push(`--layer-${id}: ${g};`);
+  lines.push(`--layer-neutral: linear-gradient(135deg, var(--stroke-strong), var(--fill-control));`);
   lines.push(`--font-display: ${tokens.font.display};`, `--font-body: ${tokens.font.body};`);
   for (const [name, t] of Object.entries(tokens.type)) {
     lines.push(`--type-${name}: ${t.weight} ${t.size}px var(--font-${t.family});`);

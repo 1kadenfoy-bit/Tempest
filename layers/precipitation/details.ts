@@ -9,7 +9,7 @@ import { crossings as rawCrossings, type Crossing } from '../../core/time/crossi
 
 /** Crossings to the nearest hour: they are "about", from hourly model steps. */
 const crossings = (...a: Parameters<typeof rawCrossings>): Crossing[] => rawCrossings(...a).map((c) => ({ ...c, time: new Date(Math.round(c.time.getTime() / 3_600_000) * 3_600_000) }));
-import { formatCmNumber, formatElevation, formatElevationNumber, formatMmNumber, formatRate, formatRateNumber, formatTemp, formatTempOneDecimal, formatWhen, unitLabel } from '../../core/units/format';
+import { formatCmNumber, formatElevation, formatElevationNumber, formatMmNumber, formatRate, formatRateNumber, formatTempOneDecimal, formatWhen, unitLabel } from '../../core/units/format';
 import type { BandsInfo, Card, DetailContext, Setting, ViewSample } from '../contract';
 import { precipRamp } from './fill';
 import { withObserved } from './observed';
@@ -24,7 +24,6 @@ export const settings = (): Setting[] => [
   // HRDPS has no snow ratio of its own; Open-Meteo converts at a fixed 7:1.
   { key: 'ratio', title: 'SNOW RATIO', kind: 'segmented', options: [{ value: '7:1', label: '7:1' }, { value: 'kuchera', label: 'Kuchera' }, { value: '10:1', label: '10:1' }], default: 'kuchera' },
   // HRDPS's files carry no snow line of its own, so there is no "Model" choice.
-  { key: 'line', title: 'LINE ON THE MAP', kind: 'segmented', options: [{ value: 'off', label: 'Off' }, { value: 'wetbulb', label: 'Snow line' }, { value: '0c', label: formatTemp(0) }], default: 'wetbulb' },
 ];
 export const settingsNote = (): string => `Nothing is drawn under ${formatRate(PRECIP_CUTOFF)}. The snow line is where the wet-bulb temperature falls to ${formatTempOneDecimal(0.5)}.`;
 

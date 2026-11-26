@@ -17,6 +17,10 @@ export const VOCABULARY = {
   wind_speed_10m: { unit: 'km/h', meaning: 'Wind speed 10 m above the model’s own ground' },
   wind_direction_10m: { unit: '°', meaning: 'Direction the 10 m wind blows from, clockwise from north' },
   wind_gusts_10m: { unit: 'km/h', meaning: 'Strongest gust 10 m above the model’s own ground during the step' },
+  cloud_cover: { unit: '%', meaning: 'Share of the sky covered by cloud at all heights, for the hour' },
+  cloud_cover_low: { unit: '%', meaning: 'Share of the sky covered by low cloud (up to about 2 km above the ground), for the hour' },
+  cloud_cover_mid: { unit: '%', meaning: 'Share of the sky covered by mid-level cloud (about 2 to 6 km), for the hour' },
+  cloud_cover_high: { unit: '%', meaning: 'Share of the sky covered by high cloud (above about 6 km), for the hour' },
   pm2_5: { unit: 'µg/m³', meaning: 'Fine particles (PM2.5) near the ground, from every source, for the hour' },
   pm2_5_smoke: { unit: 'µg/m³', meaning: 'Fine particles (PM2.5) near the ground from wildfire smoke only, for the hour' },
 } as const;

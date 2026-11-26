@@ -21,7 +21,10 @@ export function setupLongPress(map: MapLibreMap, onPress: (point: { x: number; y
 
   /** Only presses on the map itself, or on the pin: not on a station, report pin or other marker. */
   // Not while an area is being chosen for saving (its box is dragged over the map).
-  const onMap = (t: EventTarget | null) => document.body.dataset.saveMode !== 'true' && (t === map.getCanvas() || (t instanceof Element && !!t.closest('.pin')));
+  // Not while an area is being chosen for saving: the old save box (saveMode) or the
+  // Save for offline card (saving), where one finger traces the area (Nov 26).
+  const choosingArea = () => document.body.dataset.saveMode === 'true' || document.body.dataset.saving === 'true';
+  const onMap = (t: EventTarget | null) => !choosingArea() && (t === map.getCanvas() || (t instanceof Element && !!t.closest('.pin')));
   const local = (clientX: number, clientY: number) => {
     const r = box.getBoundingClientRect();
     return { x: clientX - r.left, y: clientY - r.top };

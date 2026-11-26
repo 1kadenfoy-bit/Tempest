@@ -11,12 +11,10 @@ import { currentAlerts, isFresh, placeFor, type IssuedAlert } from '../../core/a
 import { savedOnlyActive } from '../data/connection';
 import { formatCursorTime, formatRelative, formatWhen } from '../../core/units/format';
 import { fetchAlerts, officialColour, source } from '../../adapters/eccc-alerts/alerts';
-import { isOpenFrom, openPanel } from '../shell/panel';
 
 const svg = (size: number) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.2 2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>`;
 const TRIANGLE = svg(24);
-const TRIANGLE_PANEL = svg(22);
 
 interface Answer { alerts: IssuedAlert[]; fetchedAt: Date; failed: boolean }
 
@@ -31,7 +29,7 @@ function setupBadge(): HTMLButtonElement | null {
   badge = document.getElementById('alert-badge') as HTMLButtonElement | null;
   if (!badge) return null;
   badge.querySelector('.alert-icon')!.innerHTML = TRIANGLE;
-  badge.addEventListener('click', () => { if (!isOpenFrom(badge!)) openAlerts(); });
+  // The bell opens the Notification Centre (app/notify/centre.ts), which draws the alerts through renderAlertsSection.
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void refresh(); });
   window.addEventListener('online', () => void refresh());
   return badge;
@@ -78,6 +76,7 @@ function render(): void {
   badge.setAttribute('aria-label', n ? `${n} weather ${n === 1 ? 'alert' : 'alerts'} at the pin` : 'Weather alerts: none at the pin');
   // For tests: 'pending' until there is an answer for the place.
   document.body.dataset.alerts = s ? String(n) : 'pending';
+  for (const draw of [...sections]) draw();
 }
 
 /** "Fetched 9:41 PM", with its age once it is an hour old. */
@@ -112,33 +111,36 @@ function row(a: IssuedAlert): HTMLElement {
   return r;
 }
 
-function openAlerts(): void {
-  const now = new Date();
-  const s = shown(now);
-  if (!badge) return;
-  const body = document.createElement('div');
-  body.className = 'panel-groups';
-  const list = document.createElement('div');
-  list.className = 'group alert-list';
-  if (s) for (const a of s.list) list.append(row(a));
-  if (!s?.list.length) {
-    const none = document.createElement('p');
-    none.className = 'alert-none';
-    none.textContent = s ? 'No alerts in force at the pin.'
-      : !navigator.onLine || savedOnlyActive() ? 'Alerts need a connection. None checked for this place yet.'
-      : 'Checking Environment Canada…';
-    list.append(none);
-  }
-  const foot = document.createElement('p');
-  foot.className = 'panel-note alert-source';
-  foot.textContent = s ? `${source.publisher} · ${fetchedText(s.answer, now)}` : source.publisher;
-  if (s?.answer.failed) foot.textContent += '. Could not reach ECCC just now; this is the last answer.';
-  body.append(list, foot);
-  openPanel({
-    origin: badge,
-    icon: TRIANGLE_PANEL,
-    title: 'Weather alerts',
-    caption: 'At the pin, as issued',
-    body,
-  });
+/** Panels showing the alerts section right now, each redrawn when the answer changes. */
+const sections = new Set<() => void>();
+
+/**
+ * The weather alerts section of the Notification Centre, shown exactly as ECCC issues them: its words,
+ * its colour level, issue and expiry times, its link, and the age of the answer. Never re-scored,
+ * recoloured or summarised. Returns a function that stops it following changes (call it when the panel closes).
+ */
+export function renderAlertsSection(container: HTMLElement): () => void {
+  const draw = () => {
+    const now = new Date();
+    const s = shown(now);
+    const list = document.createElement('div');
+    list.className = 'group alert-list';
+    if (s) for (const a of s.list) list.append(row(a));
+    if (!s?.list.length) {
+      const none = document.createElement('p');
+      none.className = 'alert-none';
+      none.textContent = s ? 'No alerts in force at the pin.'
+        : !navigator.onLine || savedOnlyActive() ? 'Alerts need a connection. None checked for this place yet.'
+        : 'Checking Environment Canada…';
+      list.append(none);
+    }
+    const foot = document.createElement('p');
+    foot.className = 'panel-note alert-source';
+    foot.textContent = s ? `${source.publisher} · ${fetchedText(s.answer, now)}` : source.publisher;
+    if (s?.answer.failed) foot.textContent += '. Could not reach ECCC just now; this is the last answer.';
+    container.replaceChildren(list, foot);
+  };
+  draw();
+  sections.add(draw);
+  return () => { sections.delete(draw); };
 }

@@ -23,7 +23,6 @@ const about = (t: Date, ref: Date) => `about ${formatWhen(t, ref)}`;
 
 export const settings: Setting[] = [
   { key: 'map', title: 'MAP SHOWS', kind: 'segmented', options: [{ value: 'air', label: 'Air temperature' }, { value: 'feels', label: 'Feels-like' }], default: 'air' },
-  { key: 'freezingLine', title: 'Freezing level line', kind: 'toggle', default: true },
 ];
 export const settingsNote = 'Always 2 m above the terrain, corrected per pixel.';
 

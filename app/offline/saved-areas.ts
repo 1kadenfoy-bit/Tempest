@@ -111,10 +111,20 @@ async function plainFromApi(run: RunMetadata, times: Date[], vars: VariableName[
   return out;
 }
 
-export async function saveArea(opts: {
+type SaveOptions = {
   bbox: [number, number, number, number];
   /** Hours from now to keep, or null for every step to the last model's end. */
   hours: number | null;
+  /** A span chosen on the scrubber: replaces `hours`. */
+  span?: { from: Date; to: Date };
+  /** The outline traced on the map: kept in the record. */
+  shape?: [number, number][];
+  /** The model chosen for each layer, kept in the record. */
+  layerModels?: { layer: string; model: string }[];
+  /** Base map and terrain tiles to keep, cut to the outline; without it, every tile the box touches. */
+  tilesFor?: (minZoom: number, maxZoom: number) => [number, number, number][];
+  /** Stops the save: files written so far are removed and the save rejects. */
+  signal?: AbortSignal;
   /** The runs to save, in the chain's order: each covers the hours after the one before ends. */
   runs: RunMetadata[];
   /** Amounts (read with the library's per-step conversion). */
@@ -127,7 +137,20 @@ export async function saveArea(opts: {
   basemap: Basemap;
   style: StyleSpecification;
   onProgress: (p: SaveProgress) => void;
-}): Promise<SavedArea> {
+};
+
+/** Save an area. A cancelled or failed save removes the files it had written. */
+export async function saveArea(opts: SaveOptions): Promise<SavedArea> {
+  const written: string[] = [];
+  try {
+    return await saveAreaInner(opts, written);
+  } catch (err) {
+    for (const f of written) await removeFile(f).catch(() => undefined);
+    throw err;
+  }
+}
+
+async function saveAreaInner(opts: SaveOptions, written: string[]): Promise<SavedArea> {
   const { bbox, basemap } = opts;
   const amounts = opts.variables;
   const plain = opts.plainVariables ?? [];
@@ -136,9 +159,9 @@ export async function saveArea(opts: {
   const id = `a${Date.now().toString(36)}`;
   const now = Date.now();
   const H = 3_600_000;
-  const until = opts.hours === null ? Infinity : now + opts.hours * H;
+  const until = opts.span ? opts.span.to.getTime() : opts.hours === null ? Infinity : now + opts.hours * H;
   // Each run's hours: after the previous model's end (or from now), up to the window's end.
-  let after = now - H;
+  let after = (opts.span ? opts.span.from.getTime() : now) - H;
   const plan = opts.runs.map((run, k) => {
     const times = run.validTimes.slice(k === 0 ? 1 : 0).filter((t) => t.getTime() > after && t.getTime() <= until);
     after = Math.max(after, run.validTimes[run.validTimes.length - 1]!.getTime());
@@ -146,11 +169,13 @@ export async function saveArea(opts: {
   }).filter((p) => p.times.length);
   if (!plan.length) throw new Error('no forecast hours in that window');
   const req = gridRequest(bbox, 12, bbox, 1e-9)!; // the box itself, at the model's own spacing
-  const terrainTiles = tilesInBox(bbox, 0, TERRAIN_MAXZOOM);
+  const tilesFor = opts.tilesFor ?? ((a: number, b: number) => tilesInBox(bbox, a, b));
+  const terrainTiles = tilesFor(0, TERRAIN_MAXZOOM);
+  const stopped = () => { if (opts.signal?.aborted) throw new Error('The save was cancelled'); };
   const extras = glyphAndSpriteUrls(opts.style);
   const total = plan.reduce((n, p) => n + p.times.length, 0) + 1 + terrainTiles.length + extras.length;
   let done = 0;
-  const tick = (label: string) => opts.onProgress({ done: ++done, total, label });
+  const tick = (label: string) => { stopped(); opts.onProgress({ done: ++done, total, label }); };
 
   // 1. Weather: every step of each run, as the model's own cells for the box,
   //    so the numbers offline are exactly the numbers online.
@@ -192,13 +217,14 @@ export async function saveArea(opts: {
         steps: steps[v]!,
       });
       weatherBytes += await writeFile(name, new Uint8Array(buf));
+      written.push(name);
       files[v] = name;
     }
     parts.push({ source: source.id, model: run.model, run: run.referenceTime.toISOString(), validTimes: times.map((t) => t.toISOString()), stepHours, files, ranges, nx, ny });
   }
 
   // 2. Base map: the stored tiles inside the box, into one PMTiles file.
-  const wanted = tilesInBox(bbox, 0, BASEMAP_MAXZOOM);
+  const wanted = tilesFor(0, BASEMAP_MAXZOOM);
   const tiles: TileIn[] = [];
   await pool(wanted, 12, async ([z, x, y]) => {
     const t = await basemap.storedTile(z, x, y);
@@ -210,6 +236,7 @@ export async function saveArea(opts: {
   });
   const basemapFile = `${id}-basemap.pmtiles`;
   const basemapBytes = await writeFile(basemapFile, pm);
+  written.push(basemapFile);
   tick('Base map');
 
   // 3. Terrain, fonts and icons: kept in the offline cache by address, served
@@ -235,7 +262,10 @@ export async function saveArea(opts: {
   await pool(extras, 4, async (url) => { await keep(url, 'other'); tick('Map labels'); });
 
   const area: SavedArea = {
-    version: SAVED_AREA_VERSION, id, name: opts.name, layers: opts.layers, window: opts.hours, bbox, savedAt: new Date().toISOString(),
+    version: SAVED_AREA_VERSION, id, name: opts.name, layers: opts.layers, window: opts.span ? null : opts.hours, bbox, savedAt: new Date().toISOString(),
+    ...(opts.span ? { span: { from: opts.span.from.toISOString(), to: opts.span.to.toISOString() } } : {}),
+    ...(opts.layerModels ? { layerModels: opts.layerModels } : {}),
+    ...(opts.shape ? { shape: opts.shape } : {}),
     weather: parts[0]!, more: parts.slice(1),
     basemap: { file: basemapFile, minzoom: 0, maxzoom: BASEMAP_MAXZOOM },
     cached,

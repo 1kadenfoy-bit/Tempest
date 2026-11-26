@@ -6,7 +6,8 @@
 //   node tools/build-zones.mjs [--region=sea-to-sky,kootenay-pass]
 //
 // Source: DataBC layer WHSE_FOREST_VEGETATION.BEC_BIOGEOCLIMATIC_POLY, through
-// the public WFS at openmaps.gov.bc.ca. Licence: Open Government Licence - British
+// the public WFS at openmaps.gov.bc.ca. (tools/build-terrain-tiles.mjs runs this and
+// turns the result into the map tiles the app reads; `--out=FILE` writes the plain file elsewhere.) Licence: Open Government Licence - British
 // Columbia (attribution to be confirmed against the data catalogue, which this
 // machine cannot reach). Polygons are huge (a whole zone is one shape), so each
 // is simplified here to about 300 m and its corners rounded and the three classes are written as one small file.
@@ -78,8 +79,9 @@ const out = {
   regions: regions.map((r) => r.id),
   features,
 };
-mkdirSync('public/zones', { recursive: true });
-writeFileSync('public/zones/terrain-zones.json', JSON.stringify(out));
+const OUT_FILE = typeof args.out === 'string' ? args.out : 'public/zones/terrain-zones.json';
+mkdirSync(OUT_FILE.slice(0, OUT_FILE.lastIndexOf('/')), { recursive: true });
+writeFileSync(OUT_FILE, JSON.stringify(out));
 const counts = {};
 for (const f of features) counts[f.properties.z] = (counts[f.properties.z] ?? 0) + 1;
 console.error(`terrain-zones.json: ${features.length} shapes`, counts);

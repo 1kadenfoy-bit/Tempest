@@ -28,6 +28,8 @@ export interface Prefs {
   summaryLayers: Record<string, boolean>;
   /** The map panel's choices (ground, overlays, sun), as app/map/map-settings.ts names them; what is not listed takes the map's default. */
   mapSettings: Record<string, string | boolean>;
+  /** The map panel's weather lines and 3D animations (app/shell/feature-switches.ts), by id. */
+  features?: Record<string, boolean>;
 }
 
 const KEY = 'tempest.prefs.v1';
@@ -36,7 +38,8 @@ const defaults: Prefs = { hillshade: true, contours: true, terrain3d: false, bui
 export function loadPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...defaults, ...(JSON.parse(raw) as Partial<Prefs>) } : { ...defaults };
+    // "Saved data only" is gone from settings (Kaden, Nov 22): a phone that had it on must not stay stuck in it.
+    return raw ? { ...defaults, ...(JSON.parse(raw) as Partial<Prefs>), savedOnly: false } : { ...defaults };
   } catch {
     return { ...defaults };
   }

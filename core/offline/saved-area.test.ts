@@ -12,6 +12,14 @@ describe('saved areas', () => {
     expect(parseSavedAreas([area, { version: 99, bbox: [] }, null, 'x'])).toEqual([area]);
     expect(parseSavedAreas({})).toEqual([]);
   });
+  it('still reads records from before the traced outline (versions 1 and 2) and keeps the new fields', () => {
+    const old = { ...area, version: 1 };
+    const v2 = { ...area, version: 2 };
+    const v3 = { ...area, shape: [[-123, 49.3], [-122.9, 49.3], [-122.9, 49.4]] as [number, number][], layerModels: [{ layer: 'precipitation', model: 'auto' }], span: { from: '2026-11-22T06:00:00Z', to: '2026-11-23T06:00:00Z' } };
+    expect(SAVED_AREA_VERSION).toBe(3);
+    expect(parseSavedAreas([old, v2, v3]).map((a) => a.version)).toEqual([1, 2, 3]);
+    expect(parseSavedAreas([v3])[0]!.shape).toHaveLength(3);
+  });
   it('adds up sizes and answers containment', () => {
     expect(totalBytes(area)).toBe(10);
     expect(areaContains(area, -123, 49.4)).toBe(true);

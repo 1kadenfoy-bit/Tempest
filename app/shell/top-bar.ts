@@ -11,6 +11,7 @@ import { avalanche } from '../../layers/avalanche';
 import { airQuality } from '../../layers/air-quality';
 import { savedOnlyActive } from '../data/connection';
 import { mapSettings, type MapSettings } from '../map/map-settings';
+import { setupNotifications } from '../notify/centre';
 import { mapTime, modelsFor } from '../data/forecast';
 import { RADAR_REFRESH_MS, radarError, radarFetchedAt, radarFrames, radarOffline } from '../radar/frames';
 import { ATES_ICON } from '../avalanche/ates';
@@ -59,10 +60,10 @@ export function showLayer() {
   });
   // The source button is always shown, even where there is one source (radar names ECCC).
   $('model-pill').hidden = false;
-  if (S.active.frames) $('model-pill-label').textContent = 'ECCC';
+  if (S.active.frames) $('model-pill-label').textContent = autoOn(S.active.id) ? 'Auto' : 'ECCC';
   // An issued layer names its source instead of a model.
-  if (S.active.id === 'avalanche') $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
-  if (S.active.id === airQuality.id) $('model-pill-label').textContent = S.air.short();
+  if (S.active.id === 'avalanche') $('model-pill-label').textContent = autoOn('avalanche') ? 'Auto' : AVALANCHE_SOURCES[0]!.short;
+  if (S.active.id === airQuality.id) $('model-pill-label').textContent = autoOn(airQuality.id) ? 'Auto' : S.air.short();
   document.body.dataset.layer = S.active.id;
 }
 export function renderRunAge() {
@@ -76,7 +77,7 @@ export function renderRunAge() {
     el.dataset.stale = String(!newest || radarOffline() || Date.now() - newest.getTime() > 30 * 60_000);
     return;
   } else if (S.active.id === 'avalanche') {
-    $('model-pill-label').textContent = AVALANCHE_SOURCES[0]!.short;
+    $('model-pill-label').textContent = autoOn('avalanche') ? 'Auto' : AVALANCHE_SOURCES[0]!.short;
     if (!S.pin?.get()) return;
     // Avalanche: the pin's bulletin and its age, not a model run.
     const pinNow = S.pin!.get()!;
@@ -88,7 +89,7 @@ export function renderRunAge() {
   }
   if (S.active.id === airQuality.id) {
     const a = S.air.ageLine();
-    $('model-pill-label').textContent = S.air.short();
+    $('model-pill-label').textContent = autoOn(airQuality.id) ? 'Auto' : S.air.short();
     $('run-age').textContent = a.text;
     $('run-age').dataset.stale = String(a.stale);
     return;
@@ -123,6 +124,15 @@ export const modelBtn = () => $('model-pill');
 const AUTO = 'auto';
 /** What is chosen for a layer: nothing chosen yet means Auto. */
 const choiceOf = (layerId: string): string => S.prefs.layerModels[layerId] ?? AUTO;
+/** Auto is on until a source or model is picked by hand. */
+const autoOn = (layerId: string): boolean => choiceOf(layerId) === AUTO;
+/** Remember a hand-picked source, or (null) go back to Auto. */
+function rememberSource(layerId: string, id: string | null): void {
+  if (id === null) S.prefs.layerModels = Object.fromEntries(Object.entries(S.prefs.layerModels).filter(([k]) => k !== layerId)); else S.prefs.layerModels[layerId] = id;
+  savePrefs(S.prefs);
+}
+/** Auto, the source menu's first row, for any layer: every source with good data for the area, the best for each time. */
+const autoRow = (layerId: string, onPick: () => void) => ({ current: autoOn(layerId), onPick });
 export function modelAge(m: ModelId): string | null {
   const r = S.runs[m];
   return r ? formatRunAge(r.referenceTime, new Date()).split(' · ')[1] ?? null : null;
@@ -144,14 +154,16 @@ export function openModelInfo(spec: (typeof REGISTRY)[ModelId]) {
 
 /** Wires the buttons once the map, the pin and the safety layers exist (after the 3D switches, so the thumb buttons keep their order). */
 export function setupTopBar(): void {
+setupNotifications($('alert-badge'));
 // The map panel's remembered choices go back on the map. Phones that only had the old Hillshade and Contours switches carry those over once.
 {
   const saved: Record<string, string | boolean> = { ...S.prefs.mapSettings };
   if (!Object.keys(saved).length) {
-    if (S.prefs.hillshade === false) saved.ground = 'plain';
     if (S.prefs.contours === false) saved.contours = false;
   }
   if (!S.prefs.hillshade || !S.prefs.contours) { S.prefs.hillshade = true; S.prefs.contours = true; savePrefs(S.prefs); }
+  // Plain is gone (Kaden, Nov 22): a saved Plain is Terrain now.
+  if (saved.ground === 'plain') saved.ground = 'shaded';
   // Trail names and peak heights are always on (Kaden, Nov 20).
   mapSettings.set({ ...(saved as Partial<MapSettings>), trailNames: true, peakHeights: true });
 }
@@ -178,6 +190,8 @@ layerBtn.addEventListener('click', (e) => {
     origin: layerBtn,
     icon: icons.chevronUp,
     iconAfterTitle: true,
+    // The layer button sits inside the top bar with the source button: the window grows from the whole bar.
+    shape: layerBtn.closest<HTMLElement>('.topbar-main') ?? layerBtn,
     title: 'Condition layer',
     caption: 'One condition layer at a time',
     body: layerMenuBody(S.layers, S.active.id, (l) => { closePanel(); app.setActive(l); }),
@@ -201,28 +215,34 @@ modelBtn().addEventListener('click', () => {
     // Issued data: the source menu, with Avalanche Canada as the one source.
     const at = S.pin?.get();
     const line = at ? S.avy.ageLine(at.lng, at.lat).text : '';
-    const rows = AVALANCHE_SOURCES.map((src, i) => ({ ...src, current: i === 0, age: line.startsWith(`${src.label} · issued `) ? line.slice(src.label.length + 10).replace(' · expired', ', expired') : 'as issued' }));
-    openPanel({ origin: modelBtn(), icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(rows, () => closePanel()) });
+    const rows = AVALANCHE_SOURCES.map((src, i) => ({ ...src, current: i === 0 && !autoOn('avalanche'), age: line.startsWith(`${src.label} · issued `) ? line.slice(src.label.length + 10).replace(' · expired', ', expired') : 'as issued' }));
+    openPanel({ origin: modelBtn(), icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(rows, (id) => { closePanel(); rememberSource(layer.id, id); showLayer(); renderRunAge(); }, autoRow(layer.id, () => { closePanel(); rememberSource(layer.id, null); showLayer(); renderRunAge(); })) });
     return;
   }
   if (layer.id === airQuality.id) {
-    openPanel({ origin: modelBtn(), icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(S.air.sourceRows(), (id) => {
+    openPanel({ origin: modelBtn(), icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody(S.air.sourceRows().map((r) => ({ ...r, current: r.current && !autoOn(layer.id) })), (id) => {
       closePanel();
-      S.prefs.layerModels[layer.id] = id;
-      savePrefs(S.prefs);
+      rememberSource(layer.id, id);
       S.air.changed();
       showLayer();
       renderRunAge();
       void app.updateFills();
-    }) });
+    }, autoRow(layer.id, () => {
+      closePanel();
+      rememberSource(layer.id, null);
+      S.air.changed();
+      showLayer();
+      renderRunAge();
+      void app.updateFills();
+    })) });
     return;
   }
   if (layer.frames) {
     // Observed data: one source, listed so the button always has a menu.
     const newest = radarFrames[radarFrames.length - 1];
     openPanel({ origin: modelBtn(), icon: '<span class="panel-letter">S</span>', title: 'Source', caption: `For this layer · ${layer.title}`, body: sourceMenuBody([
-      { id: 'eccc-radar', label: 'ECCC radar', detail: 'Observed rain and snow · new picture every 6 min', age: newest ? formatMinutesAgo(newest, new Date()) : 'not loaded', current: true },
-    ], () => closePanel()) });
+      { id: 'eccc-radar', label: 'ECCC radar', detail: 'Observed rain and snow · new picture every 6 min', age: newest ? formatMinutesAgo(newest, new Date()) : 'not loaded', current: !autoOn(layer.id) },
+    ], (id) => { closePanel(); rememberSource(layer.id, id); showLayer(); }, autoRow(layer.id, () => { closePanel(); rememberSource(layer.id, null); showLayer(); })) });
     return;
   }
   const choice = choiceOf(layer.id);

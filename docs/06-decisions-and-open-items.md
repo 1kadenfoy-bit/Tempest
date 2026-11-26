@@ -35,7 +35,7 @@ Nov 15, 2026. Newer decisions replace older ones. When a document in this repo d
 | Panning (Nov 16, after M4) | Colour should be there while panning, not only after letting go: the fill reaches a margin past the screen and refreshes during long pans |
 | Map detail (Nov 15, after M1) | North Vancouver area at the base map's finest level (zoom 15), Horseshoe Bay to Deep Cove up to Cypress, Grouse and Seymour |
 | Layer plan | As in `docs/01-product-brief.md` |
-| Kaden's rules by section (from Nov 20) | Each section chat keeps Kaden's rules for its part of the app in `docs/wishes/<section>.md`; integrated so far: Maps (3D by default, terrain from BC's BEC map and glacier outlines only, blue water, peaks with heights, trails and huts, the Map panel's View, Ground and Overlays) and Interface (Notification Centre bell, status line, source button with Auto, gear for settings, search button, pin as name · value · elevation, credits folded, saved data in settings). Those files are the current word; they win over older rows here |
+| Kaden's rules by section (from Nov 20) | Each section chat keeps Kaden's rules for its part of the app in `docs/wishes/<section>.md`; integrated so far: Maps (3D by default, terrain from BC's BEC map and glacier outlines only, blue water, peaks with heights, trails and huts, the Map panel's View, Ground and Overlays; from Nov 26 rules 1 to 23: the Geographical Adventures look on both Terrain and Satellite, the same sky for both, Plain removed, a water glint like the game's that never washes the map out, the temporary Tune panel); Interface (Notification Centre bell, status line, source button with Auto, gear for settings, search button, pin as name · value · elevation, credits folded, saved data in settings; from Nov 26 rules 8 and 20 to 32: the map panel's layout and grow, the Save for offline card, the Notification Centre, no "Soon" labels, the thumb buttons following the card, coloured layer circles); and Effects (Nov 26 rules 1 to 4: streaks keep the same density while zooming, stay where Kaden looks when tilted, his chosen starting look; clouds show the weather's height and cover). Weather and Data have no rules yet. Those files are the current word; they win over older rows here |
 
 ## 2. Defaults taken on Kaden's behalf
 
@@ -111,6 +111,10 @@ Do not build these, even where older text mentions them.
 - Whether to keep the repo public (the simple answer to the GPL question) or private.
 - Whether any paid source is worth it after a season on the free ones.
 - Capacitor and the app stores.
+- Maps rule 4 ("almost cartoonish" terrain colours) against the game's natural palette, and each terrain hue (Maps' proposals). Asked Nov 22.
+- How see-through clouds are over the weather colours (Effects; they draw over the fills today), and whether the 3D wind streaks replace the flat wind flow when tilted.
+- When the temporary Tune button goes (Maps rule 21).
+- Colours for the Avalanche and Air quality circles in the layer menu (no token ramp exists).
 
 ## 5. Facts to check before relying on them
 

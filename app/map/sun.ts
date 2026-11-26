@@ -13,7 +13,13 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { S } from '../state';
 import { colorToken, type Theme } from '../theme/tokens';
 import { mix } from './style-mix';
-import { mapGround } from './style';
+import { mapWater } from './style';
+import { applySky } from './atmosphere';
+import { applyWater } from './water';
+import { castShadows } from './shadows';
+import { tuning } from './tuning';
+import { plainHillshade, satelliteLook, sunHillshade, type Paint } from './look';
+import { SATELLITE_LAYER } from './satellite';
 
 const RAD = Math.PI / 180;
 const DAY_MS = 86_400_000;
@@ -46,11 +52,8 @@ export function nightAmount(altitudeDeg: number): number {
 
 /** The strongest the night wash gets, as an opacity: dark enough to read as night, light enough to keep the map readable. */
 const NIGHT_OPACITY = 0.5;
-/** Lowest light height given to the hillshade, so low sun still shows relief instead of going black. */
-const MIN_LIGHT = 14;
-/** The hillshade's strength in sun mode (the plain map's is 0.4): real low sun is harsh, so it is softened to stay readable. */
-const SUN_RELIEF = 0.28;
-const PLAIN_RELIEF = 0.4;
+/** On the light theme the wash is lighter: a heavy one turns the map to grey fog. */
+const NIGHT_OPACITY_LIGHT = 0.32;
 const NIGHT_LAYER = 'sun-night';
 
 type Listener = (on: boolean) => void;
@@ -59,8 +62,6 @@ class MapSun {
   private on = false;
   private map: MapLibreMap | null = null;
   private listeners = new Set<Listener>();
-  /** The plain map's shadow colour, kept while the sun is on so it can be put back. */
-  private plainShadow: unknown = null;
 
   enabled(): boolean { return this.on; }
   onChange(fn: Listener): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
@@ -78,8 +79,11 @@ class MapSun {
     if (!map.getLayer(NIGHT_LAYER)) {
       map.addLayer({ id: NIGHT_LAYER, type: 'background', layout: { visibility: 'none' }, paint: { 'background-color': '#000000', 'background-opacity': 0 } }, map.getLayer('hillshade') ? 'hillshade' : undefined);
     }
+    // Mountain shadows sit just above the night wash, still under the weather fills.
+    castShadows.attach(map, map.getLayer('hillshade') ? 'hillshade' : undefined);
     const refresh = () => this.update();
     map.on('moveend', refresh);
+    tuning.onChange(refresh);
     // Pages without the app's time cursor (the phone test page) have no time to follow.
     S.cursor?.subscribe(refresh);
     this.update();
@@ -91,31 +95,33 @@ class MapSun {
   update(): void {
     const map = this.map;
     if (!map || !map.getLayer('hillshade')) return;
-    if (!this.on) {
-      map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'none');
-      map.setPaintProperty('hillshade', 'hillshade-method', 'standard');
-      map.setPaintProperty('hillshade', 'hillshade-exaggeration', PLAIN_RELIEF);
-      if (this.plainShadow) map.setPaintProperty('hillshade', 'hillshade-shadow-color', this.plainShadow as string);
-      this.plainShadow = null;
-      map.setPaintProperty('hillshade', 'hillshade-illumination-direction', 335);
-      map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'viewport');
-      return;
-    }
+    // Pages without the app's settings (the effects and phone test pages) use the dark theme.
+    const theme: Theme = S.settings?.theme() ?? 'dark';
+    const satellite = map.getLayer(SATELLITE_LAYER) && map.getLayoutProperty(SATELLITE_LAYER, 'visibility') === 'visible' ? SATELLITE_LAYER : null;
     const c = map.getCenter();
     const { azimuth, altitude } = sunPosition(this.time(), c.lat, c.lng);
-    const theme: Theme = S.settings.theme();
-    // Shadows are the ground colour a little darker, not black: real low sun leaves whole slopes dark, which hides the ground.
-    if (!this.plainShadow) this.plainShadow = map.getPaintProperty('hillshade', 'hillshade-shadow-color');
-    map.setPaintProperty('hillshade', 'hillshade-shadow-color', mix(mapGround(theme), theme === 'dark' ? colorToken('water', 'dark') : colorToken('ink', 'light'), theme === 'dark' ? 0.4 : 0.25));
-    map.setPaintProperty('hillshade', 'hillshade-method', 'basic');
-    map.setPaintProperty('hillshade', 'hillshade-exaggeration', SUN_RELIEF);
-    map.setPaintProperty('hillshade', 'hillshade-illumination-anchor', 'map');
-    map.setPaintProperty('hillshade', 'hillshade-illumination-direction', azimuth);
-    map.setPaintProperty('hillshade', 'hillshade-illumination-altitude', Math.max(MIN_LIGHT, Math.min(90, altitude)));
+    // The sky follows the sun only while the sun switch is on; otherwise it is the plain day sky.
+    applySky(map, this.on ? altitude : null);
+    // Water: its blue and shine follow the sun's height while the sun switch is on; over the satellite picture it is only tinted.
+    applyWater(map, theme, this.on ? altitude : null, Boolean(satellite));
+    const set = (paint: Paint) => { for (const [k, v] of Object.entries(paint)) map.setPaintProperty('hillshade', k as 'hillshade-method', v as never); };
+    const setSat = (paint: Paint) => { if (map.getLayer(SATELLITE_LAYER)) for (const [k, v] of Object.entries(paint)) map.setPaintProperty(SATELLITE_LAYER, k as 'raster-contrast', v as never); };
+    // Mountain shadows: only with the sun switch on and the sun up.
+    castShadows.set(this.on && altitude > 0 ? { azimuth, altitude } : null);
+    if (!this.on) {
+      map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'none');
+      set(plainHillshade(theme)); // always: the tuning sliders change it too
+      setSat(satelliteLook(0));
+      return;
+    }
+    if (altitude > 0) set(sunHillshade(theme, azimuth, altitude));
+    else set(plainHillshade(theme)); // sun down: nothing lights the slopes, so the even light (a sun below the horizon drew streaks)
+    const night = nightAmount(altitude);
+    setSat(satelliteLook(night));
     map.setLayoutProperty(NIGHT_LAYER, 'visibility', 'visible');
-    // The wash is the dark water token on the dark theme, the ink token on light.
-    map.setPaintProperty(NIGHT_LAYER, 'background-color', theme === 'dark' ? colorToken('water', 'dark') : colorToken('ink', 'light'));
-    map.setPaintProperty(NIGHT_LAYER, 'background-opacity', NIGHT_OPACITY * nightAmount(altitude));
+    // The night wash: on the dark theme the dark water token; on light a deep blue-grey, lighter, because a heavy dark wash over a light map only turns it to grey fog.
+    map.setPaintProperty(NIGHT_LAYER, 'background-color', theme === 'dark' ? colorToken('water', 'dark') : mix(colorToken('ink', 'light'), mapWater('dark'), 0.45));
+    map.setPaintProperty(NIGHT_LAYER, 'background-opacity', (theme === 'dark' ? NIGHT_OPACITY : NIGHT_OPACITY_LIGHT) * night);
   }
 }
 

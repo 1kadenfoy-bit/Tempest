@@ -24,7 +24,14 @@
         "docs/handoffs/maps/**",
         "docs/reports/3d/**",
         "docs/wishes/maps.md",
-        "core/geo/shape-tiles*"
+        "core/geo/shape-tiles*",
+        "public/zones/**",
+        "public/places/**",
+        "tools/build-zones.mjs",
+        "tools/build-glaciers.mjs",
+        "tools/build-terrain-tiles.mjs",
+        "tools/lib/mvt.mjs",
+        "tools/lib/geometry.mjs"
       ],
       "except": [
         "app/map/freezing-line.ts",

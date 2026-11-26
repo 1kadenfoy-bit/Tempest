@@ -6,7 +6,7 @@
 import type { GeoJSONSource } from 'maplibre-gl';
 import { S, app } from '../state';
 import type { ViewSample } from '../../layers/contract';
-import { PROFILE_LEVELS, type GridField } from '../../core/vocabulary';
+import { PROFILE_LEVELS, PROFILE_RH_VARIABLES, type GridField } from '../../core/vocabulary';
 import { MemoryStore } from '../../core/store/memory-store';
 import { segmentAt } from '../../core/time/timeline';
 import { gridRequest } from '../../core/geo/grid-request';
@@ -31,7 +31,8 @@ import { MODEL_SPACING_DEG, type NodeData } from '../data/profile-source';
 import { mapTime, nodeNeeds, runAt } from '../data/forecast';
 import { loadSavedWeather, savedStep } from '../offline/saved-areas';
 import { elevationMosaic, type Mosaic } from '../map/elevation';
-import { levelLine, type LineKind } from '../map/freezing-line';
+import { levelLine, type LineFeatures, type LineKind } from '../map/freezing-line';
+import { features } from '../shell/feature-switches';
 import { modelGround, nodeProfiles, packWind, screenWind, windComplete } from '../map/wind-field';
 import { colorToken, type Theme } from '../theme/tokens';
 import { hideRadar, showRadarFrame } from '../radar/frames';
@@ -136,7 +137,7 @@ export async function updateTemperature(r: RunMetadata, t: Date, mine: number, c
   const set = app.settingsFor(temperature);
   const feels = set.map === 'feels';
   // Feels-like on the map needs each node's 10 m wind, 2 m air and humidity (dew point).
-  const extra = nodeNeeds(temperature, feels);
+  const extra = [...nodeNeeds(temperature, feels), ...(features.get('snowLine') ? PROFILE_RH_VARIABLES : [])];
   const [m, grid] = await Promise.all([elevationMosaic(view, S.map.getZoom(), mosaic), S.profiles.nodeGrid(r, lattice, t, extra, { cachedOnly })]);
   if (mine !== fillSeq || S.active.id !== 'temperature') return;
   // Mid-drag with nothing in memory: keep the picture; the release fetches.
@@ -144,13 +145,13 @@ export async function updateTemperature(r: RunMetadata, t: Date, mine: number, c
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
   if (!grid) {
     tempLayer.setProfiles(null);
-    setLine(null, '0c');
+    setLine(null);
     unavailable('Temperature');
     return;
   }
   tempLayer.feels = feels;
   tempLayer.setProfiles(packLattice(grid));
-  setLine(grid, set.freezingLine ? '0c' : null);
+  setLine(grid);
   document.body.dataset.fill = 'ready';
   // The next hour ahead of time (instant when the point API answered).
   const i = S.cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
@@ -237,9 +238,8 @@ export function marginView(): Box | null {
  * colours keep the model's own split.
  */
 export async function updatePrecipLine(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
-  const kind = app.settingsFor(precipitation).line as string;
   const view = marginView();
-  if (!view) { setLine(null, null); precipLayer.setShare(null); return; }
+  if (!view) { setLine(null); precipLayer.setShare(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
   const [m, grid] = await Promise.all([elevationMosaic(view, S.map.getZoom(), mosaic), S.profiles.nodeGrid(r, lattice, t, nodeNeeds(precipitation), { cachedOnly })]);
@@ -247,7 +247,7 @@ export async function updatePrecipLine(r: RunMetadata, t: Date, mine: number, ca
   if (!grid && cachedOnly) return;
   if (!grid && S.profiles.apiRetryAt) { clearTimeout(apiRetryTimer); apiRetryTimer = window.setTimeout(() => void updateFills(), S.profiles.apiRetryAt - Date.now() + 500); }
   if (m !== mosaic) { mosaic = m; tempLayer.setElevation(m); }
-  const res = setLine(grid, kind === 'off' ? null : kind === 'wetbulb' ? 'wetbulb' : '0c');
+  const res = setLine(grid);
   precipLayer.setShare(res?.share ?? null);
   // In view: type each on-screen cell by the same field.
   if (res?.share) {
@@ -280,13 +280,17 @@ export function packLattice(grid: NodeData) {
 }
 
 
-/** A dashed line from the node profiles over the terrain (0 °C, or the snow line), labelled with its height. */
-export function setLine(grid: NodeData | null, kind: LineKind | null) {
-  const src = S.map.getSource('freezing-line') as GeoJSONSource | undefined;
-  const empty = { type: 'FeatureCollection' as const, features: [] };
-  if (!grid || !mosaic) { src?.setData(empty); return null; }
-  const res = levelLine(grid, mosaic, kind ?? '0c');
-  src?.setData(kind ? res.features : empty);
+const LINE_SOURCES = ['freezing-line', 'snow-line'] as const;
+
+/** Dashed lines from the node profiles over the terrain (0 °C, or the snow line), labelled with its height. */
+export function setLine(grid: NodeData | null) {
+  const empty: LineFeatures = { type: 'FeatureCollection', features: [] };
+  const wanted: LineKind[] = [...(features.get('freezingLine') ? ['0c' as const] : []), ...(features.get('snowLine') ? ['wetbulb' as const] : [])];
+  if (!grid || !mosaic) { for (const id of LINE_SOURCES) (S.map.getSource(id) as GeoJSONSource | undefined)?.setData(empty); return null; }
+  // The colours of rain and snow follow the same wet-bulb field, so it is always worked out; the lines are drawn only while switched on.
+  const res = levelLine(grid, mosaic, wanted);
+  (S.map.getSource('freezing-line') as GeoJSONSource | undefined)?.setData(res.lines['0c']);
+  (S.map.getSource('snow-line') as GeoJSONSource | undefined)?.setData(res.lines.wetbulb);
   // In view: only what is on screen, not the panning margin.
   const b = S.map.getBounds();
   const onScreen = (c: { lon: number; lat: number }) => c.lon >= b.getWest() && c.lon <= b.getEast() && c.lat >= b.getSouth() && c.lat <= b.getNorth();
@@ -317,7 +321,7 @@ export async function updateFills(moving = false) {
     windLayer.setProfiles(null);
     flow.setShown(false);
     flow.setField(null);
-    setLine(null, null);
+    setLine(null);
     showRadarFrame();
     return;
   }
@@ -330,7 +334,7 @@ export async function updateFills(moving = false) {
     windLayer.setProfiles(null);
     tempLayer.visible = false;
     precipLayer.setFields([]);
-    setLine(null, null);
+    setLine(null);
     return;
   }
   if (!S.cursor.time) return;
@@ -342,7 +346,7 @@ export async function updateFills(moving = false) {
   if (S.active.id === 'wind') {
     precipLayer.setFields([]);
     tempLayer.visible = false;
-    setLine(null, null);
+    setLine(null);
     flow.setMode(flowMode());
     await updateWind(at, when, ++fillSeq, moving).catch((err) => console.error(err));
     return;
@@ -410,21 +414,27 @@ S.map.on('move', () => {
 /** The colours of the freezing or snow line and its label, for a theme. */
 const linePaint = (t: Theme) => ({ freezing: colorToken('ink', t), label: colorToken('ink', t), halo: colorToken('surface', t) });
 
-/** Theme changed: the line follows. */
+/** Theme changed: the lines follow. */
 export function recolourFills(t: Theme): void {
   const c = linePaint(t);
-  if (S.map.getLayer('freezing-line')) S.map.setPaintProperty('freezing-line', 'line-color', c.freezing);
-  if (S.map.getLayer('freezing-line-label')) { S.map.setPaintProperty('freezing-line-label', 'text-color', c.label); S.map.setPaintProperty('freezing-line-label', 'text-halo-color', c.halo); }
+  for (const id of LINE_SOURCES) {
+    if (S.map.getLayer(id)) S.map.setPaintProperty(id, 'line-color', c.freezing);
+    if (S.map.getLayer(`${id}-label`)) { S.map.setPaintProperty(`${id}-label`, 'text-color', c.label); S.map.setPaintProperty(`${id}-label`, 'text-halo-color', c.halo); }
+  }
 }
 
 export function addFreezingLineLayers(beforeId?: string) {
   const c = linePaint(S.settings.theme());
-  S.map.addSource('freezing-line', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-  S.map.addLayer({ id: 'freezing-line', type: 'line', source: 'freezing-line', paint: { 'line-color': c.freezing, 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [3, 2.5] } }, beforeId);
-  S.map.addLayer({
-    id: 'freezing-line-label', type: 'symbol', source: 'freezing-line',
-    layout: { 'symbol-placement': 'line', 'text-field': ['get', 'label'], 'text-size': 12, 'symbol-spacing': 400, 'text-max-angle': 45, 'text-font': ['Noto Sans Regular'] },
-    paint: { 'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.5 },
-  });
+  // The snow line is solid, the freezing line dashed, so two lines in view stay apart.
+  for (const [id, dash] of [['freezing-line', [3, 2.5]], ['snow-line', [1, 0]]] as const) {
+    S.map.addSource(id, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    S.map.addLayer({ id, type: 'line', source: id, paint: { 'line-color': c.freezing, 'line-width': 1.5, 'line-opacity': 0.85, 'line-dasharray': [...dash] } }, beforeId);
+    S.map.addLayer({
+      id: `${id}-label`, type: 'symbol', source: id,
+      layout: { 'symbol-placement': 'line', 'text-field': ['get', 'label'], 'text-size': 12, 'symbol-spacing': 400, 'text-max-angle': 45, 'text-font': ['Noto Sans Regular'] },
+      paint: { 'text-color': c.label, 'text-halo-color': c.halo, 'text-halo-width': 1.5 },
+    });
+  }
+  // A tap on a line button redraws at once (the switches only remember on or off).
+  features.onChange((id) => { if (id === 'freezingLine' || id === 'snowLine') void updateFills(); });
 }
-

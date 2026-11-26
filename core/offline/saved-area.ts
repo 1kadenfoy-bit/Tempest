@@ -2,8 +2,12 @@
 // as JSON next to the files it names; a format version from the first save
 // (architecture rule 7). Pure logic.
 
-/** 2 (M8): a name, the choices made, and later models' hours in `more`. Version 1 records still read. */
-export const SAVED_AREA_VERSION = 2;
+/**
+ * 3 (Nov 22): the traced outline (`shape`), the model chosen for each layer and
+ * the time span chosen. 2 (M8): a name, the choices made, and later models'
+ * hours in `more`. Older records still read; the new fields are optional.
+ */
+export const SAVED_AREA_VERSION = 3;
 
 /** One model run's weather in a saved area: one region file per variable, all its saved steps. */
 export type SavedWeatherPart = SavedArea['weather'];
@@ -17,6 +21,12 @@ export interface SavedArea {
   layers?: string[];
   /** Hours from the save, or null for the models' end. */
   window?: number | null;
+  /** The span the save covers, when it was chosen on the scrubber (version 3). */
+  span?: { from: string; to: string };
+  /** The model chosen for each layer ("auto": the chain), for a refresh (version 3). */
+  layerModels?: { layer: string; model: string }[];
+  /** The outline traced on the map, as [lng, lat] points in order. The map pieces are cut to it (version 3). */
+  shape?: [number, number][];
   bbox: [number, number, number, number];
   savedAt: string;
   /** Weather: one region file per variable, all steps of one run (the first model). */

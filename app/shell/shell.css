@@ -100,6 +100,9 @@ body[data-weather='recorded'] .run-age::after { content: ' · recorded'; }
 .thumb[data-busy='true'] svg { animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.35; } }
 body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
+/* While the sheet is dragged, the thumb buttons and the map credit move with the finger, no easing. */
+body[data-sheet-dragging] .thumbs { opacity: var(--thumbs-fade, 1); transition: none; }
+body[data-sheet-dragging] .maplibregl-ctrl-bottom-left { transition: none; }
 
 /* Pin and readout */
 .pin { position: relative; width: 14px; height: 14px; }
@@ -347,15 +350,19 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   position: fixed; z-index: 11;
   left: var(--screen-edge); right: var(--screen-edge);
   max-height: calc(100% - var(--safe-top) - var(--bottom-inset) - 32px);
+  /* The phone app's visible height can be shorter than 100%; never let the panel's end hang past it. */
+  max-height: calc(min(100%, 100dvh) - var(--safe-top) - var(--bottom-inset) - 32px);
   border-radius: var(--radius-grow-panel);
   background: var(--panel); border: 1px solid var(--stroke);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   display: flex; flex-direction: column; overflow: hidden;
-  touch-action: none;
+  touch-action: pan-y;
   transform: scale(0.15); opacity: 0;
   transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease;
 }
 .panel[data-open='true'] { transform: none; opacity: 1; }
+/* A panel the button grows into (see openPanel's morph): no scale, the size is animated instead. */
+.panel[data-morph='true'] { transform: none; opacity: 1; transition: none; }
 .panel-header { display: flex; align-items: center; gap: 10px; padding: 8px; }
 .panel-icon {
   flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); border-radius: 50%;
@@ -367,7 +374,7 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .panel-title-icon { display: inline-flex; vertical-align: middle; margin-left: 4px; }
 .panel-caption { font: var(--type-caption); color: var(--ink-2); }
 .panel-close, .panel-action { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-.panel-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.panel-body { flex: 0 1 auto; min-height: 0; overflow-y: scroll; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; padding: 4px 16px calc(var(--bottom-inset) + 16px); display: flex; flex-direction: column; gap: 14px; }
 .group { display: flex; flex-direction: column; gap: var(--gap-controls); }
 .group-title { font: var(--type-micro); font-weight: 600; letter-spacing: 0.06em; color: var(--ink-2); }
 .toggle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }
@@ -379,8 +386,8 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
   font: 500 13px var(--font-body);
 }
 .toggle-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
-.toggle-tile svg { visibility: hidden; }
-.toggle-tile[aria-pressed='true'] svg { visibility: visible; }
+.toggle-tile > svg { visibility: hidden; }
+.toggle-tile[aria-pressed='true'] > svg { visibility: visible; }
 /* A note beside a switch that cannot work now (map panel: Weather stations offline). */
 .toggle-tile:disabled { opacity: 0.5; }
 .toggle-note { align-self: center; font: var(--type-caption); color: var(--ink-2); }
@@ -406,18 +413,25 @@ body[data-sheet='up'] .thumbs { opacity: 0; pointer-events: none; }
 .fact-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font: var(--type-body); font-weight: 400; line-height: 20px; }
 .fact-list a { color: var(--ink); }
 
-/* Layer menu tiles (03-LayerMenu): colour bars on top, the name below. */
+/* Layer menu tiles: the layer's icon on the left, the name on the right. */
 .layer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }
 .layer-tile {
-  min-height: 72px; padding: 12px; border-radius: var(--radius-button-tile-row);
+  min-height: 72px; padding: 12px 10px; border-radius: var(--radius-button-tile-row);
   border: 1px solid var(--stroke-strong);
-  display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 14px;
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
   text-align: left;
 }
 .layer-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
-.layer-swatches { display: flex; gap: 6px; }
-.layer-swatches span { flex: 1 1 0; height: 6px; border-radius: 3px; }
-.layer-tile-name { font: 600 15px var(--font-body); }
+/* The icon sits in a circle filled with the layer's own colours: a soft gradient fill under a crisp gradient ring. */
+.layer-tile-icon {
+  position: relative; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: var(--ink);
+  background: var(--chip); box-shadow: inset 0 0 0 1.5px var(--stroke-strong);
+  isolation: isolate;
+}
+.layer-tile-icon::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--panel); opacity: 0.32; z-index: -1; }
+.layer-tile-icon svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)); }
+.layer-tile-name { min-width: 0; font: 600 13px var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Map attribution, kept clear of the sheet */
 .maplibregl-ctrl-bottom-left { bottom: var(--sheet-visible); transition: bottom 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -626,10 +640,10 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 .fold-body[hidden] { display: none; }
 
 /* ── Map panel: Ground tiles and the "Soon" mark on tiles whose data is not built yet. ── */
-.ground-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-controls); }
+.ground-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-controls); }
 .ground-tile {
-  min-height: 72px; padding: 8px; border-radius: var(--radius-button-tile-row); border: 1px solid var(--stroke);
-  background: var(--surface); color: var(--ink); font: var(--type-secondary); font-weight: 600;
+  min-height: var(--touch-min); padding: 6px 8px; border-radius: var(--radius-button-tile-row); border: 1px solid var(--stroke);
+  background: var(--surface); color: var(--ink); font: 500 13px var(--font-body);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center;
 }
 .ground-tile[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); }
@@ -647,3 +661,92 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 }
 .option-chip[aria-pressed='true'] { background: var(--fill-control); border-color: var(--ink); color: var(--ink); }
 .option-chip:disabled { opacity: 0.5; }
+/* Loading: a small spinning wheel instead of text. */
+.pin-spinner {
+  display: block; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--stroke-strong); border-top-color: var(--ink);
+  animation: pin-spin 0.9s linear infinite;
+}
+@keyframes pin-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pin-spinner { animation-duration: 3s; } }
+
+/* ── Notification Centre: the bell's dot, and the app's own notifications. ── */
+.alert-badge[data-unread='true']::after {
+  content: ''; position: absolute; right: 2px; bottom: 2px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ink); border: 2px solid var(--surface);
+}
+.notice-list { display: flex; flex-direction: column; }
+.notice-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+.notice-row + .notice-row { border-top: 1px solid var(--stroke); }
+.notice-icon { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.notice-text { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-top: 10px; }
+.notice-words { font: var(--type-body); }
+.notice-time { font: var(--type-caption); color: var(--ink-2); }
+.notice-bar { display: block; height: 6px; margin-top: 6px; border-radius: 3px; background: var(--fill-control); overflow: hidden; }
+.notice-bar[hidden] { display: none; }
+.notice-bar span { display: block; height: 100%; background: var(--ink); border-radius: 3px; transition: width 200ms ease; }
+.notice-action { align-self: flex-start; min-height: var(--touch-min); display: flex; align-items: center; color: var(--ink); font: var(--type-secondary); text-decoration: underline; text-underline-offset: 3px; }
+.notice-dismiss { flex: 0 0 auto; width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; color: var(--ink-2); }
+
+/* ── Save for offline: the card (it looks and acts like the weather card) and the tracing pad. ── */
+body[data-saving='true'] .sheet, body[data-saving='true'] .thumbs { visibility: hidden; }
+.draw-pad { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 8; touch-action: none; }
+.ofl-card {
+  position: fixed; z-index: 9; left: 0; right: 0; top: var(--sheet-up-top); height: calc(100lvh - var(--sheet-up-top) + var(--viewport-gap));
+  background: var(--sheet); border-top: 1px solid var(--stroke); border-radius: var(--radius-sheet-top) var(--radius-sheet-top) 0 0;
+  display: flex; flex-direction: column; touch-action: none; will-change: transform;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ofl-card[data-dragging='true'] { transition: none; }
+.ofl-head { display: flex; align-items: center; gap: 8px; padding: 0 16px; touch-action: none; }
+.ofl-title { flex: 1 1 auto; font: var(--type-panel-title); }
+.ofl-redraw { min-height: var(--touch-min); padding: 0 12px; font: var(--type-secondary); text-decoration: underline; text-underline-offset: 3px; }
+.ofl-close { width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.ofl-summary { margin: 0; padding: 0 16px 4px; font: var(--type-caption); color: var(--ink-2); }
+.ofl-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; padding: 8px 16px calc(var(--bottom-inset) + 84px); display: flex; flex-direction: column; gap: 16px; scrollbar-width: none; }
+.ofl-scroll::-webkit-scrollbar { display: none; }
+.ofl-time { display: flex; flex-direction: column; gap: 8px; }
+.ofl-axis { position: relative; height: 64px; border-radius: var(--radius-button-tile-row); background: var(--fill-control); touch-action: none; }
+.ofl-days { position: absolute; inset: 0; pointer-events: none; }
+.ofl-days span { position: absolute; top: 6px; transform: translateX(-50%); font: var(--type-micro); color: var(--ink-2); border-left: 1px solid var(--stroke); padding-left: 3px; height: 52px; }
+.ofl-frame {
+  position: absolute; top: 0; bottom: 0; border: 2px solid var(--ink); border-radius: 10px; background: rgba(255, 255, 255, 0.10); cursor: grab; touch-action: none;
+}
+.ofl-grip { position: absolute; top: 0; bottom: 0; width: 28px; touch-action: none; }
+.ofl-grip::after { content: ''; position: absolute; top: 14px; bottom: 14px; left: 50%; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--ink); }
+.ofl-grip[data-part='from'] { left: -14px; }
+.ofl-grip[data-part='to'] { right: -14px; }
+.ofl-layers { display: flex; flex-direction: column; gap: 6px; }
+.ofl-row { display: grid; grid-template-columns: var(--touch-min) 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 6px 0; border-top: 1px solid var(--stroke); }
+.ofl-row:first-of-type { border-top: 0; }
+.ofl-tick { grid-row: 1 / 3; width: var(--touch-min); height: var(--touch-min); display: flex; align-items: center; justify-content: center; }
+.ofl-tick svg { width: 28px; height: 28px; padding: 5px; border: 1.5px solid var(--stroke-strong); border-radius: 8px; visibility: visible; color: transparent; }
+.ofl-tick[aria-checked='true'] svg { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.ofl-name { font: var(--type-body); font-weight: 600; }
+.ofl-model { justify-self: end; font: var(--type-secondary); color: var(--ink-2); }
+.ofl-model select { appearance: none; min-height: 36px; padding: 0 28px 0 12px; border-radius: 18px; border: 1px solid var(--stroke-strong); background: var(--surface); color: var(--ink); font: var(--type-secondary); }
+.ofl-note { grid-column: 2; font: var(--type-caption); color: var(--ink-2); }
+.ofl-size { grid-column: 3; justify-self: end; font: var(--type-caption); color: var(--ink); }
+.ofl-row[data-on='false'] .ofl-name, .ofl-row[data-on='false'] .ofl-note { color: var(--ink-2); font-weight: 400; }
+.ofl-card[data-estimating='true'] .ofl-size { opacity: 0.5; }
+.ofl-foot { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; padding: 8px 16px calc(var(--bottom-inset) + 4px); background: var(--sheet); border-top: 1px solid var(--stroke); }
+.ofl-foot[hidden] { display: none; }
+.ofl-go { width: 100%; height: 56px; border-radius: var(--radius-button-tile-row); background: var(--ink); color: var(--surface); font: var(--type-body); font-weight: 600; }
+.ofl-go:disabled { background: var(--fill-control); color: var(--ink-2); }
+.ofl-card:not([data-state='up']):not([data-dragging]) .ofl-layers { visibility: hidden; }
+
+/* Icons on the settings window's buttons. */
+.seg-icon, .btn-icon { display: inline-flex; vertical-align: middle; margin-right: 6px; }
+.segmented button { display: inline-flex; align-items: center; justify-content: center; }
+.wide-button { display: inline-flex; align-items: center; justify-content: center; }
+.fold-label { display: inline-flex; align-items: center; }
+
+/* Icons beside the map panel's buttons. */
+.tile-icon { flex: 0 0 auto; display: inline-flex; color: var(--ink); }
+.toggle-tile { justify-content: flex-start; }
+.toggle-tile > svg { margin-left: auto; flex: 0 0 auto; }
+.toggle-tile .tile-soon { margin-left: auto; }
+.toggle-tile[data-soon='true'] .tile-icon { color: var(--ink-2); }
+.ground-tile { flex-direction: row; justify-content: flex-start; gap: 10px; text-align: left; }
+.ground-tile .tile-soon { margin-left: auto; }
+.segmented .seg-icon svg { width: 18px; height: 18px; }

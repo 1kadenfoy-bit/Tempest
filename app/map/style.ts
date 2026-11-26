@@ -7,6 +7,7 @@ import type { LayerSpecification, Map as MapLibreMap, StyleSpecification, Vector
 import { colorToken, type Theme } from '../theme/tokens';
 
 import { mix } from './style-mix';
+import { waterLayers } from './water';
 import { NATURAL, TERRAIN, UNDER_ZONES, kindColourExpression, terrainColour, type TerrainClass } from './terrain-colours';
 export { mix };
 
@@ -91,6 +92,28 @@ export function topoFlavor(theme: Theme = 'dark'): Flavor {
 
 const spriteUrl = (theme: Theme) => `https://protomaps.github.io/basemaps-assets/sprites/v4/${theme}`;
 
+/** How much narrower the base map's roads are drawn than Protomaps draws them (Kaden: "a little too big"). */
+const ROAD_WIDTH = 0.7;
+
+/**
+ * Scale the numbers a width expression can give, wherever they sit inside its
+ * zoom curve (a zoom expression must stay at the top, so it cannot just be multiplied).
+ */
+export function scaleWidth(expr: unknown, k: number): unknown {
+  if (typeof expr === 'number') return expr * k;
+  if (!Array.isArray(expr) || typeof expr[0] !== 'string') return expr;
+  const [op, ...rest] = expr as [string, ...unknown[]];
+  const mapAt = (from: number, step: number, last = false) => rest.map((x, i) => ((i >= from && (i - from) % step === 0) || (last && i === rest.length - 1) ? scaleWidth(x, k) : x));
+  switch (op) {
+    case 'interpolate': return [op, ...mapAt(3, 2)]; // interpolation, input, then stop/output pairs (outputs at 4, 6, ...)
+    case 'step': return [op, ...mapAt(1, 2)];
+    case 'case': return [op, ...mapAt(1, 2, true)];
+    case 'match': return [op, ...mapAt(2, 2, true)];
+    case 'coalesce': return [op, ...rest.map((x) => scaleWidth(x, k))];
+    default: return expr;
+  }
+}
+
 /** Protomaps landuse layers replaced by the one terrain colour table (app/map/terrain-colours.ts). */
 const REPLACED = ['landuse_park', 'landuse_urban_green', 'landuse_hospital', 'landuse_industrial', 'landuse_school', 'landuse_beach', 'landuse_zoo', 'landuse_aerodrome', 'landuse_pedestrian'];
 
@@ -111,7 +134,7 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     paint: { 'fill-color': kindColourExpression(classes, theme) as never, 'fill-opacity': opacity },
   } as LayerSpecification);
   const zone = (id: string, cls: string, c: TerrainClass): LayerSpecification => ({
-    id, type: 'fill', source: ZONES_SOURCE, filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': tint(c, theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
+    id, type: 'fill', source: ZONES_SOURCE, 'source-layer': 'zones', filter: ['==', ['get', 'z'], cls], paint: { 'fill-color': tint(c, theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0.9, 12, 1] },
   } as LayerSpecification);
   const overNatural = NATURAL.filter((c) => !UNDER_ZONES.includes(c));
   const cliffs = {
@@ -122,11 +145,12 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   } as LayerSpecification;
   // Natural edges are feathered: a wide, blurred line in the type's own colour along its border bleeds into the neighbour.
   const feather = (id: string, source: string, sourceLayer: string | null, filter: unknown, colour: unknown): LayerSpecification => ({
-    id, type: 'line', source, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
+    // Only from zoom 10: further out the edges are tiny, and the blurred lines were the costliest thing the map drew (about 50 ms a frame at zoom 9.5 in a software test).
+    id, type: 'line', source, minzoom: FEATHER_MINZOOM, ...(sourceLayer ? { 'source-layer': sourceLayer } : {}), filter,
     layout: { 'line-join': 'round', 'line-cap': 'round' },
     paint: { 'line-color': colour, 'line-width': FEATHER, 'line-blur': FEATHER, 'line-opacity': 0.55 },
   } as LayerSpecification);
-  const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, null, ['==', ['get', 'z'], cls], tint(c, theme, ground));
+  const zoneFeather = (id: string, cls: string, c: TerrainClass) => feather(id, ZONES_SOURCE, 'zones', ['==', ['get', 'z'], cls], tint(c, theme, ground));
   const after = all.findIndex((l) => l.id === 'landcover') + 1;
   all.splice(after, 0,
     fill('terrain_under', UNDER_ZONES),
@@ -138,8 +162,17 @@ function baseLayers(theme: Theme): LayerSpecification[] {
     zoneFeather('feather_zone_alpine', 'alpine', 'alpine'),
     fill('terrain_over', overNatural),
     feather('feather_osm', 'protomaps', 'landuse', ['in', ['get', 'kind'], ['literal', overNatural.flatMap((c) => TERRAIN[c].kinds)]], kindColourExpression(overNatural, theme)),
+    // Glaciers: the BC government's outlines (tile layer 'glaciers'), a clean rounded edge, under the built-up land.
+    { id: 'glaciers-fill', type: 'fill', source: ZONES_SOURCE, 'source-layer': 'glaciers', paint: { 'fill-color': tint('ice', theme, ground), 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.9, 8, 1] } } as LayerSpecification,
     fill('terrain_urban', ['urban']),
     cliffs);
+  // Water: ripples, sparkles and foam over its fill (app/map/water.ts).
+  const waterAt = all.findIndex((l) => l.id === 'water');
+  if (waterAt >= 0) all.splice(waterAt + 1, 0, ...waterLayers(theme));
+  // Roads a little narrower.
+  for (const l of all) {
+    if (l.type === 'line' && l.id.startsWith('roads_') && l.paint && 'line-width' in l.paint) (l.paint as Record<string, unknown>)['line-width'] = scaleWidth((l.paint as Record<string, unknown>)['line-width'], ROAD_WIDTH);
+  }
   // Trails are named from zoom 14, where the base map has their names (it showed them from 15).
   const trailLabels = all.find((l) => l.id === 'roads_labels_minor');
   if (trailLabels) trailLabels.minzoom = 14;
@@ -149,24 +182,25 @@ function baseLayers(theme: Theme): LayerSpecification[] {
   return all;
 }
 
-const ZONES_SOURCE = 'terrain-zones';
+const ZONES_SOURCE = 'terrain-tiles';
 /**
- * The zones and glaciers are cut into map pieces up to this zoom and enlarged
+ * The zones and glaciers are cut into map tiles up to this zoom and enlarged
  * beyond it. Their shapes are simplified to 120-300 m, so deeper pieces add
  * no detail, only memory (each piece is kept).
  */
 export const ZONES_MAXZOOM = 11;
 /** How wide, in pixels, the soft edge between natural types is (a blurred line centred on the border). */
 const FEATHER = 30;
-/** The BC zones file ships with the app (tools/build-zones.mjs writes it). */
-const zonesUrl = () => new URL('zones/terrain-zones.json', typeof document === 'undefined' ? 'http://localhost/' : document.baseURI).href;
+const FEATHER_MINZOOM = 10;
+/** The terrain tiles (zones and glaciers), read by app/map/terrain-tiles.ts. */
+const TERRAIN_TILES = 'terrain://{z}/{x}/{y}';
 
 export function topoStyle(source: VectorSourceSpecification, theme: Theme = 'dark'): StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
     sprite: spriteUrl(theme),
-    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'geojson', data: zonesUrl(), maxzoom: ZONES_MAXZOOM, attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
+    sources: { protomaps: source, [ZONES_SOURCE]: { type: 'vector', tiles: [TERRAIN_TILES], minzoom: 0, maxzoom: ZONES_MAXZOOM, attribution: 'BC zones and glaciers © Province of BC (OGL-BC)' } },
     layers: baseLayers(theme),
   };
 }

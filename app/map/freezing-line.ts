@@ -16,8 +16,11 @@ const latOf = (y: number) => (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180)
 
 export type LineKind = '0c' | 'wetbulb';
 
+export type LineFeatures = { type: 'FeatureCollection'; features: { type: 'Feature'; properties: { label: string }; geometry: { type: 'LineString'; coordinates: [number, number][] } }[] };
+
 export interface LineResult {
-  features: { type: 'FeatureCollection'; features: { type: 'Feature'; properties: { label: string }; geometry: { type: 'LineString'; coordinates: [number, number][] } }[] };
+  /** One collection per line asked for (the snow line needs humidity at the nodes; without it, it is empty). */
+  lines: Record<LineKind, LineFeatures>;
   /** Temperature at the terrain on the coarse grid, with each cell's place. */
   cells: { lon: number; lat: number; value: number }[];
   /**
@@ -27,7 +30,7 @@ export interface LineResult {
   share: { merc: [number, number, number, number]; width: number; height: number; data: Float32Array } | null;
 }
 
-export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }, m: Mosaic, kind: LineKind, maxSize = 400): LineResult {
+export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }, m: Mosaic, kinds: readonly LineKind[], maxSize = 400): LineResult {
   const step = Math.max(1, Math.ceil(Math.max(m.width, m.height) / maxSize));
   const w = Math.floor(m.width / step);
   const h = Math.floor(m.height / step);
@@ -38,12 +41,11 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
   const rhOf = (n: number) => Float32Array.from(PROFILE_LEVELS, (l) => grid.values?.[n]?.[`relative_humidity_${l}hPa`] ?? NaN);
   const hasRh = grid.profiles.every((_, n) => rhOf(n).every(Number.isFinite));
   const rh = hasRh ? grid.profiles.map((_, n) => rhOf(n)) : [];
-  if (kind === 'wetbulb' && !hasRh) kind = '0c';
   const nx = grid.lons.length;
   const prof = newProfile(nl);
   const rhP = new Float32Array(nl);
-  // Value whose 0 marks the line: temperature (0 °C), or wet-bulb minus 0.5 °C.
-  const field = new Float32Array(w * h);
+  // Values whose 0 marks each line: temperature (0 °C), or wet-bulb minus 0.5 °C.
+  const snowField = kinds.includes('wetbulb') && hasRh ? new Float32Array(w * h) : null;
   const temps = new Float32Array(w * h);
   const share = hasRh ? new Float32Array(w * h) : null;
   for (let r = 0; r < h; r++) {
@@ -65,12 +67,13 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
         tw = wetBulb(t, sampleProfile(prof.gh, rhP, z));
         share![r * w + c] = shareFromWetBulb(tw);
       }
-      field[r * w + c] = kind === 'wetbulb' ? tw - SNOW_WET_BULB : t;
+      if (snowField) snowField[r * w + c] = tw - SNOW_WET_BULB;
     }
   }
   const inside = (lon: number, lat: number) => lon >= grid.lons[0]! && lon <= grid.lons[nx - 1]! && lat >= grid.lats[0]! && lat <= grid.lats[grid.lats.length - 1]!;
   const toLonLat = (px: number, py: number): [number, number] => [(x0 + (px / w) * (x1 - x0)) * 360 - 180, latOf(y0 + (py / h) * (y1 - y0))];
-  const features: LineResult['features']['features'] = [];
+  const contour = (kind: LineKind, field: Float32Array): LineFeatures => {
+  const features: LineFeatures['features'] = [];
   for (const raw of joinSegments(isothermSegments(field, w, h, 0))) {
     if (raw.length < 8) continue; // specks
     const line = smoothLine(raw, 1.2);
@@ -93,7 +96,14 @@ export function levelLine(grid: NodeGrid & { values?: Record<string, number>[] }
     const name = kind === 'wetbulb' ? 'Snow line' : formatTemp(0);
     features.push({ type: 'Feature', properties: { label: height === null ? name : `${name} · ${formatElevation(Math.round(height / 10) * 10)}` }, geometry: { type: 'LineString', coordinates: coords } });
   }
+  return { type: 'FeatureCollection', features };
+  };
+  const none: LineFeatures = { type: 'FeatureCollection', features: [] };
+  const lines: Record<LineKind, LineFeatures> = {
+    '0c': kinds.includes('0c') ? contour('0c', temps) : none,
+    wetbulb: snowField ? contour('wetbulb', snowField) : none,
+  };
   const cells: LineResult['cells'] = [];
   for (let r = 0; r < h; r += 2) for (let c = 0; c < w; c += 2) cells.push({ lon: colLons[c]!, lat: rowLats[r]!, value: temps[r * w + c]! });
-  return { features: { type: 'FeatureCollection', features }, cells, share: share ? { merc: m.merc, width: w, height: h, data: share } : null };
+  return { lines, cells, share: share ? { merc: m.merc, width: w, height: h, data: share } : null };
 }

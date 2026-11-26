@@ -98,8 +98,8 @@ test('theme: light from the tokens, remembered; credits from the sources', async
   expect(text).toContain('OpenStreetMap');
   expect(text).toContain('Mapterhorn');
 
-  // The saved-data-only switch is the same pref as in the saved areas list.
-  await expect(panel.getByRole('switch', { name: 'Saved data only' })).toHaveAttribute('aria-checked', 'false');
+  // "Saved data only" is gone from settings (Kaden, Nov 22).
+  await expect(panel.getByRole('switch', { name: 'Saved data only' })).toHaveCount(0);
 
   await page.keyboard.press('Escape');
   await page.reload();
@@ -114,4 +114,57 @@ test('theme: light from the tokens, remembered; credits from the sources', async
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+test('save for offline: draw the area, pull the card up, save; the bell tells the story', async ({ page }) => {
+  await page.goto(HOME);
+  await started(page);
+  const panel = await openSettings(page);
+  // Settings close and the Save for offline card comes up over the home screen.
+  await panel.locator('#save-data').click();
+  const card = page.locator('.ofl-card');
+  await expect(card).toBeVisible();
+  await expect(page.locator('.ofl-summary')).toContainText('Trace a closed shape');
+  await expect(page.locator('.sheet')).toBeHidden();
+
+  // There is no starting area: the user traces one with a finger.
+  const pts: [number, number][] = [[120, 300], [200, 260], [280, 300], [300, 380], [240, 440], [160, 430], [110, 370], [118, 305]];
+  await page.mouse.move(...pts[0]!);
+  await page.mouse.down();
+  for (const p of pts.slice(1)) await page.mouse.move(p[0], p[1], { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.ofl-summary')).toContainText(/Area .* km² · map /);
+
+  // Partly up, like the weather card: the Save button is at the bottom without pulling the card up.
+  await expect(card).toHaveAttribute('data-state', 'peek');
+  await expect(page.locator('.ofl-go')).toBeVisible();
+  await expect(page.locator('.ofl-frame')).toBeVisible();
+
+  // Redraw removes the tracing at once and waits for a new one.
+  await page.locator('.ofl-redraw').click();
+  await expect(page.locator('.ofl-summary')).toContainText('Trace a closed shape');
+  expect(await page.evaluate(() => (window as unknown as { tempestMap: { getSource(id: string): { _data?: { features?: unknown[] } } | undefined } }).tempestMap.getSource('save-shape')?._data?.features?.length ?? 0)).toBe(0);
+  await page.mouse.move(...pts[0]!);
+  await page.mouse.down();
+  for (const p of pts.slice(1)) await page.mouse.move(p[0], p[1], { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.ofl-summary')).toContainText(/Area .* km² · map /);
+
+  // Pulled up: the time frame, every layer, and the total on the Save button.
+  await page.locator('.ofl-handle').click();
+  await expect(card).toHaveAttribute('data-state', 'up');
+  await expect(page.locator('.ofl-row')).toHaveCount(6);
+  await expect(page.locator('.ofl-frame')).toBeVisible();
+  await expect(page.locator('.ofl-go')).toContainText(/Save data · [\d.]+ [kM]B/);
+
+  // Save: back to the home screen, and the bell says a download started, then that it finished.
+  await page.locator('.ofl-go').click();
+  await expect(card).toBeHidden();
+  await expect(page.locator('.sheet')).toBeVisible();
+  await expect(page.locator('#alert-badge')).toHaveAttribute('data-unread', 'true');
+  await page.click('#alert-badge');
+  const centre = page.getByRole('dialog', { name: 'Notification Centre' });
+  // A real save takes minutes; its end, and the saved area working with no
+  // signal, are checked in e2e/offline.spec.ts.
+  await expect(centre.locator('.notice-words').first()).toContainText(/Download started|Saved for offline/);
 });

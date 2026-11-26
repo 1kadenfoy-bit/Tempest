@@ -49,6 +49,9 @@ import { setupSearch } from './search/search';
 import { setupStations } from './stations/stations';
 import { setupAvalanche } from './avalanche/avalanche';
 import { setupAir } from './air/air';
+import { setupSaveEngine } from './offline/engine-setup';
+import { setupEffects } from './effects';
+import { features } from './shell/feature-switches';
 import { consumeLongPressClick, loadSummarySeries, refreshSummary, setupSummary, summaryWants } from './summary/wiring';
 
 // Recorded weather (dev server, ?weather=recorded): before anything asks for data.
@@ -119,6 +122,7 @@ S.air = setupAir(S.map, {
 S.layers = [precipitation, temperature, wind, radar, avalanche, airQuality];
 S.active = S.layers.find((l) => l.id === S.prefs.layer) ?? precipitation;
 S.profiles = new ProfileSource(() => S.savedParts, () => S.usingSaved);
+setupSaveEngine();
 
 // The calls the parts make on each other (app/state.ts).
 Object.assign(app, {
@@ -231,6 +235,8 @@ setupMapControls();
 S.map.on('click', (e) => {
   // The lift that ends a press-and-hold is not a tap (the summary window is opening).
   if (consumeLongPressClick()) return;
+  // While an area is chosen for saving, a finger on the map traces it: no pin moves.
+  if (document.body.dataset.saving === 'true') return;
   // A tap on a weather station opens it; the pin stays.
   if (S.stations.hit(e.originalEvent.target)) return;
   // Air quality: a tap on a fire opens it; the pin stays.
@@ -343,6 +349,10 @@ S.map.on('load', () => {
   if (S.active.id === 'avalanche' || S.active.id === airQuality.id) void updateFills();
   S.threeD.apply({ terrain: S.prefs.terrain3d, buildings: buildingsOk() && S.prefs.buildings3d }, false);
   radarBefore(firstLabel);
+  // Clouds and 3D wind streaks (Effects), drawn only while their Map panel switch is on.
+  const effects = setupEffects(map, firstLabel);
+  for (const id of ['clouds', 'wind'] as const) effects.setOn(id, features.get(id));
+  features.onChange((id, on) => { if (id === 'clouds' || id === 'wind') effects.setOn(id, on); });
   S.mapReady = true;
   void loadRadarFrames();
   drawSavedOutlines();
