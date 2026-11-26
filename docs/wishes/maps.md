@@ -32,7 +32,7 @@ the old wording moves to "Changed".
 ## The Map panel
 
 11. The Map panel has three parts. View: a 2D | 3D switch. Ground: Terrain or Satellite (one at a time), plus a sun and shadows toggle. Overlays (toggles): trails, huts and campsites; peaks; contour lines; small roads; ski resorts; boundaries; weather stations; rain/snow line; freezing line. Satellite appears only when it works. The buttons and what they call are in docs/reports/maps-settings/panel-spec.md. (Nov 22, 2026)
-12. Day and night with shadows: the sun lights the terrain and the map darkens at night, following the time scrubber. Cast shadows are for later. (Nov 20, 2026)
+12. Day and night with shadows: the sun lights the terrain and the map darkens at night, following the time scrubber. (Nov 20, 2026; the cast shadows are done, see rule 20)
 13. The rain/snow line and freezing line hold still when zooming, like contour lines (a job for the Weather chat). (Nov 20, 2026)
 
 ## Labels and map features
@@ -43,6 +43,7 @@ the old wording moves to "Changed".
 
 ## Changed
 
+- Rule 12 said "Cast shadows are for later." until Nov 26, 2026 (they are built: rule 20).
 - Rule 11 was: "The Map panel has three parts. View: a 2D | 3D switch. Ground: Plain, Shaded terrain or Satellite (one at a time), plus a sun and shadows toggle. Overlays (toggles): trails, huts and campsites; peaks; contour lines; small roads; ski resorts; boundaries; weather stations; rain/snow line; freezing line. Satellite appears only when it works. The buttons and what they call are in docs/reports/maps-settings/panel-spec.md." until Nov 22, 2026 (Plain is gone: Ground is Terrain or Satellite).
 - Rule 17 was: "The map looks matte, with no shine or reflective look, including with sun and shadows on. Water may have a slight sheen." until Nov 22, 2026 (the game's water glint is wanted; the earlier glare is what Kaden did not want).
 - Rule 10 was: "Natural terrain types blend softly into each other along their edges so the map looks natural; urban areas stay crisp." until Nov 20, 2026 (now also rounded corners, and wider blending).
