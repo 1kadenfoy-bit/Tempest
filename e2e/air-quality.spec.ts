@@ -98,7 +98,7 @@ test('air quality: a smoky August hour (CAMS, recorded) with the fires burning t
   await expect(page.locator('#cursor-time')).toHaveText('Sun 5 PM');
   // The pin reads CAMS's cell over Manning: 83.6 µg/m³ at that hour.
   await expect(page.locator('.readout-text')).toContainText('84 µg/m³');
-  await expect(page.locator('.readout-text')).toContainText('PM2.5 · CAMS 40 km');
+  // The pin shows only name · value · elevation, no source note (Kaden's interface rule, Nov 21).
   // Fires burning on Aug 9 (BC date) by their issued dates; Pasayten River among them.
   await expect.poll(async () => Number(await page.locator('body').getAttribute('data-air-fires'))).toBeGreaterThan(5);
   await expect(page.locator('#legend-row')).toContainText('PM2.5 µg/m³');
@@ -167,7 +167,8 @@ test('air quality: ECCC (recorded Nov 18 answer), AQHI as issued, source menu, s
   await expect(page.locator('body')).toHaveAttribute('data-air-series', 'ready', { timeout: 60_000 });
   await expect(page.locator('body')).toHaveAttribute('data-air-fill', 'ready', { timeout: 30_000 });
   // The recorded point value (smoke at Manning, 12Z) for the cursor's hour, from ECCC's 10 km grid.
-  await expect(page.locator('.readout-text')).toContainText('smoke · ECCC 10 km');
+  // The pin shows only name · value · elevation, no source note (Kaden's interface rule, Nov 21).
+  await expect(page.locator('.readout-text')).toContainText(/\d+ µg\/m³/);
   // The cursor steps through ECCC's hours: two days back to the newest run's end.
   expect(asked.filter((a) => a.startsWith('GetCoverage')).length).toBeGreaterThan(0);
   // Nov 18: no fire burning near Manning.
@@ -193,15 +194,15 @@ test('air quality: ECCC (recorded Nov 18 answer), AQHI as issued, source menu, s
   await page.screenshot({ path: `${SHOTS}/settings.png` });
   await settings.getByRole('button', { name: 'All PM2.5' }).click();
   await settings.getByRole('button', { name: 'Close' }).click();
-  await expect(page.locator('.readout-text')).toContainText('PM2.5 · ECCC 10 km', { timeout: 60_000 });
+  // The pin shows only name · value · elevation, no source note (Kaden's interface rule, Nov 21).
+  await expect(page.locator('.readout-text')).toContainText(/\d+ µg\/m³/, { timeout: 60_000 });
   await page.locator('#sheet-handle').click();
 
-  // The source menu: ECCC and CAMS.
+  // The source menu: Auto first (Kaden's interface rule, Nov 21), then ECCC (chosen here) and CAMS.
   await page.locator('#model-pill').click();
   const sources = page.getByRole('dialog', { name: 'Source' });
-  await expect(sources.locator('.model-row')).toHaveCount(2);
-  await expect(sources.locator('.model-row').first()).toHaveAttribute('aria-pressed', 'true');
-  await expect(sources.locator('.model-name')).toHaveText(['ECCC RAQDPS (FireWork)', 'CAMS global']);
+  await expect(sources.locator('.model-name')).toHaveText(['Auto', 'ECCC RAQDPS (FireWork)', 'CAMS global']);
+  await expect(sources.locator('.model-row', { hasText: 'ECCC RAQDPS' })).toHaveAttribute('aria-pressed', 'true');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}/source-menu.png` });
   await sources.getByRole('button', { name: 'Close' }).click();

@@ -95,17 +95,16 @@ test('avalanche: regions coloured as issued, region forecast, report with photos
   expect(await regionValue(page, -123.08, 49.6)).toBe(expected);
   await expect(page.locator('#legend-row')).toContainText('Early season');
   await expect(page.locator('#run-age')).toContainText(/^Issued /);
-  // The model button names the source; its menu lists Avalanche Canada only.
-  await expect(page.locator('#model-pill')).toHaveText('AvCan');
+  // The source button says Auto; its menu has Auto first, then Avalanche Canada
+  // (Auto in every source menu: Kaden's interface rule, Nov 21).
+  await expect(page.locator('#model-pill')).toHaveText('Auto');
   await page.locator('#model-pill').click();
   const sources = page.getByRole('dialog', { name: 'Source' });
-  await expect(sources.locator('.model-row')).toHaveCount(1);
-  await expect(sources.locator('.model-row')).toHaveAttribute('aria-pressed', 'true');
-  await expect(sources.locator('.model-name')).toHaveText('Avalanche Canada');
+  await expect(sources.locator('.model-name')).toHaveText(['Auto', 'Avalanche Canada']);
   await expect(sources.locator('.model-age')).toContainText('ago');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOTS}/source-menu.png` });
-  await sources.locator('.model-row').click();
+  await sources.locator('.model-row', { hasText: 'Avalanche Canada' }).click();
   await expect(sources).toBeHidden();
   // Report pins: one per report with a place (21 in the saved answer).
   await expect(page.locator('.avy-report-pin')).toHaveCount(21);

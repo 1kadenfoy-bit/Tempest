@@ -22,7 +22,8 @@ test('wind: terrain fill, flow that pauses, readout, chart, cards, settings', as
 
   // Readout: speed, gusts, compass direction with degrees, elevation.
   await expect(page.locator('.readout-text strong')).toHaveText(/^\d+ km\/h$/);
-  await expect(page.locator('.readout-text .muted')).toContainText(/^gusts \d+ · (N|NE|E|SE|S|SW|W|NW) \d+° · [\d,]+ m/);
+  // The pin shows only name · value · elevation (Kaden's interface rule, Nov 21).
+  await expect(page.locator('.readout-text .muted')).toHaveText(/^[\d,]+ m$/);
   await expect(page.locator('#summary-before')).toHaveText(/^Gusts to \d+ km\/h$/);
   await expect(page.locator('#legend-row')).toContainText('60+ km/h');
 
