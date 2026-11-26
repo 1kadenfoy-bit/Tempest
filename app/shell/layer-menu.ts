@@ -16,6 +16,7 @@ export function layerMenuBody(layers: LayerSlots[], activeId: string, onPick: (l
     b.setAttribute('aria-pressed', String(l.id === activeId));
     const icon = document.createElement('span');
     icon.className = 'layer-tile-icon';
+    icon.style.setProperty('--chip', `var(--layer-${l.id}, var(--layer-neutral))`);
     icon.innerHTML = icons[`layer-${l.id}` as IconName] ?? '';
     const name = document.createElement('span');
     name.className = 'layer-tile-name';

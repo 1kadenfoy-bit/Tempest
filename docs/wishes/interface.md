@@ -70,6 +70,8 @@ the old wording moves to "Changed".
 
 29. (Nov 22) In the map panel, **3D buildings is a tile in the 3D ANIMATIONS section** (greyed out in 2D), not under View. The Terrain and Satellite tiles are the same compact size as the other tiles. Every panel has extra room at the bottom so the last row can always be scrolled into view. Every map panel button has an icon beside its name (approved Nov 22): 2D folded map, 3D cube, Terrain mountain, Satellite globe with orbit, Trails/huts/camps tent, Peaks flagged mountain, Contour lines rings, Small roads dashed road, Ski resorts gondola, Park boundaries pine in a dashed ring, Regional boundaries dashed region, Municipal boundaries city skyline, Weather stations mast with wind cups, Rain/snow line (snowflake above, drop below), Freezing line, Day/night sync half sun half moon, 3D buildings, Clouds, Wind, Saved data wall, Water, Trees.
 30. (Nov 22) The map layers panel opens the same way whatever state the weather card is in: anchored to the bottom, fully scrollable.
+31. (Nov 26) The map layers, locate and search buttons ride with the weather card while it is dragged (no waiting for release), and fade out as it nears full height.
+32. (Nov 26) Each weather layer's icon sits in a circle filled with that layer's own colours (from the token ramps; radar uses precipitation's). Avalanche and air quality stay neutral until Kaden picks colours.
 
 ## Changed
 - Rules 8 and 27: unbuilt tiles were shown dimmed and marked "Soon", until Nov 22.
