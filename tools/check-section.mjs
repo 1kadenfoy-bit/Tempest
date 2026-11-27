@@ -11,7 +11,8 @@
 //      section (docs/sections/sections.json). Another section's file fails;
 //      a shared file (the lead's) is listed for the handoff note.
 //   2. Typecheck, lint (with the architecture rules), unit tests.
-//   3. Build, then the section's own browser tests on recorded weather.
+//   3. Build, then last time's failed browser tests, then the section's own
+//      browser tests and those of other areas it changed, on recorded weather.
 // The full browser suite runs when the lead integrates (and in CI).
 import { execSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -69,9 +70,19 @@ const steps = [
   ['Lint (architecture rules included)', 'npx', ['eslint', '.']],
   ['Unit tests', 'npx', ['vitest', 'run']],
 ];
-if (!flags.has('--no-browser') && section.specs.length) {
+// The browser tests: this area's, and those of every other area whose files
+// changed (docs/working.md, step 4). Those that failed last time go first, so
+// a failure still there shows in a minute, not at the end (Kaden, Nov 27).
+const otherSpecs = Object.entries(cfg.sections)
+  .filter(([k, s]) => k !== name && [...changed].some((f) => owns(s, f)))
+  .flatMap(([, s]) => s.specs);
+const specs = [...new Set([...section.specs, ...otherSpecs])];
+if (!flags.has('--no-browser') && specs.length) {
   steps.push(['Build', 'npm', ['run', 'build']]);
-  steps.push([`Browser tests on recorded weather (${section.specs.join(', ')})`, 'npx', ['playwright', 'test', ...section.specs, '--trace', 'off']]);
+  let failedBefore = false;
+  try { failedBefore = (JSON.parse(readFileSync('test-results/.last-run.json', 'utf8')).failedTests ?? []).length > 0; } catch { /* no last run */ }
+  if (failedBefore) steps.push(['The browser tests that failed last time, first', 'npx', ['playwright', 'test', '--last-failed', '--trace', 'off', '--pass-with-no-tests']]);
+  steps.push([`Browser tests on recorded weather (${specs.join(', ')})`, 'npx', ['playwright', 'test', ...specs, '--trace', 'off']]);
 }
 for (const [label, cmd, cmdArgs] of steps) {
   console.log(`\n== ${label}`);

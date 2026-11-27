@@ -17,20 +17,26 @@ permissions:
   contents: read
 
 jobs:
-  # The browser tests are split across three machines that run at the same
+  # The browser tests are split across four machines that run at the same
   # time, one test at a time on each: the map draws in software on these
   # machines, and two tests sharing one machine starved each other (the
   # Nov 21 run hit the time limit). Every test still runs, unchanged.
+  # tools/test-plan.mjs gives each machine an even share by measured time
+  # (e2e/durations.json), and the tests most likely to fail first (Kaden,
+  # Nov 27): last run's failures, then the areas this branch changed.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
-    name: check (${{ matrix.shard }} of 3)
+        shard: [1, 2, 3, 4]
+    name: check (${{ matrix.shard }} of 4)
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Enough history to see what this branch changed since main.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -39,8 +45,9 @@ jobs:
 
       - run: npm ci
 
+      # The quick checks first, on every machine (under a minute): a typing or
+      # lint mistake stops the run before any browser starts.
       - name: Typecheck
-        if: matrix.shard == 1
         run: npm run typecheck
 
       - name: Lint
@@ -65,36 +72,88 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The browser is kept between runs (about 110 MB); only the system
+      # libraries it needs are installed each time.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        id: browser
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.pw.outputs.version }}
       - name: Install browser for screenshot tests
+        if: steps.browser.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+      - name: Install the browser's system libraries
+        if: steps.browser.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
-      # Failed tests first (Kaden, Nov 26): each machine keeps the list of
-      # tests that failed on its last run of this branch and runs those
-      # before anything else. If they still fail, the run stops in minutes
-      # instead of after the whole set; if they pass, the whole set runs.
-      - name: Failures from this branch's last run
+      # Failed tests first (Kaden, Nov 26): every machine keeps the list of
+      # tests that failed on its last run of this branch; each machine reads
+      # all four lists, since a test can move to another machine when the
+      # shares are rebalanced.
+      - name: Failures from this branch's last run (machine 1)
         uses: actions/cache/restore@v6
         with:
-          path: .last-run
-          key: last-run-${{ github.head_ref || github.ref_name }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: last-run-${{ github.head_ref || github.ref_name }}-${{ matrix.shard }}-
+          path: .last-run/1
+          key: last-run-${{ github.head_ref || github.ref_name }}-1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: last-run-${{ github.head_ref || github.ref_name }}-1-
+      - name: Failures from this branch's last run (machine 2)
+        uses: actions/cache/restore@v6
+        with:
+          path: .last-run/2
+          key: last-run-${{ github.head_ref || github.ref_name }}-2-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: last-run-${{ github.head_ref || github.ref_name }}-2-
+      - name: Failures from this branch's last run (machine 3)
+        uses: actions/cache/restore@v6
+        with:
+          path: .last-run/3
+          key: last-run-${{ github.head_ref || github.ref_name }}-3-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: last-run-${{ github.head_ref || github.ref_name }}-3-
+      - name: Failures from this branch's last run (machine 4)
+        uses: actions/cache/restore@v6
+        with:
+          path: .last-run/4
+          key: last-run-${{ github.head_ref || github.ref_name }}-4-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: last-run-${{ github.head_ref || github.ref_name }}-4-
 
-      - name: Last run's failed tests, first
-        if: hashFiles('.last-run/last-run.json') != ''
-        run: npx playwright test --trace off --workers=1 --last-failed --last-failed-file=.last-run/last-run.json --pass-with-no-tests
+      - name: This machine's tests, most likely to fail first
+        id: plan
+        run: |
+          node tools/test-plan.mjs --shard=${{ matrix.shard }}/4 --write-failed=.last-run/all.json
+          node tools/test-plan.mjs --shard=${{ matrix.shard }}/4 --github >> "$GITHUB_OUTPUT"
 
-      - name: Screenshot tests (390 x 844)
-        run: npm run screenshots -- --shard=${{ matrix.shard }}/3 --workers=1
+      # Each step stops the machine when a test fails, so a failure shows in
+      # minutes; the steps after it are skipped. Each keeps its own results
+      # folder (a new run of the tests empties its folder).
+      - name: 1. Last run's failed tests
+        if: steps.plan.outputs.failed != ''
+        run: npx playwright test --trace off --workers=1 --last-failed --last-failed-file=.last-run/all.json --pass-with-no-tests --output=test-results/1-failed ${{ steps.plan.outputs.failed }}
+
+      - name: 2. Tests of the areas this branch changed
+        if: steps.plan.outputs.changed != ''
+        run: npx playwright test --trace off --workers=1 --output=test-results/2-changed ${{ steps.plan.outputs.changed }}
+
+      - name: 3. The rest of this machine's tests (390 x 844)
+        if: steps.plan.outputs.rest != ''
+        run: npx playwright test --trace off --workers=1 --output=test-results/3-rest ${{ steps.plan.outputs.rest }}
 
       - name: Remember this run's failed tests
-        if: always() && hashFiles('test-results/.last-run.json') != ''
-        run: mkdir -p .last-run && cp test-results/.last-run.json .last-run/last-run.json
+        if: always()
+        run: |
+          mkdir -p .last-run/${{ matrix.shard }}
+          node -e "
+            const fs = require('fs');
+            const ids = ['1-failed', '2-changed', '3-rest'].flatMap((d) => { try { return JSON.parse(fs.readFileSync('test-results/' + d + '/.last-run.json', 'utf8')).failedTests; } catch { return []; } });
+            fs.writeFileSync('.last-run/${{ matrix.shard }}/last-run.json', JSON.stringify({ status: ids.length ? 'failed' : 'passed', failedTests: ids }));
+          "
 
       - name: Keep the list for the next run
-        if: always() && hashFiles('.last-run/last-run.json') != ''
+        if: always()
         uses: actions/cache/save@v6
         with:
-          path: .last-run
+          path: .last-run/${{ matrix.shard }}
           key: last-run-${{ github.head_ref || github.ref_name }}-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Where pixel tests differ

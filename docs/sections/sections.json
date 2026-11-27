@@ -193,13 +193,15 @@
         "public/satellite/**",
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts",
+        "e2e/consistency.spec.ts",
         "docs/reports/data-*/**",
         "docs/handoffs/data/**",
         "docs/wishes/data.md"
       ],
       "specs": [
         "e2e/offline.spec.ts",
-        "e2e/models.spec.ts"
+        "e2e/models.spec.ts",
+        "e2e/consistency.spec.ts"
       ]
     },
     "performance": {
@@ -235,6 +237,8 @@
       "playwright.config.ts",
       "e2e/fixtures.ts",
       "e2e/recorded.ts",
+      "e2e/durations.json",
+      "tools/test-plan.mjs",
       "e2e/phone-tests.spec.ts",
       "app/spike/**",
       "spike.html",
@@ -254,6 +258,7 @@
       ".gitignore",
       "docs/reports/m*/**",
       "docs/working.md",
+      "docs/testing.md",
       "docs/tasks/**"
     ]
   },

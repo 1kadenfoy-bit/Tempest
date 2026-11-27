@@ -1,0 +1,25 @@
+{
+  "$comment": "About how long each browser test file takes on one of GitHub's machines (seconds, one test at a time, passing runs of Nov 27, 2026). tools/test-plan.mjs splits the files among the machines with it so they finish together. A file not listed counts 60 s. Update a number when a file's time changes a lot (the CI log prints each file's time).",
+  "seconds": {
+    "e2e/3d.spec.ts": 205,
+    "e2e/air-quality.spec.ts": 65,
+    "e2e/alerts.spec.ts": 25,
+    "e2e/ates.spec.ts": 70,
+    "e2e/avalanche.spec.ts": 105,
+    "e2e/consistency.spec.ts": 240,
+    "e2e/details.spec.ts": 40,
+    "e2e/effects.spec.ts": 15,
+    "e2e/models.spec.ts": 30,
+    "e2e/offline.spec.ts": 430,
+    "e2e/perf.spec.ts": 200,
+    "e2e/phone-tests.spec.ts": 80,
+    "e2e/radar.spec.ts": 25,
+    "e2e/search.spec.ts": 65,
+    "e2e/settings.spec.ts": 130,
+    "e2e/shell.spec.ts": 260,
+    "e2e/stations.spec.ts": 70,
+    "e2e/summary.spec.ts": 150,
+    "e2e/temperature.spec.ts": 25,
+    "e2e/wind.spec.ts": 110
+  }
+}
