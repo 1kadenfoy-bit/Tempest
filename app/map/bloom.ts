@@ -2,7 +2,31 @@
 // the temporary Tune panel, which is gone (Kaden, Nov 27); the glow stays, at the
 // strength settled in app/map/tuning.ts.
 import { S } from '../state';
-import { tuning, type Tuning } from './tuning';
+import { tuning } from './tuning';
+import type { Theme } from '../theme/tokens';
+import { onWeatherCover, weatherCover } from './ground-veil';
+
+/**
+ * How much of the bloom each theme takes. On the light theme nearly the whole map is
+ * "bright", so a full bloom lays a white haze over everything and washes out the relief,
+ * water and labels (rule 18): it keeps only a hint.
+ */
+const THEME_BLOOM: Record<Theme, number> = { dark: 1, light: 0.2 };
+
+/**
+ * Under a weather layer that colours the whole map, the light parts of its colours (near
+ * 0 °C, light wind) would glow into a haze over everything: the bloom drops to this share.
+ */
+const UNDER_WEATHER = 0.35;
+
+/** The bloom's strength for the settled tuning, a theme and how much of the map the weather colours (0 to 1). */
+export function bloomStrength(bloom: number, theme: Theme, cover = 0): number {
+  return bloom * THEME_BLOOM[theme] * (1 - (1 - UNDER_WEATHER) * cover);
+}
+
+let refresh: () => void = () => {};
+/** Re-reads the theme (the app calls it when the theme changes). */
+export function refreshBloom(): void { refresh(); }
 
 const css = (el: HTMLElement, styles: Record<string, string>) => Object.assign(el.style, styles);
 
@@ -32,13 +56,18 @@ export function setupBloom(): void {
     try { g.drawImage(src, 0, 0, w, h); } catch { /* the picture was not available this frame */ }
   };
   // `render` fires after each frame is drawn, so the copy is of that same frame.
-  map.on('render', () => { if (tuning.get().bloom > 0) copy(); });
-  const apply = (t: Tuning) => {
-    el.style.opacity = String(t.bloom);
-    el.style.display = t.bloom > 0 ? 'block' : 'none';
-    if (t.bloom > 0) map.triggerRepaint(); // one draw to take a copy of
+  // Pages without the app's settings (the effects and phone test pages) use the dark theme.
+  const strength = () => bloomStrength(tuning.get().bloom, S.settings?.theme() ?? 'dark', weatherCover());
+  map.on('render', () => { if (strength() > 0) copy(); });
+  const apply = () => {
+    const b = strength();
+    el.style.opacity = String(b);
+    el.style.display = b > 0 ? 'block' : 'none';
+    if (b > 0) map.triggerRepaint(); // one draw to take a copy of
   };
   tuning.onChange(apply);
-  apply(tuning.get());
+  onWeatherCover(apply);
+  refresh = apply;
+  apply();
 }
 

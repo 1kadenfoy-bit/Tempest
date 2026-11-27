@@ -8,7 +8,7 @@ import { S, app, $ } from '../state';
 import { maplibregl } from './maplibre';
 import { applyMapSettings } from './map-settings';
 import { registerWaterImages } from './water';
-import { setupBloom } from './bloom';
+import { refreshBloom, setupBloom } from './bloom';
 import { showShape, startDrawing } from './draw-shape';
 import { applyBaseTheme, topoStyle } from './style';
 import { applyTerrainTheme } from './terrain';
@@ -101,6 +101,7 @@ export function recolourMap(t: Theme): void {
   applyBaseTheme(S.map, t);
   applyTerrainTheme(S.map, t);
   S.threeD.applyTheme(t);
+  refreshBloom();
 }
 
 /** The locate button, the place line and the map panel. */

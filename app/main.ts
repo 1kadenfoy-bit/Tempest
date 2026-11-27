@@ -27,6 +27,7 @@ import { savedOnlyActive } from './data/connection';
 import { loadPinGround, loadRun, loadSeries, rebuildTimeline } from './data/forecast';
 import { loadBasemap } from './map/basemap-router';
 import { addTerrain } from './map/terrain';
+import { setGroundVeil } from './map/ground-veil';
 import { setupThreeD } from './map/three-d';
 import { applyTerrainPrefs, buildingsOk, createMap, fitPadding, locate, recolourMap, setupMapControls } from './map/setup';
 import { setupRadar, radar, radarBefore, radarPinData, loadRadarFrames, scheduleRadarPin, setFrameSteps } from './radar/frames';
@@ -291,6 +292,7 @@ function setLayerSetting(layer: LayerSlots, key: string, v: string | boolean) {
 function setActive(l: LayerSlots) {
   if (l === S.active) return;
   S.active = l;
+  setGroundVeil(l.id, S.settings.theme());
   holdWindAnimation();
   syncStreaks();
   S.prefs.layer = l.id;
