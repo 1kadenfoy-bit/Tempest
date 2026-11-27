@@ -111,3 +111,76 @@ export function screenWind(grid: NodeData, profiles: WindProfile[], m: Mosaic, g
   }
   return { field: { width, height, cols, rows, step, u, v }, cells };
 }
+
+/** The wind on a grid of map positions (mercator units, 0 to 1), for the 3D streaks. */
+export interface MercatorWind {
+  /** The box the grid covers: west, north, east, south edges in mercator units (y grows southwards). */
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** Grid columns and rows; cell (c, r) sits at x0 + (c / (cols - 1)) × (x1 - x0), and so on. */
+  cols: number;
+  rows: number;
+  /** East and north parts (km/h) at the terrain, row-major from the north. Never NaN. */
+  u: Float32Array;
+  v: Float32Array;
+  /** Average speed (km/h) and the direction it blows FROM (degrees), over the grid. */
+  meanKmh: number;
+  meanFromDeg: number;
+}
+
+/**
+ * The wind at the terrain over `box` (west, south, east, north, degrees), on a
+ * `size` × `size` grid of map positions. Same reading as the flow's: profiles
+ * blended between nodes, read at the ground height over the model's own ground.
+ * Cells with no wind (off the model's grid or the terrain picture) take the
+ * nearest known one, so the streaks never stop dead at an edge.
+ */
+export function mercatorWind(grid: NodeData, profiles: WindProfile[], m: Mosaic, ground: Float32Array, box: [number, number, number, number], size = 48): MercatorWind | null {
+  const x0 = mercX(box[0]), x1 = mercX(box[2]), y0 = mercY(box[3]), y1 = mercY(box[1]);
+  const cols = size, rows = size;
+  const u = new Float32Array(cols * rows).fill(NaN), v = new Float32Array(cols * rows).fill(NaN);
+  const lon0 = grid.lons[0]!, lon1 = grid.lons[grid.lons.length - 1]!, lat0 = grid.lats[0]!, lat1 = grid.lats[grid.lats.length - 1]!;
+  let su = 0, sv = 0, ss = 0, n = 0;
+  for (let r = 0; r < rows; r++) {
+    const my = y0 + (r / (rows - 1)) * (y1 - y0);
+    const lat = (Math.atan(Math.sinh(Math.PI * (1 - 2 * my))) * 180) / Math.PI;
+    for (let c = 0; c < cols; c++) {
+      const mx = x0 + (c / (cols - 1)) * (x1 - x0);
+      const lng = mx * 360 - 180;
+      if (lng < lon0 || lng > lon1 || lat < lat0 || lat > lat1) continue;
+      const px = Math.floor(((mx - m.merc[0]) / (m.merc[2] - m.merc[0])) * m.width);
+      const py = Math.floor(((my - m.merc[1]) / (m.merc[3] - m.merc[1])) * m.height);
+      if (px < 0 || py < 0 || px >= m.width || py >= m.height) continue;
+      const z = Math.max(0, m.data[py * m.width + px]!);
+      const [a, b] = windAtHeight(blend(grid, profiles, lat, lng), z, ground[py * m.width + px]!);
+      if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+      u[r * cols + c] = a; v[r * cols + c] = b;
+      su += a; sv += b; ss += Math.hypot(a, b); n++;
+    }
+  }
+  if (!n) return null;
+  fillGaps(u, v, cols, rows);
+  return { x0, y0, x1, y1, cols, rows, u, v, meanKmh: ss / n, meanFromDeg: ((Math.atan2(-su, -sv) * 180) / Math.PI + 360) % 360 };
+}
+
+/** Unknown cells take a known neighbour's wind, spreading outwards until every cell has one. */
+function fillGaps(u: Float32Array, v: Float32Array, cols: number, rows: number): void {
+  for (let pass = 0; pass < cols + rows; pass++) {
+    let missing = 0;
+    for (let i = 0; i < u.length; i++) {
+      if (Number.isFinite(u[i]!)) continue;
+      const c = i % cols, r = (i - c) / cols;
+      let a = 0, b = 0, k = 0;
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const cc = c + dc, rr = r + dr;
+        if (cc < 0 || rr < 0 || cc >= cols || rr >= rows) continue;
+        const j = rr * cols + cc;
+        if (Number.isFinite(u[j]!)) { a += u[j]!; b += v[j]!; k++; }
+      }
+      if (k) { u[i] = a / k; v[i] = b / k; } else missing++;
+    }
+    if (!missing) return;
+  }
+}

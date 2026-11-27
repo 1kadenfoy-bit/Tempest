@@ -10,6 +10,11 @@
 //   clouds, wind, water, savedDataWall   Effects (3D animations)
 //   trees                    Effects, unless Kaden gives it to Maps
 // Nothing here draws anything. An id nobody listens to simply does nothing yet.
+//
+// A switch can be held on for a while without touching the saved choice
+// (`features.hold`): the Wind animation is on while the Wind layer is shown
+// (Kaden, Nov 27). A tap while held changes only the held value; letting go
+// brings back the saved choice.
 import { S } from '../state';
 import { savePrefs } from './prefs';
 
@@ -18,19 +23,32 @@ export type FeatureId = (typeof FEATURE_IDS)[number];
 
 type Listener = (id: FeatureId, on: boolean) => void;
 const listeners = new Set<Listener>();
+/** Switches held at a value for now, not saved. */
+const held = new Map<FeatureId, boolean>();
 
 export const features = {
   get(id: FeatureId): boolean {
-    return S.prefs.features?.[id] === true;
+    return held.get(id) ?? S.prefs.features?.[id] === true;
   },
   /** Every switch and whether it is on, for start-up. */
   all(): Record<FeatureId, boolean> {
     return Object.fromEntries(FEATURE_IDS.map((id) => [id, features.get(id)])) as Record<FeatureId, boolean>;
   },
   set(id: FeatureId, on: boolean): void {
-    S.prefs.features = { ...S.prefs.features, [id]: on };
-    savePrefs(S.prefs);
+    if (held.has(id)) held.set(id, on);
+    else {
+      S.prefs.features = { ...S.prefs.features, [id]: on };
+      savePrefs(S.prefs);
+    }
     for (const l of listeners) l(id, on);
+  },
+  /** Hold a switch at `on` for now without saving it; `null` lets go and brings back the saved choice. */
+  hold(id: FeatureId, on: boolean | null): void {
+    const before = features.get(id);
+    if (on === null) held.delete(id);
+    else if (!held.has(id)) held.set(id, on);
+    const now = features.get(id);
+    if (now !== before) for (const l of listeners) l(id, now);
   },
   onChange(l: Listener): () => void {
     listeners.add(l);

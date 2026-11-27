@@ -33,7 +33,7 @@ import { loadSavedWeather, savedStep } from '../offline/saved-areas';
 import { elevationMosaic, type Mosaic } from '../map/elevation';
 import { levelLine, type LineFeatures, type LineKind } from '../map/freezing-line';
 import { features } from '../shell/feature-switches';
-import { modelGround, nodeProfiles, packWind, screenWind, windComplete } from '../map/wind-field';
+import { mercatorWind, modelGround, nodeProfiles, packWind, screenWind, windComplete, type MercatorWind } from '../map/wind-field';
 import { colorToken, type Theme } from '../theme/tokens';
 import { hideRadar, showRadarFrame } from '../radar/frames';
 
@@ -173,6 +173,10 @@ export function unavailable(what: string) {
 /** The model's ground under the mosaic, per mosaic and model grid (computed once each). */
 export let windGround: { key: string; data: Float32Array } | null = null;
 
+/** Who wants the forecast wind on map positions (the 3D streaks, app/effects), each time the wind layer reads it. */
+const windListeners = new Set<(w: MercatorWind) => void>();
+export function onForecastWind(fn: (w: MercatorWind) => void): void { windListeners.add(fn); }
+
 /** The wind fill: profiles at a lattice of nodes, wind at the terrain per pixel on the GPU, and the flow over it. */
 export async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
   const view = marginView();
@@ -204,6 +208,10 @@ export async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOn
     const w = c.clientWidth, h = c.clientHeight;
     const sw = screenWind(grid, profilesAt, m, windGround.data, w, h, (x, y) => S.map.unproject([x, y]));
     flow.setField(sw.field);
+    if (windListeners.size) {
+      const mw = mercatorWind(grid, profilesAt, m, windGround.data, view);
+      if (mw) for (const fn of windListeners) fn(mw);
+    }
     S.view = { cells: sw.cells.map((x) => ({ lon: x.lon, lat: x.lat, value: x.gust, second: x.dir })) };
     app.scheduleDetails();
   }
