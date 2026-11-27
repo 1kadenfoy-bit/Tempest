@@ -80,11 +80,23 @@ function prepare() {
 /** Runs Playwright on the set being recorded; returns the titles of the tests whose checks failed. */
 function playwright(args, outDir) {
   const env = { ...process.env, RECORD: set, RECORD_SPOTS: spots, RECORD_LAYERS: layers, RECORD_PLAY: play };
-  const r = spawnSync('npx', ['playwright', 'test', '--trace', 'off', '--workers=1', `--output=${outDir}`, ...args], { stdio: 'inherit', env });
+  const results = join(outDir, 'results.json');
+  rmSync(results, { force: true });
+  const r = spawnSync('npx', ['playwright', 'test', '--trace', 'off', '--workers=1', '--reporter=list,json', `--output=${outDir}`, ...args], {
+    stdio: 'inherit', env: { ...env, PLAYWRIGHT_JSON_OUTPUT_NAME: results },
+  });
   try {
-    const last = JSON.parse(readFileSync(join(outDir, '.last-run.json'), 'utf8'));
-    if (last.status === 'failed' && !last.failedTests?.length) return ['(the run stopped before its tests: see the log above)'];
-    return last.failedTests ?? [];
+    const report = JSON.parse(readFileSync(results, 'utf8'));
+    const failed = [];
+    const walk = (suite, path) => {
+      for (const spec of suite.specs ?? []) {
+        if (spec.tests.some((t) => t.results.some((x) => x.status !== 'passed' && x.status !== 'skipped'))) failed.push(`${spec.file} › ${[...path, spec.title].join(' › ')}`);
+      }
+      for (const s of suite.suites ?? []) walk(s, s.title && !s.title.endsWith('.ts') ? [...path, s.title] : path);
+    };
+    for (const s of report.suites ?? []) walk(s, []);
+    if (r.status !== 0 && !failed.length) failed.push('(the run stopped before its tests: see the log above)');
+    return failed;
   } catch {
     return r.status === 0 ? [] : ['(the test run did not finish)'];
   }
