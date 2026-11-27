@@ -289,6 +289,8 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
 
   // 9. Not touching it: fifteen quiet seconds. Counts the map's draws, frame
   // requests, downloads and changes to the page.
+  // ?perf&idle=<seconds> waits longer (the build machine, to catch the app's slower timers).
+  const idleSeconds = Number(new URLSearchParams(location.search).get('idle')) || 15;
   await step('Idle', async (r) => {
     let rafCalls = 0;
     const realRaf = window.requestAnimationFrame;
@@ -297,16 +299,25 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
     const onRender = () => { draws++; };
     S.map.on('render', onRender);
     let changes = 0;
-    const obs = new MutationObserver((recs) => { changes += recs.length; });
+    const where = new Map<string, number>();
+    const obs = new MutationObserver((recs) => {
+      changes += recs.length;
+      for (const m of recs) {
+        const el = m.target instanceof Element ? m.target : m.target.parentElement;
+        const k = el ? `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ''}${m.type === 'attributes' ? ` [${m.attributeName}]` : ''}` : '?';
+        where.set(k, (where.get(k) ?? 0) + 1);
+      }
+    });
     obs.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
     const fetches0 = state.fetches.length;
     const res0 = performance.getEntriesByType('resource').length;
-    await sleep(15_000);
+    await sleep(idleSeconds * 1000);
     window.requestAnimationFrame = realRaf;
     S.map.off('render', onRender);
     obs.disconnect();
-    r.data = { seconds: 15, mapDraws: draws, frameRequests: rafCalls, downloads: Math.max(state.fetches.length - fetches0, performance.getEntriesByType('resource').length - res0), pageChanges: changes };
-    r.notes.push(`${draws} map draws, ${rafCalls} frame requests, ${r.data.downloads} downloads, ${changes} page changes in 15 s`);
+    const downloads = Math.max(state.fetches.length - fetches0, performance.getEntriesByType('resource').length - res0);
+    r.data = { seconds: idleSeconds, mapDraws: draws, frameRequests: rafCalls, downloads, pageChanges: changes, changedWhere: Object.fromEntries([...where].sort((a, b) => b[1] - a[1]).slice(0, 8)), downloaded: state.fetches.slice(fetches0).map((f) => f.url.slice(0, 120)) };
+    r.notes.push(`${draws} map draws, ${rafCalls} frame requests, ${downloads} downloads, ${changes} page changes in ${idleSeconds} s`);
   });
 
   ready.stop();

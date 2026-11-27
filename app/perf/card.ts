@@ -36,7 +36,7 @@ export function rows(r: TourResult): Row[] {
   const t = taps.flatMap((x) => [x.openMs, x.closeMs]).filter((x): x is number => typeof x === 'number');
   out.push({ what: 'Taps (slowest)', got: t.length ? `${Math.max(...t)} ms` : '—', target: '0.1–0.2 s', ok: t.length ? Math.max(...t) <= 200 : null });
   const idle = by('Idle')?.data as { mapDraws?: number; downloads?: number; frameRequests?: number } | undefined;
-  out.push({ what: 'Idle 15 s', got: idle ? `${idle.mapDraws} draws · ${idle.frameRequests} frames · ${idle.downloads} downloads` : '—', target: 'nothing', ok: idle ? idle.mapDraws === 0 && idle.downloads === 0 && idle.frameRequests === 0 : null });
+  out.push({ what: 'Idle', got: idle ? `${idle.mapDraws} draws · ${idle.frameRequests} frames · ${idle.downloads} downloads` : '—', target: 'nothing', ok: idle ? idle.mapDraws === 0 && idle.downloads === 0 && idle.frameRequests === 0 : null });
   out.push({ what: 'Memory', got: r.memoryMB === null ? 'not reported by this browser' : `${r.memoryMB} MB`, target: 'no reload', ok: null });
   return out;
 }

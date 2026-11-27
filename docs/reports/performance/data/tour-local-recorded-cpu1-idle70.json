@@ -1,0 +1,332 @@
+{
+ "label": "local-recorded-cpu1-idle70",
+ "url": "http://localhost:4173/?idle=70",
+ "weather": "recorded",
+ "cpu": 1,
+ "net": "none",
+ "prefs": {},
+ "wallSeconds": 241,
+ "marks": {
+  "html": 9,
+  "appStarted": 465,
+  "firstMap": 2261,
+  "pinForecast": 4254,
+  "firstWeather": 5798,
+  "mapComplete": 7315,
+  "everything": 7315
+ },
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": false,
+   "buildings3d": false,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {},
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 9,
+     "appStarted": 465,
+     "firstMap": 2261,
+     "pinForecast": 4254,
+     "firstWeather": 5798,
+     "mapComplete": 7315,
+     "everything": 7315,
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 3,
+     "fps": 60,
+     "low1": 60,
+     "worstMs": 17,
+     "mapDraws": 0,
+     "longTasks": 0,
+     "longTaskMs": 0
+    }
+   },
+   {
+    "name": "Pan",
+    "notes": [],
+    "data": {
+     "settleMs": 919.559999999823,
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 5.7,
+     "fps": 3.3,
+     "low1": 2.2,
+     "worstMs": 450,
+     "mapDraws": 19,
+     "longTasks": 18,
+     "longTaskMs": 5302
+    }
+   },
+   {
+    "name": "Pinch",
+    "notes": [],
+    "data": {
+     "settleMs": 358.2399999999907,
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 3.3,
+     "fps": 3.7,
+     "low1": 2.6,
+     "worstMs": 383,
+     "mapDraws": 12,
+     "longTasks": 11,
+     "longTaskMs": 2858
+    }
+   },
+   {
+    "name": "Tilt 3D",
+    "notes": [],
+    "data": {
+     "switchedOnForTest": true,
+     "settleTiltedMs": null,
+     "flatten": {
+      "seconds": 3.3,
+      "fps": 0,
+      "low1": 0,
+      "worstMs": 0,
+      "mapDraws": 2,
+      "longTasks": 0,
+      "longTaskMs": 0
+     },
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 9.2,
+     "fps": 0.5,
+     "low1": 0.5,
+     "worstMs": 2050,
+     "mapDraws": 5,
+     "longTasks": 4,
+     "longTaskMs": 7358
+    }
+   },
+   {
+    "name": "Drag time",
+    "notes": [
+     "23 of 48 steps drawn while dragging",
+     "caught up 0.67 s after the finger stopped"
+    ],
+    "data": {
+     "steps": 48,
+     "drawn": 23,
+     "medianDelayMs": 648,
+     "catchUpMs": 665,
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 23,
+     "fps": 4.1,
+     "low1": 1.9,
+     "worstMs": 533,
+     "mapDraws": 68,
+     "longTasks": 67,
+     "longTaskMs": 21246
+    }
+   },
+   {
+    "name": "Play",
+    "notes": [
+     "13 of 14 steps drawn",
+     "each step drawn 0.35 s after it came"
+    ],
+    "data": {
+     "steps": 14,
+     "drawn": 13,
+     "medianDelayMs": 353,
+     "tap": {
+      "handlerMs": 0,
+      "responseMs": 57
+     },
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 11.2,
+     "fps": 7.3,
+     "low1": 2.5,
+     "worstMs": 400,
+     "mapDraws": 31,
+     "longTasks": 31,
+     "longTaskMs": 9720
+    }
+   },
+   {
+    "name": "Switch layers",
+    "notes": [
+     "Temperature: 0.1 s, worst hitch 367 ms",
+     "Wind: no picture in 15 s, worst hitch 483 ms",
+     "Radar: 0 s, worst hitch 367 ms",
+     "Avalanche: 1.5 s, worst hitch 400 ms",
+     "Air quality: 1.5 s, worst hitch 317 ms",
+     "Precipitation: 0 s, worst hitch 300 ms"
+    ],
+    "data": {
+     "switches": [
+      {
+       "layer": "temperature",
+       "openMenuMs": 35,
+       "pickMs": 1024,
+       "readyMs": 117,
+       "settleMs": null,
+       "worstFrameMs": 367
+      },
+      {
+       "layer": "wind",
+       "openMenuMs": 21,
+       "pickMs": 324,
+       "readyMs": null,
+       "settleMs": 6397,
+       "worstFrameMs": 483
+      },
+      {
+       "layer": "radar",
+       "openMenuMs": 19,
+       "pickMs": 656,
+       "readyMs": 15,
+       "settleMs": 8555,
+       "worstFrameMs": 367
+      },
+      {
+       "layer": "avalanche",
+       "openMenuMs": 17,
+       "pickMs": 664,
+       "readyMs": 1512,
+       "settleMs": 746,
+       "worstFrameMs": 400
+      },
+      {
+       "layer": "air-quality",
+       "openMenuMs": 29,
+       "pickMs": 695,
+       "readyMs": 1474,
+       "settleMs": 591,
+       "worstFrameMs": 317
+      },
+      {
+       "layer": "precipitation",
+       "openMenuMs": 25,
+       "pickMs": 938,
+       "readyMs": 13,
+       "settleMs": 637,
+       "worstFrameMs": 300
+      }
+     ],
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 58.1,
+     "fps": 46.7,
+     "low1": 3.5,
+     "worstMs": 517,
+     "mapDraws": 40,
+     "longTasks": 45,
+     "longTaskMs": 13090
+    }
+   },
+   {
+    "name": "Panels",
+    "notes": [
+     "taps answered in 7–33 ms (median 32)"
+    ],
+    "data": {
+     "taps": [
+      {
+       "id": "layer-button",
+       "openMs": 7,
+       "openCodeMs": 4,
+       "closeMs": 32
+      },
+      {
+       "id": "model-pill",
+       "openMs": 32,
+       "openCodeMs": 6,
+       "closeMs": 33
+      },
+      {
+       "id": "settings-button",
+       "openMs": 33,
+       "openCodeMs": 5,
+       "closeMs": 33
+      },
+      {
+       "id": "map-layers",
+       "openMs": 32,
+       "openCodeMs": 6,
+       "closeMs": 33
+      },
+      {
+       "id": "search-button",
+       "openMs": 32,
+       "openCodeMs": 3,
+       "closeMs": 32
+      },
+      {
+       "id": "window-button",
+       "openMs": 32,
+       "openCodeMs": 3,
+       "closeMs": 32
+      },
+      {
+       "id": "sheet",
+       "openMs": 32,
+       "openCodeMs": 8,
+       "closeMs": 33
+      }
+     ],
+     "memoryMB": 72
+    },
+    "frames": {
+     "seconds": 9.8,
+     "fps": 57.9,
+     "low1": 30,
+     "worstMs": 33,
+     "mapDraws": 0,
+     "longTasks": 0,
+     "longTaskMs": 0
+    }
+   },
+   {
+    "name": "Idle",
+    "notes": [
+     "0 map draws, 2 frame requests, 0 downloads, 40 page changes in 70 s"
+    ],
+    "data": {
+     "seconds": 70,
+     "mapDraws": 0,
+     "frameRequests": 2,
+     "downloads": 0,
+     "pageChanges": 40,
+     "changedWhere": {
+      "div#chart-axis": 10,
+      "span#cursor-time": 2,
+      "span#cursor-note": 2,
+      "span#subject-time": 2,
+      "span#window-label": 2,
+      "div#window-summary [data-kind]": 2,
+      "span#summary-before": 2,
+      "span#summary-after": 2
+     },
+     "downloaded": [],
+     "memoryMB": 72
+    }
+   }
+  ],
+  "memoryMB": 72,
+  "done": true
+ },
+ "errors": []
+}
