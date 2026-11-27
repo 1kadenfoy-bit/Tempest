@@ -20,6 +20,22 @@ The exact list is `performance` in `docs/sections/sections.json`.
 
 ## Rules for this section
 
+- **Keep everything Kaden asked for (Kaden, Nov 27).** Every other section's
+  rules files (`docs/wishes/*.md`) and settled decisions
+  (`docs/06-decisions-and-open-items.md`) stay in force. A fix may make
+  something faster; it may not change how it looks or behaves. That rules out:
+  - removing an effect;
+  - lowering quality (sharpness, detail, frame of time, number of streaks);
+  - dropping a layer, a label or a button;
+  - changing a gesture.
+  - **Trade-offs:** when the only way to meet a target is such a trade-off, put
+    it in the report as an option for Kaden, with what it gains and what it
+    costs. Never make it yourself, and never ask a section to.
+  - **The fix list:** each fix names the rules it touches and says how they are
+    kept.
+- **After each fix,** measure again and check the owning section's rules still
+  hold: its browser tests pass, and the screens look the same.
+
 - **Measure, don't guess.** Every claim in the report comes with a number and
   how it was measured. Say plainly when something could not be reproduced.
 - **Kaden's phone is the truth.** The build machine draws in software and is

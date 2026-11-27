@@ -128,6 +128,19 @@ Keep the tour as a repeatable check:
 - the budgets are set from the measured numbers, generous enough not to fail
   at random on GitHub's slower machines.
 
+## Keep what Kaden asked for (Kaden, Nov 27)
+
+Every section's rules (`docs/wishes/*.md`) and settled decisions
+(`docs/06-decisions-and-open-items.md`) stay in force.
+- **Speed, not change.** Fixes make things faster without changing how they
+  look or behave.
+- **Trade-offs are Kaden's call.** Lower quality, an effect off by default, or
+  fewer details are offered to him as options, with the gain and the cost.
+  They are never made without his word.
+- **Every fix names the rules it touches** and how they are kept.
+- **Checked twice.** The owning section confirms its rules still hold in its
+  handoff. The lead checks again when combining.
+
 ## Who does what
 
 - **The Performance chat** (strongest model, high effort): builds the
