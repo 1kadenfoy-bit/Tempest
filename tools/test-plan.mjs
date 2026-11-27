@@ -11,6 +11,7 @@
 //   2. changed: every test file of an area whose files this branch changed
 //      (docs/sections/sections.json), and any test file changed itself;
 //      a shared file (fixtures, config, main.ts…) counts as every area;
+//      and always the server budget (e2e/requests.spec.ts), which any change can trip;
 //   3. rest: everything else.
 // The machines' parts are balanced by how long each test file takes on
 // GitHub's machines (e2e/durations.json; a file not listed counts 60 s), so
@@ -61,6 +62,10 @@ for (const f of changed) {
 }
 // When everything changed, "changed first" says nothing: keep only the failures first.
 if (changedFiles.size === files.length) changedFiles.clear();
+// Guards that any change can trip run early on every branch: how much the app
+// asks the weather and safety servers (Data rule 1; quick, about a minute).
+const EARLY = ['e2e/requests.spec.ts'];
+for (const f of EARLY) if (files.includes(f)) changedFiles.add(f);
 
 // 3. Balance the machines: longest files first, each to the machine with the least work so far.
 const [shard, shards] = String(args.shard ?? '1/1').split('/').map(Number);
@@ -95,6 +100,6 @@ if (args.github) {
   const show = (xs) => (xs.length ? xs.map((f) => `  ${f} (about ${Math.max(1, Math.round(secs(f) / 60))} min)`).join('\n') : '  (none)');
   console.log(`Machine ${shard} of ${shards}: about ${Math.round(loads[shard - 1].s / 60)} min of browser tests.`);
   console.log(`\n1. Failed last time:\n${show(plan.failed)}`);
-  console.log(`\n2. Areas this branch changed:\n${show(plan.changed)}`);
+  console.log(`\n2. Areas this branch changed, and the server budget:\n${show(plan.changed)}`);
   console.log(`\n3. The rest:\n${show(plan.rest)}`);
 }

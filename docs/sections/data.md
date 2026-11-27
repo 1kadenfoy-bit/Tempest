@@ -19,10 +19,10 @@ The exact list is `data` in `docs/sections/sections.json`.
 | Runs, the time line joining the models, the pin's series | `app/data/forecast.ts`, `app/data/profile-source.ts` |
 | Fetching politely and keeping answers | `app/data/api-cache.ts`, `kept-fetch.ts`, `connection.ts` |
 | Open-Meteo map files and point API, ECCC precipitation analysis | `adapters/openmeteo-maps/`, `adapters/openmeteo-api/`, `adapters/eccc-geomet/hrdpa*`, `render/openmeteo-starter/` |
-| Store, time, grid requests | `core/store/`, `core/time/`, `core/geo/grid-request*` |
+| Store, time, grid requests; the run timetable and retries (when to ask again, Data rule 1) | `core/store/`, `core/time/` (`run-schedule.ts`, `retry.ts`), `core/geo/grid-request*` |
 | Saved areas and the region file | `app/offline/`, `core/offline/`, `core/region-file/`, `public/sw.js` |
 | Recorded weather | `app/data/recorded.ts`, `public/recorded-sw.js`, `tools/record-weather.mjs`, `recorded/` |
-| Browser tests | `e2e/offline.spec.ts`, `e2e/models.spec.ts` |
+| Browser tests | `e2e/offline.spec.ts`, `e2e/models.spec.ts`, `e2e/consistency.spec.ts`, `e2e/requests.spec.ts` (the server budget: runs early on every branch) |
 | A data viewer page (yours to build) | `data-viewer.html`, `app/data-viewer/` |
 
 ## Showing work without the app

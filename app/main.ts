@@ -24,7 +24,7 @@ import { formatElevation } from '../core/units/format';
 import { startRecordedWeather } from './data/recorded';
 import { ProfileSource } from './data/profile-source';
 import { savedOnlyActive } from './data/connection';
-import { loadPinGround, loadRun, loadSeries, rebuildTimeline } from './data/forecast';
+import { loadPinGround, loadRun, loadSeries, rebuildTimeline, seriesRetry } from './data/forecast';
 import { loadBasemap } from './map/basemap-router';
 import { addTerrain } from './map/terrain';
 import { setGroundVeil } from './map/ground-veil';
@@ -161,7 +161,9 @@ function renderReadout() {
   setAvalancheCursor(S.cursor.time ?? new Date());
   S.air.setCursor(S.cursor.time ?? null);
   const i = seriesIndex();
-  S.pin.setReadout(S.active.readout(pinData(), i, settingsFor(S.active)));
+  const r = S.active.readout(pinData(), i, settingsFor(S.active));
+  // No longer asked for (the service refused, Data rule 1): no spinning wheel; the time line says why.
+  S.pin.setReadout(seriesRetry.stopped && !S.series && r.value === '…' ? { value: '' } : r);
   scheduleDetails();
 }
 

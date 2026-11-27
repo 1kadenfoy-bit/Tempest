@@ -12,7 +12,7 @@ build on a green, steady test run.
 
 ## 1. Polite to the servers, as fast as now (Data; Opus, high effort)
 
-- [ ] Done
+- [x] Done (Nov 27: the run timetable, retries that stop, the server budget test `e2e/requests.spec.ts`; `docs/testing.md`)
 
 ```
 You are working on Tempest. I'm Kaden; I design and test, I don't read code. Talk to me in plain language.

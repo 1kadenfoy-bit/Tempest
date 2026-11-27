@@ -14,6 +14,7 @@
     "e2e/perf.spec.ts": 200,
     "e2e/phone-tests.spec.ts": 80,
     "e2e/radar.spec.ts": 25,
+    "e2e/requests.spec.ts": 150,
     "e2e/search.spec.ts": 65,
     "e2e/settings.spec.ts": 130,
     "e2e/shell.spec.ts": 260,

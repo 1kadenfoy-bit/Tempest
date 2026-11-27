@@ -76,7 +76,8 @@ const steps = [
 const otherSpecs = Object.entries(cfg.sections)
   .filter(([k, s]) => k !== name && [...changed].some((f) => owns(s, f)))
   .flatMap(([, s]) => s.specs);
-const specs = [...new Set([...section.specs, ...otherSpecs])];
+// The server budget (Data rule 1) runs with every area's checks, first: any change can trip it.
+const specs = [...new Set(['e2e/requests.spec.ts', ...section.specs, ...otherSpecs])];
 if (!flags.has('--no-browser') && specs.length) {
   steps.push(['Build', 'npm', ['run', 'build']]);
   let failedBefore = false;
