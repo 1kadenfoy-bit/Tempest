@@ -40,3 +40,9 @@ github.com/open-meteo/open-meteo-website, routes/en/pricing and terms)
   caps drawing at 30 fps (seen: still map = exactly 30.0) and the processor runs
   slower. A run with it off is asked for.
 - Setup: 3D terrain and buildings on, sun on, shaded ground, layer precipitation.
+- Run 3 (03:28) with Low Power Mode **off**: still map 59.8 fps (60 Hz ceiling).
+  Pan 30.3 avg / 1% 4.7 / worst 267 ms; pinch 24.3 / 4.6; tilt 43.8 / 7.5;
+  drag time 17 fps, worst 511 ms, 21/48 drawn; play 45 / 7.7. Averages near the
+  target; the stalls of 150-500 ms are what fail. Open was 13.5 s (map 8.4 s):
+  slower than runs 1-2 (7.0 / 5.8 s) on the same phone; connection unknown.
+  Idle: 24 map draws in 15 s (runs 1-2: 3 and 0).
