@@ -3,7 +3,7 @@
 // and its one call in setup.ts once the look is settled.
 //
 //   Overlays off   hides the map's overlays (peaks, trails, huts and so on)
-//   Weather layers off   hides the weather: fills, wind flow, lines, avalanche, smoke, radar
+//   Weather layers off   hides the weather: fills, wind streaks, lines, avalanche, smoke, radar
 //   Satellite      the Satellite ground
 //   Sun & shadows  the time of day from the scrubber, with mountain shadows
 //   Haze           background haze and fog in 3D
@@ -20,11 +20,11 @@ import { windLook, type WindLook } from '../effects/wind-look';
 
 const OVERLAY_KEYS: (keyof MapSettings)[] = ['trails', 'trailNames', 'huts', 'camps', 'peaks', 'peakHeights', 'contours', 'smallRoads', 'skiLifts', 'parkBoundaries', 'regionBoundaries', 'municipalBoundaries'];
 /** Map layers the weather and safety sections draw, by id: lines, fills and radar pictures. */
-const WEATHER_STYLE = /^(avy-|ates-|air-|freezing-line|radar-)/;
+const WEATHER_STYLE = /^(avy-|ates-|air-|freezing-line|radar-|wind-particles$)/;
 
 /**
  * Hides every weather drawing: the colour fills (custom layers that decide their own
- * visibility, so it is overridden on the layer itself), the wind flow canvas, and the
+ * visibility, so it is overridden on the layer itself), the 3D wind streaks, and the
  * lines, avalanche, smoke and radar layers. Kept hidden while on, even if the weather
  * code shows one again, by checking after each draw.
  */
@@ -37,8 +37,6 @@ function setWeatherHidden(hide: boolean): void {
       Object.defineProperty(layer, 'visible', { get: () => (weatherHidden ? false : layer.__real!), set: (v: boolean) => { layer.__real = v; }, configurable: true });
     }
   }
-  const flowCanvas = document.querySelector<HTMLElement>('.flow-canvas');
-  if (flowCanvas) flowCanvas.style.visibility = hide ? 'hidden' : '';
   enforce();
   S.map.triggerRepaint();
 }

@@ -1,5 +1,5 @@
 // The weather on the map (Weather section): the precipitation, temperature and
-// wind fills drawn by the app's own GPU renderer, the wind's flow, the 0 °C or
+// wind fills drawn by the app's own GPU renderer, the 0 °C or
 // snow line, and what the map holds for the details' In view line. Grid
 // fields come from memory, then a saved area, then the network. Moved out of
 // app/main.ts; it reads the shared state in app/state.ts.
@@ -25,7 +25,6 @@ import { airQuality } from '../../layers/air-quality';
 import { TypedRateLayer } from '../../render/grid-gl/typed-rate-layer';
 import { TerrainTemperatureLayer } from '../../render/grid-gl/terrain-temperature-layer';
 import { TerrainWindLayer } from '../../render/grid-gl/terrain-wind-layer';
-import { FlowCanvas, type FlowMode } from '../../render/flow/flow-canvas';
 import { regridNative } from '../../render/openmeteo-starter';
 import { MODEL_SPACING_DEG, type NodeData } from '../data/profile-source';
 import { mapTime, nodeNeeds, runAt } from '../data/forecast';
@@ -43,31 +42,14 @@ export const BC_BOX: [number, number, number, number] = [-139.1, 48.2, -114, 60]
 export let precipLayer: TypedRateLayer;
 export let tempLayer: TerrainTemperatureLayer;
 export let windLayer: TerrainWindLayer;
-export let flow: FlowCanvas;
 
-/** Creates the fills and the flow once the map exists, and follows the map's moves. */
+/** Creates the fills once the map exists, and follows the map's moves. */
 export function setupFills(): void {
 precipLayer = new TypedRateLayer('precip-grid', precip.precipRenderStyle(app.settingsFor(precipitation).type as 'all' | 'rain' | 'snow'));
 tempLayer = new TerrainTemperatureLayer('temperature-grid', temperatureRenderStyle(), PROFILE_LEVELS.length);
 windLayer = new TerrainWindLayer('wind-grid', windRenderStyle(), PROFILE_LEVELS.length);
-// Inside the map's canvas container, before the pin, so the pin stays on top.
-flow = new FlowCanvas(S.map.getCanvasContainer(), S.map.getContainer());
-S.map.on('resize', () => flow.resized());
-// A frame-rate readout for checking the flow on a phone: add ?fps to the address.
-if (new URLSearchParams(location.search).has('fps')) {
-  const meter = document.createElement('div');
-  meter.className = 'fps-meter';
-  document.body.append(meter);
-  setInterval(() => {
-    const f = flow.fps();
-    meter.textContent = f ? `${Math.round(f)} fps · ${flow.workMs().toFixed(1)} ms a frame` : 'flow paused';
-  }, 1000);
-}
-(window as unknown as { tempestFlow: FlowCanvas }).tempestFlow = flow;
 watchMoves();
 }
-/** The flow's mode from the wind settings: animated, still arrows, or nothing. */
-export const flowMode = (): FlowMode => { const s = app.settingsFor(wind); return s.flow ? 'flow' : s.arrows ? 'arrows' : 'off'; };
 export let mosaic: Mosaic | null = null;
 /** How far beyond each screen edge the temperature fill reaches, as a share of the screen. */
 export const PAN_MARGIN = 0.35;
@@ -177,10 +159,10 @@ export let windGround: { key: string; data: Float32Array } | null = null;
 const windListeners = new Set<(w: MercatorWind) => void>();
 export function onForecastWind(fn: (w: MercatorWind) => void): void { windListeners.add(fn); }
 
-/** The wind fill: profiles at a lattice of nodes, wind at the terrain per pixel on the GPU, and the flow over it. */
+/** The wind fill: profiles at a lattice of nodes, wind at the terrain per pixel on the GPU, and the wind for the 3D streaks. */
 export async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOnly = false) {
   const view = marginView();
-  if (!view) { windLayer.setProfiles(null); flow.setField(null); return; }
+  if (!view) { windLayer.setProfiles(null); return; }
   const spacing = MODEL_SPACING_DEG[r.model] ?? 0.0225;
   const lattice = { lats: latticeAxis(view[1], view[3], spacing), lons: latticeAxis(view[0], view[2], spacing) };
   const [m, grid] = await Promise.all([elevationMosaic(view, S.map.getZoom(), mosaic), S.profiles.nodeGrid(r, lattice, t, nodeNeeds(wind), { cachedOnly })]);
@@ -190,7 +172,6 @@ export async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOn
   const profilesAt = grid ? nodeProfiles(grid) : null;
   if (!grid || !profilesAt || !windComplete(profilesAt)) {
     windLayer.setProfiles(null);
-    flow.setField(null);
     unavailable('Wind');
     return;
   }
@@ -202,17 +183,16 @@ export async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOn
   windLayer.gusts = app.settingsFor(wind).map === 'gusts';
   windLayer.setProfiles(packWind(grid, profilesAt));
   document.body.dataset.fill = 'ready';
-  // The flow and In view need the wind on screen: not while dragging (the release does it).
+  // The 3D streaks and In view need the wind over the view: not while dragging (the release does it).
   if (!cachedOnly) {
     const c = S.map.getCanvas();
     const w = c.clientWidth, h = c.clientHeight;
-    const sw = screenWind(grid, profilesAt, m, windGround.data, w, h, (x, y) => S.map.unproject([x, y]));
-    flow.setField(sw.field);
+    const cells = screenWind(grid, profilesAt, m, windGround.data, w, h, (x, y) => S.map.unproject([x, y]));
     if (windListeners.size) {
       const mw = mercatorWind(grid, profilesAt, m, windGround.data, view);
       if (mw) for (const fn of windListeners) fn(mw);
     }
-    S.view = { cells: sw.cells.map((x) => ({ lon: x.lon, lat: x.lat, value: x.gust, second: x.dir })) };
+    S.view = { cells: cells.map((x) => ({ lon: x.lon, lat: x.lat, value: x.gust, second: x.dir })) };
     app.scheduleDetails();
   }
   const i = S.cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
@@ -327,8 +307,6 @@ export async function updateFills(moving = false) {
     tempLayer.visible = false;
     windLayer.visible = false;
     windLayer.setProfiles(null);
-    flow.setShown(false);
-    flow.setField(null);
     setLine(null);
     showRadarFrame();
     return;
@@ -337,7 +315,6 @@ export async function updateFills(moving = false) {
   // Avalanche: issued bulletins, not model grids; the weather fills step aside.
   S.avy.update(S.active.id === 'avalanche', S.cursor.time ?? new Date());
   if (S.active.id === 'avalanche' || S.active.id === airQuality.id) {
-    flow.setShown(false);
     windLayer.visible = false;
     windLayer.setProfiles(null);
     tempLayer.visible = false;
@@ -349,13 +326,11 @@ export async function updateFills(moving = false) {
   const when = mapTime(S.cursor.time);
   const at = runAt(when);
   if (!at) return;
-  flow.setShown(S.active.id === 'wind' && S.threeD.flat());
   windLayer.visible = S.active.id === 'wind';
   if (S.active.id === 'wind') {
     precipLayer.setFields([]);
     tempLayer.visible = false;
     setLine(null);
-    flow.setMode(flowMode());
     await updateWind(at, when, ++fillSeq, moving).catch((err) => console.error(err));
     return;
   }
@@ -407,8 +382,7 @@ export const scheduleFills = (ms: number) => { clearTimeout(fillTimer); fillTime
 let lastMoveFill = 0;
 let moveFilling = false;
 function watchMoves(): void {
-S.map.on('moveend', () => { flow.setMoving(false); scheduleFills(150); });
-S.map.on('movestart', () => flow.setMoving(true));
+S.map.on('moveend', () => scheduleFills(150));
 // During a long pan, refresh about twice a second rather than only on release.
 S.map.on('move', () => {
   const now = performance.now();

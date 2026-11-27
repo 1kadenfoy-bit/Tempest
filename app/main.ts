@@ -30,7 +30,7 @@ import { addTerrain } from './map/terrain';
 import { setupThreeD } from './map/three-d';
 import { applyTerrainPrefs, buildingsOk, createMap, fitPadding, locate, recolourMap, setupMapControls } from './map/setup';
 import { setupRadar, radar, radarBefore, radarPinData, loadRadarFrames, scheduleRadarPin, setFrameSteps } from './radar/frames';
-import { addFreezingLineLayers, flow, onForecastWind, precipLayer, recolourFills, scheduleFills, setupFills, tempLayer, updateFills, windLayer } from './weather/fills';
+import { addFreezingLineLayers, onForecastWind, precipLayer, recolourFills, scheduleFills, setupFills, tempLayer, updateFills, windLayer } from './weather/fills';
 import { drawSavedOutlines, recolourSavedOutlines, registerSavedAreas, setSavedOnly } from './offline/wiring';
 import { hydrateIcons } from './shell/icons';
 import { applyInsetOverride } from './shell/insets';
@@ -171,12 +171,12 @@ function seriesIndex(): number {
   return S.series.times.findIndex((s) => s.getTime() === t.getTime());
 }
 
-// Radar's pictures, the weather fills and the wind's flow.
+// Radar's pictures and the weather fills.
 setupRadar();
 setupFills();
-// 3D terrain and buildings. The flow is drawn in screen space for a flat,
-// north-up map, so it waits while the map is tilted or turned.
-S.threeD = setupThreeD(S.map, document.querySelector<HTMLElement>('.thumbs')!, () => S.settings.theme(), (flat) => { flow.setShown(S.active.id === 'wind' && flat); syncStreaks(); });
+// 3D terrain and buildings. Nothing needs to know when the map goes flat now
+// that the wind's flat flow is gone (Kaden, Nov 27: the 3D streaks only).
+S.threeD = setupThreeD(S.map, document.querySelector<HTMLElement>('.thumbs')!, () => S.settings.theme(), () => {});
 // The avalanche layer's regions, report pins and panels (online only).
 S.avy = setupAvalanche(S.map, {
   theme: () => S.settings.theme(),
@@ -360,10 +360,9 @@ S.map.on('load', () => {
   S.threeD.apply({ terrain: S.prefs.terrain3d, buildings: buildingsOk() && S.prefs.buildings3d }, false);
   radarBefore(firstLabel);
   // Clouds and 3D wind streaks (Effects), drawn only while their Map panel switch is on.
-  // On the Wind layer the wind animation is held on (feature-switches.ts); there the flat flow
-  // takes over while the map is flat, so the two never show at once.
+  // On the Wind layer the wind animation is held on (feature-switches.ts).
   const effects = setupEffects(map, firstLabel);
-  syncStreaks = () => effects.setOn('wind', features.get('wind') && !(S.active.id === 'wind' && S.threeD.flat()));
+  syncStreaks = () => effects.setOn('wind', features.get('wind'));
   effects.setOn('clouds', features.get('clouds'));
   syncStreaks();
   features.onChange((id, on) => { if (id === 'clouds') effects.setOn(id, on); if (id === 'wind') syncStreaks(); });

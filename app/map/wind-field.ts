@@ -1,12 +1,11 @@
 // Wind for the map: node profiles packed for the GPU fill, and the same wind
-// read on a coarse grid over the screen for the flow, the arrows and the In
-// view line. Both follow core/wind/wind.ts: profiles blended between nodes,
+// read on a coarse grid over the screen for the In view line, and over map
+// positions for the 3D streaks. Both follow core/wind/wind.ts: profiles blended between nodes,
 // then read at the ground height, over the model's own ground.
 import { cellOf } from '../../core/temperature/toposcale';
 import { gustAt, smoothGround, toUV, windAtHeight, type WindProfile } from '../../core/wind/wind';
 import { PROFILE_LEVELS } from '../../core/vocabulary';
 import type { WindLattice } from '../../render/grid-gl/terrain-wind-layer';
-import type { FlowField } from '../../render/flow/flow-canvas';
 import type { NodeData } from '../data/profile-source';
 import type { Mosaic } from './elevation';
 
@@ -76,20 +75,16 @@ function blend(grid: NodeData, profiles: WindProfile[], lat: number, lon: number
   return { gh, u, v, u10: mix((p) => p.u10), v10: mix((p) => p.v10), speed10: mix((p) => p.speed10), gust10: mix((p) => p.gust10) };
 }
 
-export interface ScreenWind {
-  field: FlowField;
-  /** Each grid cell's place, gust and direction, for the In view line. */
-  cells: { lon: number; lat: number; gust: number; dir: number }[];
-}
+/** A screen grid cell's place, gust and direction, for the In view line. */
+export interface ScreenWindCell { lon: number; lat: number; gust: number; dir: number }
 
 /**
  * The wind on a grid over the screen (one value per `step` pixels). `unproject`
  * turns a screen point into its place.
  */
-export function screenWind(grid: NodeData, profiles: WindProfile[], m: Mosaic, ground: Float32Array, width: number, height: number, unproject: (x: number, y: number) => { lng: number; lat: number }, step = 24): ScreenWind {
+export function screenWind(grid: NodeData, profiles: WindProfile[], m: Mosaic, ground: Float32Array, width: number, height: number, unproject: (x: number, y: number) => { lng: number; lat: number }, step = 24): ScreenWindCell[] {
   const cols = Math.ceil(width / step) + 1, rows = Math.ceil(height / step) + 1;
-  const u = new Float32Array(cols * rows).fill(NaN), v = new Float32Array(cols * rows).fill(NaN);
-  const cells: ScreenWind['cells'] = [];
+  const cells: ScreenWindCell[] = [];
   const lon0 = grid.lons[0]!, lon1 = grid.lons[grid.lons.length - 1]!, lat0 = grid.lats[0]!, lat1 = grid.lats[grid.lats.length - 1]!;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -102,14 +97,13 @@ export function screenWind(grid: NodeData, profiles: WindProfile[], m: Mosaic, g
       const z = Math.max(0, m.data[py * m.width + px]!);
       const p = blend(grid, profiles, lat, lng);
       const [a, b] = windAtHeight(p, z, ground[py * m.width + px]!);
-      u[r * cols + c] = a; v[r * cols + c] = b;
       if (x <= width && y <= height) {
         const speed = Math.hypot(a, b);
         cells.push({ lon: lng, lat, gust: gustAt(speed, p.speed10, p.gust10), dir: ((Math.atan2(-a, -b) * 180) / Math.PI + 360) % 360 });
       }
     }
   }
-  return { field: { width, height, cols, rows, step, u, v }, cells };
+  return cells;
 }
 
 /** The wind on a grid of map positions (mercator units, 0 to 1), for the 3D streaks. */

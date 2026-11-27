@@ -110,6 +110,18 @@ export function setupEffects(map: MapLibreMap, beforeId: string | undefined): Ef
 
   map.addLayer(clouds, beforeId);
   map.addLayer(wind, beforeId);
+  // The browser tests read the streaks' frame rate here.
+  (window as unknown as { tempestWind: WindParticlesLayer }).tempestWind = wind;
+  // A frame-rate readout for checking the streaks on a phone: add ?fps to the address.
+  if (new URLSearchParams(location.search).has('fps')) {
+    const meter = document.createElement('div');
+    meter.className = 'fps-meter';
+    document.body.append(meter);
+    setInterval(() => {
+      const st = wind.stats();
+      meter.textContent = st.fps ? `${Math.round(st.fps)} fps · ${st.workMs.toFixed(1)} ms a frame` : 'wind paused';
+    }, 1000);
+  }
 
   // The streaks follow the ground's height, read once the view has settled and its terrain has arrived.
   let timer = 0;

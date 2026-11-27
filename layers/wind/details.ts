@@ -18,8 +18,6 @@ const color = (s: number) => { const [r, g, b] = rampColor(ramp, s); return `rgb
 /** The settings, labelled in the units chosen in app settings (read when the panel opens). Thresholds stay km/h underneath. */
 export const settings = (): Setting[] => [
   { key: 'map', title: 'MAP SHOWS', kind: 'segmented', options: [{ value: 'speed', label: 'Speed' }, { value: 'gusts', label: 'Gusts' }], default: 'speed' },
-  { key: 'flow', title: 'Flow animation', kind: 'toggle', default: true },
-  { key: 'arrows', title: 'Arrows when animation is off', kind: 'toggle', default: true },
   { key: 'calm', title: 'CALM THRESHOLD', kind: 'segmented', options: ['10', '15', '20', '25'].map((v) => ({ value: v, label: formatSpeed(Number(v), v === '25') })), default: '15' },
 ];
 export const settingsNote = (): string => `Wind at the terrain, from 10 m wind and pressure levels. Colours stop at ${formatSpeed(60)}; readouts always show the real value.`;

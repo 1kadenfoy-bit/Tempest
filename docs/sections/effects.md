@@ -14,7 +14,7 @@ The exact list is `effects` in `docs/sections/sections.json`.
 | Area | Files |
 | --- | --- |
 | The effects (MapLibre custom layers, WebGL) | new `render/effects/` |
-| Today's wind particles and arrows (a 2D canvas over the map) | `render/flow/flow-canvas.ts` |
+| The wind streaks' look (the Tune panel's wind sliders) and the forecast wind they follow | `app/effects/wind-look.ts`, `app/effects/index.ts` |
 | Wiring the effects into the app, when they are ready | new `app/effects/` |
 | A test page to build and judge effects on their own | new `effects.html`, `app/effects-lab/` |
 | Browser test | new `e2e/effects.spec.ts` |
@@ -57,5 +57,6 @@ software, not a graphics chip, so only Kaden's phone can judge it.
 - **Keep it cheap on a phone:**
   - a fixed particle budget, nothing allocated per frame;
   - measure the frame rate (`?fps` shows the wind flow's).
-- **The flow canvas is drawn flat.** It pauses while the map is tilted
-  (`app/map/three-d.ts`). Making it follow the slopes is yours.
+- **The wind animation is the 3D streaks only** (Kaden, Nov 27). The flat
+  flow canvas (`render/flow/`) is gone. The streaks follow the Wind layer's
+  forecast wind (`onForecastWind` in `app/weather/fills.ts`).
