@@ -376,6 +376,12 @@ S.map.on('load', () => {
 });
 window.addEventListener('resize', fitPadding);
 S.map.on('idle', () => { document.body.dataset.idle = 'true'; });
+// The wind streaks keep the map redrawing, so its 'idle' never comes while they animate. The map has
+// still settled once its style, tiles and terrain are loaded and it is not moving: say so then too.
+S.map.on('render', () => {
+  if (document.body.dataset.idle === 'true' || !features.get('wind')) return;
+  if (S.map.loaded() && S.map.areTilesLoaded() && !S.map.isMoving()) document.body.dataset.idle = 'true';
+});
 
 // Installed app: keep the app's own files on the device.
 // A section preview (VITE_PREVIEW at build time) is named in the top bar and
