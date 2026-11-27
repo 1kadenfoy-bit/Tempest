@@ -1,3 +1,25 @@
+# Area guides
+
+**How work is done is now in [`docs/working.md`](../working.md)** (Nov 27):
+one chat per round of changes, which merges its own pull request. The section
+chats and the lead are retired.
+
+This folder keeps what is still useful:
+- **The area guides** (`maps.md`, `interface.md`, `weather.md`, `effects.md`,
+  `data.md`, `performance.md`): what each part of the app is, its files, and
+  its rules. Read the ones for the areas your task touches.
+- **`sections.json`:** which files belong to which area. It is used by
+  `npm run check:section -- <area>` to run that area's browser tests, and to
+  tell whether two chats at once would clash.
+
+Where a guide says "the lead", "handoff note" or "section chat", read it as
+"the chat doing the task" and "the pull request description".
+
+---
+
+The rest of this file is the old guide, kept for its tables of which area
+covers what.
+
 # Working in sections
 
 Tempest is built by several chats at once. Kaden talks to each one directly
@@ -23,7 +45,7 @@ and iterates quickly. One main chat (the lead) combines the work into the app.
 | Effects | [effects.md](effects.md) | Animated weather over the map: rain, snow, clouds, wind particles, in 3D |
 | Data | [data.md](data.md) | Where the numbers come from: models, runs, new sources, caching, saved areas, recorded weather |
 | Performance | [performance.md](performance.md) | How fast the app opens, moves and answers on Kaden's phones: measures, ranks the causes, hands fixes to the owning section |
-| The lead | [lead.md](lead.md) | Combining, the shared files, the full checks, publishing |
+| (retired) The lead | — | See docs/working.md |
 
 Who owns which file is listed in [sections.json](sections.json). The section
 check reads it.
@@ -143,7 +165,7 @@ the section is integrated.
 1. Bring the branch up to date with `main` again.
 2. Run `npm run check:section -- <section>`. Fix what fails, inside your own
    files.
-3. Write the handoff note from [handoff-template.md](handoff-template.md) at
+3. (Old) Write the handoff note at
    `docs/handoffs/<section>/<YYYY-MM-DD>-<topic>.md`. Pictures go beside it.
 4. Commit, push, and open a pull request titled `<Section>: <topic>`, with the
    handoff note as its description. Tell Kaden it is ready to integrate.

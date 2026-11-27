@@ -1,12 +1,12 @@
 name: Publish to GitHub Pages
 
-# Publishes main, the combined app, at the site's address, and each section
-# chat's branch (claude/tempest-<section>) as a preview at preview/<section>/,
-# for Kaden to try on his phone (docs/sections/README.md). Runs on every push
-# to main or a section branch. Skips while the repository is private.
+# Publishes main, the app, at the site's address, and the most recently pushed
+# chat branches (claude/<name>) as previews at preview/<name>/, for Kaden to
+# try on his phone (docs/working.md). Runs on every push to main or a chat
+# branch. Skips while the repository is private.
 on:
   push:
-    branches: [main, 'claude/tempest-*']
+    branches: [main, 'claude/**']
   workflow_dispatch:
 
 permissions:
@@ -49,26 +49,31 @@ jobs:
         run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
-      - name: Section previews (each section chat's branch, at preview/<section>/)
+      # Previews: the six chat branches (claude/...) pushed most recently, in the
+      # last 3 days, each at preview/<name>/ (the branch name without "claude/").
+      # One chat per round of changes (docs/working.md), so the names change.
+      - name: Previews of recent chat branches
         env:
           REPO: ${{ github.event.repository.name }}
         run: |
-          for s in maps interface weather effects data performance; do
-            b="claude/tempest-$s"
-            git fetch --depth=1 origin "$b" 2>/dev/null || { echo "no branch $b yet"; continue; }
-            rm -rf "../wt-$s"
-            git worktree add --detach "../wt-$s" FETCH_HEAD
-            if cmp -s package-lock.json "../wt-$s/package-lock.json"; then ln -s "$PWD/node_modules" "../wt-$s/node_modules"; else (cd "../wt-$s" && npm ci --no-audit --no-fund); fi
-            # The base map comes from the main site, so a preview is small.
-            if (cd "../wt-$s" && BASE_PATH="/$REPO/preview/$s/" VITE_TILES_BASE="/$REPO/tiles/" VITE_SATELLITE_BASE="/$REPO/satellite/" VITE_PREVIEW="$s" npx vite build); then
-              mkdir -p "dist/preview/$s" && cp -r "../wt-$s/dist/." "dist/preview/$s/"
-              # The satellite picture (62 MB) is read from the main site, like
-              # the base map: seven copies would pass the site's 1 GB limit.
-              rm -rf "dist/preview/$s/satellite"
+          git fetch --quiet --depth=1 origin '+refs/heads/claude/*:refs/remotes/origin/claude/*' || true
+          since=$(date -u -d '3 days ago' +%s)
+          git for-each-ref --sort=-committerdate --format='%(committerdate:unix) %(refname:strip=4)' 'refs/remotes/origin/claude/' \
+            | awk -v s="$since" '$1 >= s { print $2 }' | head -6 > ../preview-branches.txt
+          while read -r b; do
+            n=$(echo "$b" | tr '/' '-')
+            rm -rf "../wt-$n"
+            git worktree add --detach "../wt-$n" "origin/claude/$b"
+            if cmp -s package-lock.json "../wt-$n/package-lock.json"; then ln -s "$PWD/node_modules" "../wt-$n/node_modules"; else (cd "../wt-$n" && npm ci --no-audit --no-fund); fi
+            # The base map and the satellite come from the main site, so a preview is small
+            # (seven copies of the satellite would pass the site's 1 GB limit).
+            if (cd "../wt-$n" && BASE_PATH="/$REPO/preview/$n/" VITE_TILES_BASE="/$REPO/tiles/" VITE_SATELLITE_BASE="/$REPO/satellite/" VITE_PREVIEW="$n" npx vite build); then
+              mkdir -p "dist/preview/$n" && cp -r "../wt-$n/dist/." "dist/preview/$n/"
+              rm -rf "dist/preview/$n/satellite"
             else
-              echo "::warning::the $s preview did not build"
+              echo "::warning::the $n preview did not build"
             fi
-          done
+          done < ../preview-branches.txt
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

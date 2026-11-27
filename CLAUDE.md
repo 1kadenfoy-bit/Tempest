@@ -14,16 +14,18 @@ The owner, Kaden, designs and tests. He does not read code. Write reports and qu
 | `docs/05-data-sources.md` | Every source and model, with limits and licences |
 | `docs/06-decisions-and-open-items.md` | Settled decisions, defaults, facts to check. Wins over other docs |
 | `docs/reference/` | Background research and the terrain-temperature code to port. Reference only |
-| `docs/sections/` | How the work is split between section chats, who owns which file, each section's brief, the handoff template |
+| `docs/working.md` | How work is done: one chat per round of changes, checks, pull request, merge; the lessons |
+| `docs/sections/` + `docs/wishes/` | Each area's guide and files (`sections.json`), and Kaden's rules for it |
+| `docs/tasks/` | Ready-made tasks, one chat each |
 
 ## Working rules
 
-1. **Work in sections** (`docs/sections/README.md`). A section chat works on one piece at a time with Kaden, edits only its own files, and when he is happy runs `npm run check:section -- <section>`, writes a handoff note and stops. The main chat (the lead) integrates on Kaden's word and owns the shared files.
+1. **One chat per round of changes** (`docs/working.md`). Start from the latest `main`, read Kaden's rules for the areas you touch, work with him on the preview address, run the checks, open a pull request, and merge it once GitHub's tests pass.
 2. **Do not ask questions mid-task** unless you are blocked. Take the most reasonable reading, note it, and list it in the report.
 3. **Verify before relying.** Library versions, API shapes and anything marked unconfirmed must be checked against current documentation. Record what you found.
 4. **Check your own work in a browser.** Run the app, take Playwright screenshots at 390 × 844, and compare them with `design/v8/png`.
 5. **No invented designs.** If a screen has no v8 reference, build the plainest version from existing components and say so.
-6. **Small commits, clear messages.** One pull request per handoff.
+6. **Small commits, clear messages.** One pull request per round.
 
 ## Architecture rules
 
@@ -79,7 +81,7 @@ Node 22.12 or newer.
 | Install | `npm ci` |
 | Dev server (http://localhost:5173, with isolation headers) | `npm run dev` |
 | Dev server on recorded weather (same weather every time, no server limits) | `npm run dev`, then open `/?weather=recorded` |
-| A section's checks before its handoff (area, typecheck, lint, unit tests, its browser tests on recorded weather) | `npm run check:section -- <section>` |
+| An area's checks before the pull request (typecheck, lint, unit tests, that area's browser tests on recorded weather; areas in `docs/sections/sections.json`) | `npm run check:section -- <area>` |
 | Record a new weather set into `recorded/` (Data section) | `npm run weather:record -- --set=<name>` |
 | Base map pieces the tests use (overview, North Shore piece, Sea to Sky detail) into `public/tiles`; skips files present; also runs before `build` | `npm run tiles` |
 | Base map for all of BC (about 680 MB in 28 files; the Pages publish runs this) | `npm run tiles:all` |
