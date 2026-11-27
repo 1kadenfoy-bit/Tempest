@@ -49,6 +49,22 @@ test('wind: terrain fill, streaks that pause, readout, chart, cards, settings', 
   });
   await expect.poll(() => moving(page), { timeout: 30_000 }).toBe(true);
 
+  // The streaks get bigger as the map zooms in (Effects rule 9): faster, so longer, and a little wider.
+  type Look = { pxPerKmh: number; widthPx: number };
+  const look = () => page.evaluate(() => ((window as unknown as { tempestWind: { look: Look } }).tempestWind.look));
+  const map = (zoom: number) => page.evaluate((z) => (window as unknown as { tempestMap: { jumpTo(o: unknown): void } }).tempestMap.jumpTo({ zoom: z }), zoom);
+  const before = await look();
+  await map(15);
+  const closer = await look();
+  expect(closer.pxPerKmh).toBeGreaterThan(before.pxPerKmh * 2);
+  expect(closer.widthPx).toBeGreaterThan(before.widthPx);
+  await page.screenshot({ path: 'test-results/screens/m7-wind-zoomed-in.png' });
+  await map(8);
+  const farther = await look();
+  expect(farther.pxPerKmh).toBeLessThan(before.pxPerKmh);
+  expect(farther.pxPerKmh).toBeGreaterThan(0);
+  await map(11);
+
   // Details: headline, now, strongest gusts, direction and calm lines, hourly.
   await page.click('#sheet-handle');
   const details = page.locator('.details');

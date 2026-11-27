@@ -14,7 +14,8 @@ the old wording moves to "Changed".
 5. (Nov 27) **The wind animation follows the forecast:** each streak moves in the direction and at the speed the wind layer's forecast gives where it is, for the hour on the scrubber. A calm day has short, slow, faint streaks.
 6. (Nov 27) **On the Wind layer the Wind animation switch turns on by itself,** and goes back to his own setting once he leaves the Wind layer.
 8. (Nov 27) **The wind animation is the 3D streaks only.** The flat (2D) flow is gone, with its still arrows and its two wind settings (Flow animation, Arrows when animation is off).
-7. (Nov 27) **The Tune button (temporary) adjusts the look of the wind:** streaks, length, width, brightness, speed, height above ground, how much hills bend it, patchiness and gusts. It goes away once the look is settled.
+9. (Nov 27) **The streaks get bigger as the map zooms in:** they move faster (so they trail longer) and are a little wider, so a slow wind can still be seen by zooming in on a spot. Zooming out slows them only so far.
+7. (Nov 27) **The wind's look is fixed** (rule 3's values, plus rules 8 and 9). The temporary Tune button that adjusted it is gone.
 
 ## Clouds
 
@@ -23,3 +24,4 @@ the old wording moves to "Changed".
 ## Changed
 
 - Rule 6 also said: "While the map is flat on the Wind layer the flat flow shows instead, so the two never show at once." until Nov 27, 2026 (the flat flow is gone: rule 8).
+- Rule 7 was: "**The Tune button (temporary) adjusts the look of the wind:** streaks, length, width, brightness, speed, height above ground, how much hills bend it, patchiness and gusts. It goes away once the look is settled." until Nov 27, 2026 (the Tune button was removed).
