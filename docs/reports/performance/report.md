@@ -324,7 +324,53 @@ chat on the build machine).
 
 ## Then against now
 
-_Filled in when the runs finish._
+The same runs on three versions of `main` (`data/versions/`), each built with
+today's `?perf` folder and a one-line hook added (the Nov 18 version has no
+shared state yet, so its hook passes the map, cursor and settings directly):
+
+- **Nov 18** (`e6aef95`): before the section work began on Nov 19.
+- **Nov 22** (`5523a89`): `main` before the game look and the effects were
+  combined on Nov 26.
+- **Today** (`13e18cc` plus the Performance branch's test mode).
+
+Build machine, recorded weather, software drawing; the base map files are
+today's for all three. "Default" is the app's own setup (3D off, sun off);
+"Kaden's" is his (3D terrain and buildings, sun, Terrain ground; the Nov 18
+version has only the 3D part of it).
+
+| | Nov 18 | Nov 22 | Today | Nov 18 → today |
+| --- | --- | --- | --- | --- |
+| **Default setup** | | | | |
+| One still frame (flat) | 174 ms | 230 ms | 263 ms | +51% |
+| Everything loaded | 4.2 s | 6.1 s | 7.0 s | +65% |
+| First weather | 3.1 s | 4.2 s | 5.4 s | +74% |
+| Pin forecast | 2.4 s | 3.2 s | 4.1 s | +70% |
+| Pan (fps / longest stop) | 4.7 / 0.32 s | 3.7 / 0.37 s | 3.5 / 0.38 s | −26% |
+| Drag the time (fps / longest stop) | 8.5 / 0.33 s | 4.5 / 0.38 s | 3.9 / 0.68 s | −54% |
+| Play (fps) | 21.2 | 3.9 | 6.1 | −71% |
+| **Kaden's setup** | | | | |
+| One still frame (flat) | 130 ms | 174 ms | 182 ms | +40% |
+| Everything loaded | 9.2 s | 16.6 s | 20.4 s | +122% |
+| Pan (fps / longest stop) | 1.4 / 0.90 s | 0.9 / 1.42 s | 0.8 / 1.43 s | −43% |
+| Drag the time (fps / longest stop) | 5.3 / 0.82 s | 1.9 / 0.98 s | 1.9 / 1.07 s | −64% |
+| Wind layer's picture after switching | 12.7 s | 10.1 s | 8.9 s | (all slow: point API refused, see above) |
+
+What came in between (`git log` of `app/map`, `app/weather`, `render`,
+`app/effects`):
+- **Nov 18 → Nov 22: the larger step.** Terrain zones with soft, rounded
+  edges and glaciers (Nov 20–21), peaks, huts and trail names (Nov 20), the
+  sun lighting (Nov 20–21), satellite ground (Nov 21). The still frame grew
+  32%, opening 45%, and playing through time fell from 21 to 4 fps here.
+  Rain or snow at real height (cause 2) was already in the Nov 18 version.
+- **Nov 22 → today: the game look and effects.** Multi-light relief, water
+  waves and sparkle, mountain shadows (cause 3), the glow (cause 1), haze
+  (Nov 22, combined Nov 26); clouds and wind streaks (off unless switched on).
+  The still frame grew a further 14% (default) and opening 15%; the longest
+  stop while dragging the time grew from 0.38 to 0.68 s.
+
+The build machine draws in software, so it exaggerates drawing costs against
+script costs; the glow's cost in particular shows up much larger on the phone
+(cause 1) than in this table.
 
 ## Fix list
 

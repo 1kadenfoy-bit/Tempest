@@ -1,0 +1,443 @@
+{
+ "label": "today-default-tour",
+ "url": "http://localhost:4173/?perf",
+ "weather": "recorded",
+ "cpu": 1,
+ "net": "none",
+ "prefs": {
+  "layer": "precipitation"
+ },
+ "wallSeconds": 186,
+ "marks": {
+  "html": 7,
+  "appStarted": 395,
+  "firstMap": 1693,
+  "mapComplete": 1710,
+  "pinForecast": 3735,
+  "firstWeather": 5318,
+  "everything": 5619
+ },
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": false,
+   "buildings3d": false,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {},
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 7,
+     "appStarted": 395,
+     "firstMap": 1693,
+     "mapComplete": 1710,
+     "pinForecast": 3735,
+     "firstWeather": 5318,
+     "everything": 5619,
+     "memoryMB": 57
+    },
+    "t0": 5920,
+    "frames": {
+     "seconds": 3,
+     "fps": 43.9,
+     "low1": 4,
+     "worstMs": 333,
+     "mapDraws": 3,
+     "longTasks": 4,
+     "longTaskMs": 815
+    },
+    "t1": 8921
+   },
+   {
+    "name": "Yardstick",
+    "notes": [
+     "12.9 ms"
+    ],
+    "data": {
+     "ms": 12.9,
+     "memoryMB": 57
+    },
+    "t0": 9421,
+    "t1": 9493
+   },
+   {
+    "name": "Draw",
+    "notes": [
+     "one frame takes 247.5 ms flat, 294.7 ms tilted"
+    ],
+    "data": {
+     "flat": {
+      "msPerFrame": 247.5,
+      "frames": 11
+     },
+     "tilted": {
+      "msPerFrame": 294.7,
+      "frames": 11
+     },
+     "memoryMB": 57
+    },
+    "t0": 9994,
+    "t1": 21176
+   },
+   {
+    "name": "Pan",
+    "notes": [],
+    "data": {
+     "settleMs": 2421.4950000001118,
+     "memoryMB": 57
+    },
+    "t0": 22041,
+    "frames": {
+     "seconds": 5.8,
+     "fps": 3.5,
+     "low1": 2.6,
+     "worstMs": 383,
+     "mapDraws": 20,
+     "longTasks": 18,
+     "longTaskMs": 4956
+    },
+    "t1": 30272
+   },
+   {
+    "name": "Pinch",
+    "notes": [],
+    "data": {
+     "settleMs": 383.37000000011176,
+     "memoryMB": 57
+    },
+    "t0": 30772,
+    "frames": {
+     "seconds": 3.1,
+     "fps": 3.9,
+     "low1": 2.9,
+     "worstMs": 350,
+     "mapDraws": 12,
+     "longTasks": 11,
+     "longTaskMs": 2696
+    },
+    "t1": 34261
+   },
+   {
+    "name": "Tilt 3D",
+    "notes": [],
+    "data": {
+     "switchedOnForTest": true,
+     "settleTiltedMs": null,
+     "flatten": {
+      "seconds": 3.3,
+      "fps": 0.4,
+      "low1": 0.4,
+      "worstMs": 2283,
+      "mapDraws": 2,
+      "longTasks": 0,
+      "longTaskMs": 0
+     },
+     "memoryMB": 57
+    },
+    "t0": 34843,
+    "frames": {
+     "seconds": 8.7,
+     "fps": 0.6,
+     "low1": 0.6,
+     "worstMs": 1800,
+     "mapDraws": 5,
+     "longTasks": 4,
+     "longTaskMs": 6972
+    },
+    "t1": 63420
+   },
+   {
+    "name": "Drag time",
+    "notes": [
+     "23 of 48 steps drawn while dragging",
+     "caught up 0.94 s after the finger stopped"
+    ],
+    "data": {
+     "steps": 48,
+     "drawn": 23,
+     "medianDelayMs": 598,
+     "catchUpMs": 943,
+     "memoryMB": 57
+    },
+    "t0": 64092,
+    "frames": {
+     "seconds": 24.2,
+     "fps": 3.9,
+     "low1": 1.5,
+     "worstMs": 683,
+     "mapDraws": 71,
+     "longTasks": 72,
+     "longTaskMs": 22998
+    },
+    "t1": 88244
+   },
+   {
+    "name": "Play",
+    "notes": [
+     "14 of 14 steps drawn",
+     "each step drawn 0.34 s after it came"
+    ],
+    "data": {
+     "steps": 14,
+     "drawn": 14,
+     "medianDelayMs": 337,
+     "tap": {
+      "handlerMs": 1,
+      "responseMs": 297
+     },
+     "memoryMB": 57
+    },
+    "t0": 89166,
+    "frames": {
+     "seconds": 11.3,
+     "fps": 6.1,
+     "low1": 2.9,
+     "worstMs": 350,
+     "mapDraws": 34,
+     "longTasks": 34,
+     "longTaskMs": 10116
+    },
+    "t1": 110470
+   },
+   {
+    "name": "Switch layers",
+    "notes": [
+     "Temperature: 0.1 s, worst hitch 383 ms",
+     "Wind: no picture in 15 s, worst hitch 467 ms",
+     "Radar: 0 s, worst hitch 317 ms",
+     "Avalanche: 1.3 s, worst hitch 350 ms",
+     "Air quality: 1.4 s, worst hitch 300 ms",
+     "Precipitation: 0 s, worst hitch 283 ms"
+    ],
+    "data": {
+     "switches": [
+      {
+       "layer": "temperature",
+       "openMenuMs": 8,
+       "pickMs": 890,
+       "readyMs": 69,
+       "settleMs": null,
+       "worstFrameMs": 383
+      },
+      {
+       "layer": "wind",
+       "openMenuMs": 25,
+       "pickMs": 354,
+       "readyMs": null,
+       "settleMs": 2358,
+       "worstFrameMs": 467
+      },
+      {
+       "layer": "radar",
+       "openMenuMs": 31,
+       "pickMs": 598,
+       "readyMs": 15,
+       "settleMs": 1785,
+       "worstFrameMs": 317
+      },
+      {
+       "layer": "avalanche",
+       "openMenuMs": 29,
+       "pickMs": 601,
+       "readyMs": 1338,
+       "settleMs": 664,
+       "worstFrameMs": 350
+      },
+      {
+       "layer": "air-quality",
+       "openMenuMs": 33,
+       "pickMs": 656,
+       "readyMs": 1419,
+       "settleMs": 151,
+       "worstFrameMs": 300
+      },
+      {
+       "layer": "precipitation",
+       "openMenuMs": 18,
+       "pickMs": 805,
+       "readyMs": 12,
+       "settleMs": 567,
+       "worstFrameMs": 283
+      }
+     ],
+     "memoryMB": 57
+    },
+    "t0": 110970,
+    "frames": {
+     "seconds": 46.4,
+     "fps": 44.8,
+     "low1": 3.5,
+     "worstMs": 483,
+     "mapDraws": 40,
+     "longTasks": 44,
+     "longTaskMs": 12108
+    },
+    "t1": 157380
+   },
+   {
+    "name": "Panels",
+    "notes": [
+     "taps answered in 9–33 ms (median 33)"
+    ],
+    "data": {
+     "taps": [
+      {
+       "id": "layer-button",
+       "openMs": 9,
+       "openCodeMs": 5,
+       "closeMs": 33
+      },
+      {
+       "id": "model-pill",
+       "openMs": 33,
+       "openCodeMs": 5,
+       "closeMs": 33
+      },
+      {
+       "id": "settings-button",
+       "openMs": 33,
+       "openCodeMs": 6,
+       "closeMs": 33
+      },
+      {
+       "id": "map-layers",
+       "openMs": 33,
+       "openCodeMs": 5,
+       "closeMs": 33
+      },
+      {
+       "id": "search-button",
+       "openMs": 33,
+       "openCodeMs": 4,
+       "closeMs": 32
+      },
+      {
+       "id": "window-button",
+       "openMs": 33,
+       "openCodeMs": 4,
+       "closeMs": 33
+      },
+      {
+       "id": "sheet",
+       "openMs": 33,
+       "openCodeMs": 7,
+       "closeMs": 33
+      }
+     ],
+     "memoryMB": 57
+    },
+    "t0": 157880,
+    "frames": {
+     "seconds": 9.8,
+     "fps": 59.1,
+     "low1": 30,
+     "worstMs": 50,
+     "mapDraws": 0,
+     "longTasks": 0,
+     "longTaskMs": 0
+    },
+    "t1": 167723
+   },
+   {
+    "name": "Idle",
+    "notes": [
+     "1 map draws, 2 frame requests, 0 downloads, 23 page changes in 15 s"
+    ],
+    "data": {
+     "seconds": 15,
+     "mapDraws": 1,
+     "frameRequests": 2,
+     "downloads": 0,
+     "pageChanges": 23,
+     "changedWhere": {
+      "div#chart-axis": 5,
+      "body [data-idle]": 1,
+      "span#cursor-time": 1,
+      "span#cursor-note": 1,
+      "span#subject-time": 1,
+      "span#window-label": 1,
+      "div#window-summary [data-kind]": 1,
+      "span#summary-before": 1
+     },
+     "downloaded": [],
+     "memoryMB": 57
+    },
+    "t0": 170020,
+    "t1": 185021
+   }
+  ],
+  "memoryMB": 57,
+  "done": true
+ },
+ "errors": [],
+ "api": [
+  {
+   "at": 2458,
+   "calls": 1,
+   "url": "https://api.open-meteo.com/data/cmc_gem_hrdps/static/meta.json",
+   "step": "Load"
+  },
+  {
+   "at": 3272,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 3767,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 3769,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 5612,
+   "calls": 84,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.6000%2C49.6000%2C49.6000%2C49.6000%2C49.6000&longitude=-123.1200%2C-123.0400%2C-122.9600%2C-122.880",
+   "step": "Load"
+  },
+  {
+   "at": 14502,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 16058,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 19051,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  }
+ ],
+ "apiByStep": {
+  "Load": {
+   "requests": 5,
+   "calls": 108.1
+  },
+  "Draw": {
+   "requests": 3,
+   "calls": 176.4
+  }
+ }
+}
