@@ -252,7 +252,9 @@
       "docs/reference/**",
       ".github/**",
       ".gitignore",
-      "docs/reports/m*/**"
+      "docs/reports/m*/**",
+      "docs/working.md",
+      "docs/tasks/**"
     ]
   },
   "nobody": [

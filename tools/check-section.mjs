@@ -55,13 +55,12 @@ for (const f of [...changed].sort()) {
 /** A list, shortened past 25 lines. */
 const list = (xs) => [...xs.slice(0, 25), ...(xs.length > 25 ? [`... and ${xs.length - 25} more`] : [])].join('\n  ');
 console.log(`\n${section.title}: ${changed.size} file(s) changed since this branch left main`);
-if (shared.length) console.log(`\nShared files (the lead's). Say why in the handoff note:\n  ${list(shared)}`);
-if (unowned.length) console.log(`\nFiles no section owns yet (name them in the handoff note):\n  ${list(unowned)}`);
-if (others.length) {
-  console.log(`\nFAIL: files that belong to another section:\n  ${list(others)}\nUndo these, or ask Kaden to have that section (or the lead) make the change.`);
-  process.exit(1);
-}
-console.log('Area: OK');
+// One chat per round (docs/working.md, Nov 27): a chat may change any area's
+// files; this lists them so it also runs those areas' browser tests.
+if (shared.length) console.log(`\nShared files (app/main.ts, state, settings…). Say why in the pull request:\n  ${list(shared)}`);
+if (unowned.length) console.log(`\nFiles no area lists yet (add them to docs/sections/sections.json):\n  ${list(unowned)}`);
+if (others.length) console.log(`\nFiles of other areas: also run their checks (npm run check:section -- <area>):\n  ${list(others)}`);
+console.log('Area: listed');
 if (flags.has('--area')) process.exit(0);
 
 // 2 and 3
@@ -82,4 +81,4 @@ for (const [label, cmd, cmdArgs] of steps) {
     process.exit(1);
   }
 }
-console.log(`\n${section.title}: every check passed. Write the handoff note (docs/sections/handoff-template.md).`);
+console.log(`\n${section.title}: every check passed. Open the pull request (docs/working.md).`);
