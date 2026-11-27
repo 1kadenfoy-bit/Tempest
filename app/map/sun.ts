@@ -50,10 +50,10 @@ export function nightAmount(altitudeDeg: number): number {
   return smooth((6 - altitudeDeg) / 18);
 }
 
-/** The strongest the night wash gets, as an opacity: dark enough to read as night, light enough to keep the map readable. */
-const NIGHT_OPACITY = 0.5;
-/** On the light theme the wash is lighter: a heavy one turns the map to grey fog. */
-const NIGHT_OPACITY_LIGHT = 0.32;
+/** The strongest the night wash gets, as an opacity: dark enough to read as night, light enough to keep small streams and trails readable (0.5 hid them, Nov 27). */
+const NIGHT_OPACITY = 0.45;
+/** On the light theme the wash is lighter: a heavy one turns the map to grey fog. 0.32 read as dusk, not night (Nov 27). */
+const NIGHT_OPACITY_LIGHT = 0.42;
 const NIGHT_LAYER = 'sun-night';
 
 type Listener = (on: boolean) => void;

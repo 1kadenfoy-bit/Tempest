@@ -28,6 +28,7 @@ the old wording moves to "Changed".
 21. There is no tuning panel or Tune button on the map page any more (removed Nov 27, 2026). The look it settled stays fixed (rule 23), and what its switches did (satellite, sun and shadows, overlays) is in the map panel.
 22. The map is shown in 2D while a shape is drawn for offline saving (the tilt comes back afterwards). One finger draws, two fingers pan and zoom. (Nov 22, 2026)
 23. The map's settings (until Kaden changes them): haze 0.85, relief strength 1.2, shadow and light tint 0.55, mountain shadows 0.65, bloom 0.65. (Nov 22, 2026)
+24. Every combination (dark or light theme; day/night sync off, by day, at dusk or at night; with or without a weather layer) keeps the desired look, and the map's details stay easy to read. So: the glow is only a hint on the light theme and is softened under a weather layer that colours the whole map; the terrain colours are quietened (not hidden) under such a layer so the weather colours read true; the night is a clear blue dusk on both themes. (Nov 27, 2026)
 
 ## The Map panel
 

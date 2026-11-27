@@ -9,6 +9,8 @@ import { plainHillshade } from './look';
 import { addPlaces, applyPlacesTheme } from './places';
 import { mapSun } from './sun';
 import { addSatellite } from './satellite';
+import { addGroundVeil, setGroundVeil } from './ground-veil';
+import { S } from '../state';
 
 export { terrainSource } from './terrain-source';
 import { terrainSource } from './terrain-source';
@@ -37,6 +39,7 @@ export function applyTerrainTheme(map: MapLibreMap, theme: Theme): void {
   if (map.getLayer('hillshade')) for (const [k, v] of Object.entries(p.hillshade)) map.setPaintProperty('hillshade', k as Parameters<MapLibreMap['setPaintProperty']>[1], v as never);
   if (map.getLayer('contour-lines')) for (const [k, v] of Object.entries(p.contours)) map.setPaintProperty('contour-lines', k as Parameters<MapLibreMap['setPaintProperty']>[1], v);
   applyPlacesTheme(map, theme);
+  setGroundVeil(S.active?.id ?? '', theme);
   // The sun's lighting, if on, goes back over the plain one.
   mapSun.update();
 }
@@ -97,6 +100,9 @@ export function addTerrain(map: MapLibreMap, beforeLayerId?: string, theme: Them
 
   // Trails, huts and peaks, above the contours.
   addPlaces(map, beforeLayerId, theme);
+  // The ground veil quietens the terrain colours under a weather layer (app/map/ground-veil.ts).
+  addGroundVeil(map, theme);
+  setGroundVeil(S.active?.id ?? '', theme);
   // The sun's night wash goes under the hillshade, so under the weather fills too.
   mapSun.attach(map);
   // The satellite picture, hidden until the ground setting is Satellite.
