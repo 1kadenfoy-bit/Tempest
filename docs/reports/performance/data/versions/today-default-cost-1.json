@@ -1,0 +1,157 @@
+{
+ "label": "today-default-cost-1",
+ "url": "http://localhost:4173/?perf=cost",
+ "weather": "recorded",
+ "cpu": 1,
+ "net": "none",
+ "prefs": {
+  "layer": "precipitation"
+ },
+ "wallSeconds": 25,
+ "marks": {
+  "html": 7,
+  "appStarted": 393,
+  "firstMap": 1781,
+  "mapComplete": 1800,
+  "pinForecast": 4176,
+  "firstWeather": 5345,
+  "everything": 6948
+ },
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": false,
+   "buildings3d": false,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {},
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 7,
+     "appStarted": 393,
+     "firstMap": 1781,
+     "mapComplete": 1800,
+     "pinForecast": 4176,
+     "firstWeather": 5345,
+     "everything": 6948,
+     "memoryMB": 64
+    },
+    "t0": 7256,
+    "frames": {
+     "seconds": 3,
+     "fps": 54.6,
+     "low1": 60,
+     "worstMs": 283,
+     "mapDraws": 1,
+     "longTasks": 1,
+     "longTaskMs": 275
+    },
+    "t1": 10257
+   },
+   {
+    "name": "Yardstick",
+    "notes": [
+     "14.6 ms"
+    ],
+    "data": {
+     "ms": 14.6,
+     "memoryMB": 64
+    },
+    "t0": 10757,
+    "t1": 10832
+   },
+   {
+    "name": "Draw",
+    "notes": [
+     "one frame takes 272 ms flat, 303.2 ms tilted"
+    ],
+    "data": {
+     "flat": {
+      "msPerFrame": 272,
+      "frames": 11
+     },
+     "tilted": {
+      "msPerFrame": 303.2,
+      "frames": 11
+     },
+     "memoryMB": 64
+    },
+    "t0": 11333,
+    "t1": 23040
+   }
+  ],
+  "memoryMB": 64,
+  "done": true
+ },
+ "errors": [],
+ "api": [
+  {
+   "at": 2640,
+   "calls": 1,
+   "url": "https://api.open-meteo.com/data/cmc_gem_hrdps/static/meta.json",
+   "step": "Load"
+  },
+  {
+   "at": 3644,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 4686,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 4688,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 6045,
+   "calls": 84,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.6000%2C49.6000%2C49.6000%2C49.6000%2C49.6000&longitude=-123.1200%2C-123.0400%2C-122.9600%2C-122.880",
+   "step": "Load"
+  },
+  {
+   "at": 15889,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 18107,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 21387,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  }
+ ],
+ "apiByStep": {
+  "Load": {
+   "requests": 5,
+   "calls": 108.1
+  },
+  "Draw": {
+   "requests": 3,
+   "calls": 176.4
+  }
+ }
+}

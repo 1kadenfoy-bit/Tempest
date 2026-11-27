@@ -1,0 +1,473 @@
+{
+ "label": "nov18-kaden-tour",
+ "url": "http://localhost:4175/?perf",
+ "weather": "recorded",
+ "cpu": 1,
+ "net": "none",
+ "prefs": {
+  "terrain3d": true,
+  "buildings3d": true,
+  "hillshade": true,
+  "contours": true,
+  "stations": false,
+  "layer": "precipitation",
+  "mapSettings": {
+   "ground": "shaded",
+   "trails": true,
+   "trailNames": true,
+   "huts": true,
+   "camps": true,
+   "peaks": false,
+   "peakHeights": true,
+   "contours": true,
+   "smallRoads": true,
+   "skiLifts": false,
+   "parkBoundaries": false,
+   "regionBoundaries": true,
+   "municipalBoundaries": true,
+   "sun": true
+  },
+  "features": {}
+ },
+ "wallSeconds": 210,
+ "marks": {
+  "html": 7,
+  "appStarted": 461,
+  "firstMap": 1349,
+  "mapComplete": 1424,
+  "pinForecast": 4398,
+  "firstWeather": 7098,
+  "everything": 8181
+ },
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": true,
+   "buildings3d": true,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {
+    "ground": "shaded",
+    "trails": true,
+    "trailNames": true,
+    "huts": true,
+    "camps": true,
+    "peaks": false,
+    "peakHeights": true,
+    "contours": true,
+    "smallRoads": true,
+    "skiLifts": false,
+    "parkBoundaries": false,
+    "regionBoundaries": true,
+    "municipalBoundaries": true,
+    "sun": true
+   },
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 7,
+     "appStarted": 461,
+     "firstMap": 1349,
+     "mapComplete": 1424,
+     "pinForecast": 4398,
+     "firstWeather": 7098,
+     "everything": 8181,
+     "memoryMB": 54
+    },
+    "t0": 8273,
+    "frames": {
+     "seconds": 3,
+     "fps": 16,
+     "low1": 1.3,
+     "worstMs": 767,
+     "mapDraws": 5,
+     "longTasks": 6,
+     "longTaskMs": 2289
+    },
+    "t1": 11273
+   },
+   {
+    "name": "Yardstick",
+    "notes": [
+     "18.1 ms"
+    ],
+    "data": {
+     "ms": 18.1,
+     "memoryMB": 54
+    },
+    "t0": 11774,
+    "t1": 11856
+   },
+   {
+    "name": "Draw",
+    "notes": [
+     "one frame takes 129.7 ms flat, 194.5 ms tilted"
+    ],
+    "data": {
+     "flat": {
+      "msPerFrame": 129.7,
+      "frames": 11
+     },
+     "tilted": {
+      "msPerFrame": 194.5,
+      "frames": 11
+     },
+     "memoryMB": 54
+    },
+    "t0": 12356,
+    "t1": 33642
+   },
+   {
+    "name": "Pan",
+    "notes": [],
+    "data": {
+     "settleMs": 2616.8149999994785,
+     "memoryMB": 54
+    },
+    "t0": 34142,
+    "frames": {
+     "seconds": 5.9,
+     "fps": 1.4,
+     "low1": 1.1,
+     "worstMs": 900,
+     "mapDraws": 9,
+     "longTasks": 8,
+     "longTaskMs": 5731
+    },
+    "t1": 42614
+   },
+   {
+    "name": "Pinch",
+    "notes": [],
+    "data": {
+     "settleMs": 3092.9000000003725,
+     "memoryMB": 54
+    },
+    "t0": 43948,
+    "frames": {
+     "seconds": 3.4,
+     "fps": 1.2,
+     "low1": 1.1,
+     "worstMs": 933,
+     "mapDraws": 5,
+     "longTasks": 4,
+     "longTaskMs": 3264
+    },
+    "t1": 50480
+   },
+   {
+    "name": "Tilt 3D",
+    "notes": [],
+    "data": {
+     "switchedOnForTest": false,
+     "settleTiltedMs": 12767.464999999851,
+     "flatten": {
+      "seconds": 1.6,
+      "fps": 0.6,
+      "low1": 0.6,
+      "worstMs": 1550,
+      "mapDraws": 2,
+      "longTasks": 0,
+      "longTaskMs": 0
+     },
+     "memoryMB": 54
+    },
+    "t0": 50981,
+    "frames": {
+     "seconds": 4.6,
+     "fps": 0.9,
+     "low1": 0.7,
+     "worstMs": 1433,
+     "mapDraws": 5,
+     "longTasks": 4,
+     "longTaskMs": 4558
+    },
+    "t1": 71325
+   },
+   {
+    "name": "Drag time",
+    "notes": [
+     "23 of 48 steps drawn while dragging",
+     "caught up 0.96 s after the finger stopped"
+    ],
+    "data": {
+     "steps": 48,
+     "drawn": 23,
+     "medianDelayMs": 61,
+     "catchUpMs": 957,
+     "memoryMB": 54
+    },
+    "t0": 72128,
+    "frames": {
+     "seconds": 36.3,
+     "fps": 5.3,
+     "low1": 1.3,
+     "worstMs": 817,
+     "mapDraws": 51,
+     "longTasks": 52,
+     "longTaskMs": 34100
+    },
+    "t1": 108463
+   },
+   {
+    "name": "Play",
+    "notes": [
+     "13 of 14 steps drawn",
+     "each step drawn 0.06 s after it came"
+    ],
+    "data": {
+     "steps": 14,
+     "drawn": 13,
+     "medianDelayMs": 60,
+     "tap": {
+      "handlerMs": 0,
+      "responseMs": 841
+     },
+     "memoryMB": 54
+    },
+    "t0": 109425,
+    "frames": {
+     "seconds": 11.6,
+     "fps": 7,
+     "low1": 1.2,
+     "worstMs": 817,
+     "mapDraws": 16,
+     "longTasks": 15,
+     "longTaskMs": 9789
+    },
+    "t1": 131034
+   },
+   {
+    "name": "Switch layers",
+    "notes": [
+     "Temperature: 0.1 s, worst hitch 817 ms",
+     "Wind: 12.7 s, worst hitch 833 ms",
+     "Radar: 0 s, worst hitch 550 ms",
+     "Avalanche: 1.8 s, worst hitch 550 ms",
+     "Air quality: 2.4 s, worst hitch 733 ms",
+     "Precipitation: 0 s, worst hitch 750 ms"
+    ],
+    "data": {
+     "switches": [
+      {
+       "layer": "temperature",
+       "openMenuMs": 14,
+       "pickMs": 926,
+       "readyMs": 81,
+       "settleMs": null,
+       "worstFrameMs": 817
+      },
+      {
+       "layer": "wind",
+       "openMenuMs": 18,
+       "pickMs": 575,
+       "readyMs": 12683,
+       "settleMs": 1367,
+       "worstFrameMs": 833
+      },
+      {
+       "layer": "radar",
+       "openMenuMs": 22,
+       "pickMs": 624,
+       "readyMs": 15,
+       "settleMs": 2344,
+       "worstFrameMs": 550
+      },
+      {
+       "layer": "avalanche",
+       "openMenuMs": 25,
+       "pickMs": 633,
+       "readyMs": 1794,
+       "settleMs": 893,
+       "worstFrameMs": 550
+      },
+      {
+       "layer": "air-quality",
+       "openMenuMs": 20,
+       "pickMs": 670,
+       "readyMs": 2436,
+       "settleMs": 829,
+       "worstFrameMs": 733
+      },
+      {
+       "layer": "precipitation",
+       "openMenuMs": 22,
+       "pickMs": 996,
+       "readyMs": 17,
+       "settleMs": 2139,
+       "worstFrameMs": 750
+      }
+     ],
+     "memoryMB": 54
+    },
+    "t0": 131535,
+    "frames": {
+     "seconds": 49.3,
+     "fps": 36.5,
+     "low1": 1.7,
+     "worstMs": 883,
+     "mapDraws": 40,
+     "longTasks": 44,
+     "longTaskMs": 19718
+    },
+    "t1": 180797
+   },
+   {
+    "name": "Panels",
+    "notes": [
+     "taps answered in 16–35 ms (median 32)"
+    ],
+    "data": {
+     "taps": [
+      {
+       "id": "layer-button",
+       "openMs": 16,
+       "openCodeMs": 2,
+       "closeMs": 32
+      },
+      {
+       "id": "model-pill",
+       "openMs": 32,
+       "openCodeMs": 3,
+       "closeMs": 32
+      },
+      {
+       "id": "settings-button",
+       "openMs": null,
+       "openCodeMs": null,
+       "closeMs": null
+      },
+      {
+       "id": "map-layers",
+       "openMs": 32,
+       "openCodeMs": 4,
+       "closeMs": 32
+      },
+      {
+       "id": "search-button",
+       "openMs": 32,
+       "openCodeMs": 4,
+       "closeMs": 33
+      },
+      {
+       "id": "window-button",
+       "openMs": 32,
+       "openCodeMs": 2,
+       "closeMs": 33
+      },
+      {
+       "id": "sheet",
+       "openMs": 33,
+       "openCodeMs": 10,
+       "closeMs": 35
+      }
+     ],
+     "memoryMB": 54
+    },
+    "t0": 181298,
+    "frames": {
+     "seconds": 9.8,
+     "fps": 60,
+     "low1": 60,
+     "worstMs": 17,
+     "mapDraws": 0,
+     "longTasks": 0,
+     "longTaskMs": 0
+    },
+    "t1": 191083
+   },
+   {
+    "name": "Idle",
+    "notes": [
+     "3 map draws, 3 frame requests, 0 downloads, 1 page changes in 15 s"
+    ],
+    "data": {
+     "seconds": 15,
+     "mapDraws": 3,
+     "frameRequests": 3,
+     "downloads": 0,
+     "pageChanges": 1,
+     "changedWhere": {
+      "body [data-idle]": 1
+     },
+     "downloaded": [],
+     "memoryMB": 54
+    },
+    "t0": 194164,
+    "t1": 209165
+   }
+  ],
+  "memoryMB": 54,
+  "done": true
+ },
+ "errors": [],
+ "api": [
+  {
+   "at": 3059,
+   "calls": 1,
+   "url": "https://api.open-meteo.com/data/cmc_gem_hrdps/static/meta.json",
+   "step": "Load"
+  },
+  {
+   "at": 3904,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 4440,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 4866,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 8206,
+   "calls": 84,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.6000%2C49.6000%2C49.6000%2C49.6000%2C49.6000&longitude=-123.1200%2C-123.0400%2C-122.9600%2C-122.880",
+   "step": "Load"
+  },
+  {
+   "at": 16265,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 17826,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 20869,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  }
+ ],
+ "apiByStep": {
+  "Load": {
+   "requests": 5,
+   "calls": 108.1
+  },
+  "Draw": {
+   "requests": 3,
+   "calls": 176.4
+  }
+ }
+}

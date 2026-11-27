@@ -1,0 +1,1752 @@
+{
+ "label": "kaden-3d",
+ "url": "http://localhost:5174/",
+ "prefs": {
+  "terrain3d": true,
+  "buildings3d": true,
+  "hillshade": true,
+  "contours": true,
+  "stations": false,
+  "layer": "precipitation",
+  "mapSettings": {
+   "ground": "shaded",
+   "trails": true,
+   "trailNames": true,
+   "huts": true,
+   "camps": true,
+   "peaks": false,
+   "peakHeights": true,
+   "contours": true,
+   "smallRoads": true,
+   "skiLifts": false,
+   "parkBoundaries": false,
+   "regionBoundaries": true,
+   "municipalBoundaries": true,
+   "sun": true
+  },
+  "features": {}
+ },
+ "off": "",
+ "at": "2026-11-27T04:08:12.797Z",
+ "steps": [
+  {
+   "name": "whole tour",
+   "seconds": null,
+   "busyMs": 209296,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 192394
+    },
+    {
+     "what": "(program)",
+     "ms": 7161
+    },
+    {
+     "what": "(anonymous) · app/map/elevation.ts:84",
+     "ms": 2423
+    },
+    {
+     "what": "shadowMask · app/map/shadow-mask.ts:19",
+     "ms": 657
+    },
+    {
+     "what": "fetch",
+     "ms": 614
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 531
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 505
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 308
+    },
+    {
+     "what": "shrinkMax · app/map/shadow-mask.ts:50",
+     "ms": 185
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 138
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 129
+    },
+    {
+     "what": "smoothGround · core/wind/wind.ts:95",
+     "ms": 125
+    },
+    {
+     "what": "window.fetch · app/perf/marks.ts:53",
+     "ms": 111
+    },
+    {
+     "what": "dayStart · core/time/window.ts:35",
+     "ms": 88
+    },
+    {
+     "what": "parts · core/units/format.ts:83",
+     "ms": 84
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 192394
+    },
+    {
+     "what": "(program)",
+     "ms": 7161
+    },
+    {
+     "what": "app/map/elevation.ts",
+     "ms": 2443
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 1643
+    },
+    {
+     "what": "app/map/shadow-mask.ts",
+     "ms": 851
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 842
+    },
+    {
+     "what": "fetch",
+     "ms": 614
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 505
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 281
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 171
+    },
+    {
+     "what": "node_modules/@openmeteo/weather-map-layer/dist/index.mjs",
+     "ms": 155
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 139
+    },
+    {
+     "what": "core/wind/wind.ts",
+     "ms": 134
+    },
+    {
+     "what": "app/perf/marks.ts",
+     "ms": 123
+    },
+    {
+     "what": "core/units/format.ts",
+     "ms": 97
+    }
+   ]
+  },
+  {
+   "name": "Open",
+   "seconds": 4.2,
+   "busyMs": 1544,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 1090
+    },
+    {
+     "what": "(program)",
+     "ms": 235
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 32
+    },
+    {
+     "what": "fetch",
+     "ms": 21
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 18
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 16
+    },
+    {
+     "what": "loadGeometry · lib:maplibre-gl.js:13391",
+     "ms": 12
+    },
+    {
+     "what": "readSVarint · lib:maplibre-gl.js:16282",
+     "ms": 7
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 6
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 6
+    },
+    {
+     "what": "window.fetch · app/perf/marks.ts:53",
+     "ms": 6
+    },
+    {
+     "what": "yf · lib:maplibre-gl.js:11974",
+     "ms": 5
+    },
+    {
+     "what": "setLine · app/weather/fills.ts:362",
+     "ms": 4
+    },
+    {
+     "what": "getBytes · lib:@openmeteo_file-reader.js:1155",
+     "ms": 4
+    },
+    {
+     "what": "texImage2D",
+     "ms": 3
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 1090
+    },
+    {
+     "what": "(program)",
+     "ms": 235
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 55
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 50
+    },
+    {
+     "what": "fetch",
+     "ms": 21
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 19
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 16
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 9
+    },
+    {
+     "what": "app/perf/marks.ts",
+     "ms": 7
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 6
+    },
+    {
+     "what": "app/weather/fills.ts",
+     "ms": 6
+    },
+    {
+     "what": "texImage2D",
+     "ms": 3
+    },
+    {
+     "what": "requestAnimationFrame",
+     "ms": 3
+    },
+    {
+     "what": "node_modules/@openmeteo/file-format-wasm/dist/om_file_format.web.wasm",
+     "ms": 3
+    },
+    {
+     "what": "js-to-wasm:i:i",
+     "ms": 2
+    }
+   ]
+  },
+  {
+   "name": "Draw",
+   "seconds": 17.8,
+   "busyMs": 17618,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 16411
+    },
+    {
+     "what": "(program)",
+     "ms": 351
+    },
+    {
+     "what": "(anonymous) · app/map/elevation.ts:84",
+     "ms": 347
+    },
+    {
+     "what": "shadowMask · app/map/shadow-mask.ts:19",
+     "ms": 58
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 46
+    },
+    {
+     "what": "shrinkMax · app/map/shadow-mask.ts:50",
+     "ms": 32
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 18
+    },
+    {
+     "what": "texImage2D",
+     "ms": 15
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 15
+    },
+    {
+     "what": "fire · lib:maplibre-gl.js:1233",
+     "ms": 13
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 11
+    },
+    {
+     "what": "getImageData",
+     "ms": 10
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 10
+    },
+    {
+     "what": "_getTerrainCoordsForRegularTile · lib:maplibre-gl.js:35643",
+     "ms": 10
+    },
+    {
+     "what": "terrariumElevation · core/geo/terrain.ts:3",
+     "ms": 9
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 16411
+    },
+    {
+     "what": "app/map/elevation.ts",
+     "ms": 351
+    },
+    {
+     "what": "(program)",
+     "ms": 351
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 200
+    },
+    {
+     "what": "app/map/shadow-mask.ts",
+     "ms": 92
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 61
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 18
+    },
+    {
+     "what": "texImage2D",
+     "ms": 15
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 13
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 11
+    },
+    {
+     "what": "getImageData",
+     "ms": 10
+    },
+    {
+     "what": "core/geo/terrain.ts",
+     "ms": 9
+    },
+    {
+     "what": "bufferData",
+     "ms": 6
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 5
+    },
+    {
+     "what": "Blob",
+     "ms": 5
+    }
+   ]
+  },
+  {
+   "name": "Pan",
+   "seconds": 21.6,
+   "busyMs": 21527,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 19582
+    },
+    {
+     "what": "(anonymous) · app/map/elevation.ts:84",
+     "ms": 964
+    },
+    {
+     "what": "(program)",
+     "ms": 279
+    },
+    {
+     "what": "shadowMask · app/map/shadow-mask.ts:19",
+     "ms": 130
+    },
+    {
+     "what": "shrinkMax · app/map/shadow-mask.ts:50",
+     "ms": 59
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 54
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 49
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 46
+    },
+    {
+     "what": "terrariumElevation · core/geo/terrain.ts:3",
+     "ms": 20
+    },
+    {
+     "what": "run · app/map/shadows.ts:88",
+     "ms": 14
+    },
+    {
+     "what": "getImageData",
+     "ms": 14
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 9
+    },
+    {
+     "what": "toDataURL",
+     "ms": 9
+    },
+    {
+     "what": "st · lib:maplibre-gl.js:524",
+     "ms": 8
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 8
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 19582
+    },
+    {
+     "what": "app/map/elevation.ts",
+     "ms": 967
+    },
+    {
+     "what": "(program)",
+     "ms": 279
+    },
+    {
+     "what": "app/map/shadow-mask.ts",
+     "ms": 191
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 190
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 95
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 54
+    },
+    {
+     "what": "core/geo/terrain.ts",
+     "ms": 20
+    },
+    {
+     "what": "app/map/shadows.ts",
+     "ms": 15
+    },
+    {
+     "what": "getImageData",
+     "ms": 14
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 12
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 9
+    },
+    {
+     "what": "toDataURL",
+     "ms": 9
+    },
+    {
+     "what": "lib:maplibre-contour.js",
+     "ms": 8
+    },
+    {
+     "what": "fetch",
+     "ms": 6
+    }
+   ]
+  },
+  {
+   "name": "Pinch",
+   "seconds": 13.6,
+   "busyMs": 13559,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 13248
+    },
+    {
+     "what": "(program)",
+     "ms": 68
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 31
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 23
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 16
+    },
+    {
+     "what": "YO · lib:maplibre-gl.js:27554",
+     "ms": 9
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 7
+    },
+    {
+     "what": "onRender · app/perf/frames.ts:12",
+     "ms": 6
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 6
+    },
+    {
+     "what": "elevationMosaic · app/map/elevation.ts:59",
+     "ms": 5
+    },
+    {
+     "what": "(anonymous) · app/perf/frames.ts:27",
+     "ms": 5
+    },
+    {
+     "what": "fire · lib:maplibre-gl.js:1233",
+     "ms": 4
+    },
+    {
+     "what": "postMessage",
+     "ms": 3
+    },
+    {
+     "what": "cellOf · core/temperature/toposcale.ts:23",
+     "ms": 3
+    },
+    {
+     "what": "th · lib:maplibre-gl.js:13572",
+     "ms": 3
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 13248
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 94
+    },
+    {
+     "what": "(program)",
+     "ms": 68
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 48
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 23
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 11
+    },
+    {
+     "what": "app/perf/frames.ts",
+     "ms": 11
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 8
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 7
+    },
+    {
+     "what": "app/map/elevation.ts",
+     "ms": 5
+    },
+    {
+     "what": "node_modules/@openmeteo/weather-map-layer/dist/index.mjs",
+     "ms": 4
+    },
+    {
+     "what": "postMessage",
+     "ms": 3
+    },
+    {
+     "what": "bufferData",
+     "ms": 3
+    },
+    {
+     "what": "lib:pmtiles.js",
+     "ms": 2
+    },
+    {
+     "what": "app/weather/fills.ts",
+     "ms": 2
+    }
+   ]
+  },
+  {
+   "name": "Tilt 3D",
+   "seconds": 28.4,
+   "busyMs": 28354,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 26465
+    },
+    {
+     "what": "(anonymous) · app/map/elevation.ts:84",
+     "ms": 845
+    },
+    {
+     "what": "(program)",
+     "ms": 295
+    },
+    {
+     "what": "shadowMask · app/map/shadow-mask.ts:19",
+     "ms": 170
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 72
+    },
+    {
+     "what": "shrinkMax · app/map/shadow-mask.ts:50",
+     "ms": 37
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 36
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 27
+    },
+    {
+     "what": "texImage2D",
+     "ms": 25
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 21
+    },
+    {
+     "what": "getImageData",
+     "ms": 20
+    },
+    {
+     "what": "terrariumElevation · core/geo/terrain.ts:3",
+     "ms": 19
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 18
+    },
+    {
+     "what": "run · app/map/shadows.ts:88",
+     "ms": 10
+    },
+    {
+     "what": "Blob",
+     "ms": 10
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 26465
+    },
+    {
+     "what": "app/map/elevation.ts",
+     "ms": 850
+    },
+    {
+     "what": "(program)",
+     "ms": 295
+    },
+    {
+     "what": "app/map/shadow-mask.ts",
+     "ms": 207
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 174
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 109
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 27
+    },
+    {
+     "what": "texImage2D",
+     "ms": 25
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 22
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 21
+    },
+    {
+     "what": "getImageData",
+     "ms": 20
+    },
+    {
+     "what": "core/geo/terrain.ts",
+     "ms": 20
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 12
+    },
+    {
+     "what": "app/map/shadows.ts",
+     "ms": 10
+    },
+    {
+     "what": "Blob",
+     "ms": 10
+    }
+   ]
+  },
+  {
+   "name": "Drag time",
+   "seconds": 53.8,
+   "busyMs": 53068,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 50828
+    },
+    {
+     "what": "(program)",
+     "ms": 998
+    },
+    {
+     "what": "fetch",
+     "ms": 170
+    },
+    {
+     "what": "shadowMask · app/map/shadow-mask.ts:19",
+     "ms": 52
+    },
+    {
+     "what": "dayStart · core/time/window.ts:35",
+     "ms": 51
+    },
+    {
+     "what": "parts · core/units/format.ts:83",
+     "ms": 46
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 45
+    },
+    {
+     "what": "render · app/shell/scrubber.ts:35",
+     "ms": 40
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 32
+    },
+    {
+     "what": "window.fetch · app/perf/marks.ts:53",
+     "ms": 29
+    },
+    {
+     "what": "forward · node_modules/@openmeteo/weather-map-layer/dist/index.mjs:1",
+     "ms": 28
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 19
+    },
+    {
+     "what": "keepInside · app/shell/pin.ts:73",
+     "ms": 18
+    },
+    {
+     "what": "(anonymous) · core/temperature/profile.ts:9",
+     "ms": 17
+    },
+    {
+     "what": "Yb · lib:maplibre-gl.js:19641",
+     "ms": 17
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 50828
+    },
+    {
+     "what": "(program)",
+     "ms": 998
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 345
+    },
+    {
+     "what": "fetch",
+     "ms": 170
+    },
+    {
+     "what": "node_modules/@openmeteo/weather-map-layer/dist/index.mjs",
+     "ms": 70
+    },
+    {
+     "what": "app/map/shadow-mask.ts",
+     "ms": 60
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 59
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 53
+    },
+    {
+     "what": "core/time/window.ts",
+     "ms": 52
+    },
+    {
+     "what": "core/units/format.ts",
+     "ms": 48
+    },
+    {
+     "what": "app/shell/scrubber.ts",
+     "ms": 44
+    },
+    {
+     "what": "core/temperature/profile.ts",
+     "ms": 41
+    },
+    {
+     "what": "app/perf/marks.ts",
+     "ms": 32
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 32
+    },
+    {
+     "what": "app/shell/pin.ts",
+     "ms": 20
+    }
+   ]
+  },
+  {
+   "name": "Play",
+   "seconds": 22.5,
+   "busyMs": 17749,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 16533
+    },
+    {
+     "what": "(program)",
+     "ms": 512
+    },
+    {
+     "what": "fetch",
+     "ms": 159
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 48
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 45
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 43
+    },
+    {
+     "what": "update · lib:maplibre-gl.js:29737",
+     "ms": 26
+    },
+    {
+     "what": "window.fetch · app/perf/marks.ts:53",
+     "ms": 23
+    },
+    {
+     "what": "wetBulb · core/temperature/wet-bulb.ts:15",
+     "ms": 19
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 16
+    },
+    {
+     "what": "dayStart · core/time/window.ts:35",
+     "ms": 12
+    },
+    {
+     "what": "get · lib:@openmeteo_file-reader.js:1595",
+     "ms": 12
+    },
+    {
+     "what": "parts · core/units/format.ts:83",
+     "ms": 11
+    },
+    {
+     "what": "arrayBuffer",
+     "ms": 9
+    },
+    {
+     "what": "render · app/shell/scrubber.ts:35",
+     "ms": 9
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 16533
+    },
+    {
+     "what": "(program)",
+     "ms": 512
+    },
+    {
+     "what": "fetch",
+     "ms": 159
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 137
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 93
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 58
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 43
+    },
+    {
+     "what": "app/perf/marks.ts",
+     "ms": 25
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 19
+    },
+    {
+     "what": "core/temperature/wet-bulb.ts",
+     "ms": 19
+    },
+    {
+     "what": "core/time/window.ts",
+     "ms": 12
+    },
+    {
+     "what": "app/shell/scrubber.ts",
+     "ms": 11
+    },
+    {
+     "what": "core/units/format.ts",
+     "ms": 11
+    },
+    {
+     "what": "app/perf/tour.ts",
+     "ms": 10
+    },
+    {
+     "what": "node_modules/@openmeteo/file-format-wasm/dist/om_file_format.web.wasm",
+     "ms": 10
+    }
+   ]
+  },
+  {
+   "name": "Switch layers",
+   "seconds": 66.6,
+   "busyMs": 37820,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 32107
+    },
+    {
+     "what": "(program)",
+     "ms": 3382
+    },
+    {
+     "what": "fetch",
+     "ms": 233
+    },
+    {
+     "what": "shadowMask · app/map/shadow-mask.ts:19",
+     "ms": 221
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 209
+    },
+    {
+     "what": "levelLine · app/map/freezing-line.ts:14",
+     "ms": 132
+    },
+    {
+     "what": "smoothGround · core/wind/wind.ts:95",
+     "ms": 125
+    },
+    {
+     "what": "(anonymous) · app/map/freezing-line.ts:57",
+     "ms": 75
+    },
+    {
+     "what": "create · node_modules/@openmeteo/weather-map-layer/dist/index.mjs:1",
+     "ms": 53
+    },
+    {
+     "what": "window.fetch · app/perf/marks.ts:53",
+     "ms": 50
+    },
+    {
+     "what": "interpolateProfile · core/temperature/toposcale.ts:43",
+     "ms": 39
+    },
+    {
+     "what": "shrinkMax · app/map/shadow-mask.ts:50",
+     "ms": 37
+    },
+    {
+     "what": "requestAnimationFrame",
+     "ms": 32
+    },
+    {
+     "what": "(anonymous) · app/perf/tour.ts:35",
+     "ms": 26
+    },
+    {
+     "what": "parts · core/units/format.ts:83",
+     "ms": 23
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 32107
+    },
+    {
+     "what": "(program)",
+     "ms": 3382
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 337
+    },
+    {
+     "what": "app/map/shadow-mask.ts",
+     "ms": 261
+    },
+    {
+     "what": "fetch",
+     "ms": 233
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 209
+    },
+    {
+     "what": "app/map/freezing-line.ts",
+     "ms": 208
+    },
+    {
+     "what": "core/wind/wind.ts",
+     "ms": 134
+    },
+    {
+     "what": "lib:@openmeteo_file-reader.js",
+     "ms": 111
+    },
+    {
+     "what": "node_modules/@openmeteo/weather-map-layer/dist/index.mjs",
+     "ms": 65
+    },
+    {
+     "what": "app/perf/marks.ts",
+     "ms": 56
+    },
+    {
+     "what": "core/temperature/toposcale.ts",
+     "ms": 49
+    },
+    {
+     "what": "app/perf/tour.ts",
+     "ms": 39
+    },
+    {
+     "what": "requestAnimationFrame",
+     "ms": 32
+    },
+    {
+     "what": "core/units/format.ts",
+     "ms": 32
+    }
+   ]
+  },
+  {
+   "name": "Panels",
+   "seconds": 9.8,
+   "busyMs": 810,
+   "functions": [
+    {
+     "what": "(program)",
+     "ms": 746
+    },
+    {
+     "what": "getBoundingClientRect",
+     "ms": 16
+    },
+    {
+     "what": "focus",
+     "ms": 7
+    },
+    {
+     "what": "requestAnimationFrame",
+     "ms": 7
+    },
+    {
+     "what": "close · app/shell/panel.ts:139",
+     "ms": 3
+    },
+    {
+     "what": "openPanel · app/shell/panel.ts:39",
+     "ms": 2
+    },
+    {
+     "what": "click",
+     "ms": 2
+    },
+    {
+     "what": "animate",
+     "ms": 2
+    },
+    {
+     "what": "set · app/shell/sheet.ts:49",
+     "ms": 2
+    },
+    {
+     "what": "tick · app/perf/frames.ts:38",
+     "ms": 2
+    },
+    {
+     "what": "visibleHeights · app/shell/sheet.ts:9",
+     "ms": 1
+    },
+    {
+     "what": "remove",
+     "ms": 1
+    },
+    {
+     "what": "(anonymous) · core/temperature/profile.ts:9",
+     "ms": 1
+    },
+    {
+     "what": "precipDetails · layers/precipitation/details.ts:265",
+     "ms": 1
+    },
+    {
+     "what": "open · app/settings/app-settings.ts:30",
+     "ms": 1
+    }
+   ],
+   "files": [
+    {
+     "what": "(program)",
+     "ms": 746
+    },
+    {
+     "what": "getBoundingClientRect",
+     "ms": 16
+    },
+    {
+     "what": "focus",
+     "ms": 7
+    },
+    {
+     "what": "requestAnimationFrame",
+     "ms": 7
+    },
+    {
+     "what": "app/shell/panel.ts",
+     "ms": 6
+    },
+    {
+     "what": "app/shell/sheet.ts",
+     "ms": 3
+    },
+    {
+     "what": "click",
+     "ms": 2
+    },
+    {
+     "what": "app/perf/frames.ts",
+     "ms": 2
+    },
+    {
+     "what": "core/temperature/profile.ts",
+     "ms": 2
+    },
+    {
+     "what": "animate",
+     "ms": 2
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 2
+    },
+    {
+     "what": "layers/precipitation/details.ts",
+     "ms": 2
+    },
+    {
+     "what": "app/shell/cards.ts",
+     "ms": 1
+    },
+    {
+     "what": "remove",
+     "ms": 1
+    },
+    {
+     "what": "app/settings/app-settings.ts",
+     "ms": 1
+    }
+   ]
+  },
+  {
+   "name": "Idle",
+   "seconds": 15,
+   "busyMs": 696,
+   "functions": [
+    {
+     "what": "drawImage",
+     "ms": 608
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 47
+    },
+    {
+     "what": "(program)",
+     "ms": 38
+    },
+    {
+     "what": "loaded · lib:maplibre-gl.js:36993",
+     "ms": 1
+    },
+    {
+     "what": "step · app/perf/tour.ts:148",
+     "ms": 0
+    },
+    {
+     "what": "_update · lib:maplibre-gl.js:37332",
+     "ms": 0
+    },
+    {
+     "what": "URLSearchParams",
+     "ms": 0
+    },
+    {
+     "what": "setTimeout",
+     "ms": 0
+    },
+    {
+     "what": "loaded · lib:maplibre-gl.js:29702",
+     "ms": 0
+    }
+   ],
+   "files": [
+    {
+     "what": "drawImage",
+     "ms": 608
+    },
+    {
+     "what": "(garbage collector)",
+     "ms": 47
+    },
+    {
+     "what": "(program)",
+     "ms": 38
+    },
+    {
+     "what": "lib:maplibre-gl.js",
+     "ms": 1
+    },
+    {
+     "what": "app/perf/tour.ts",
+     "ms": 0
+    },
+    {
+     "what": "URLSearchParams",
+     "ms": 0
+    },
+    {
+     "what": "setTimeout",
+     "ms": 0
+    }
+   ]
+  }
+ ],
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": true,
+   "buildings3d": true,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {
+    "ground": "shaded",
+    "trails": true,
+    "trailNames": true,
+    "huts": true,
+    "camps": true,
+    "peaks": false,
+    "peakHeights": true,
+    "contours": true,
+    "smallRoads": true,
+    "skiLifts": false,
+    "parkBoundaries": false,
+    "regionBoundaries": true,
+    "municipalBoundaries": true,
+    "sun": true
+   },
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 11,
+     "appStarted": 731,
+     "firstMap": 2295,
+     "mapComplete": 2308,
+     "pinForecast": 10892,
+     "firstWeather": 14017,
+     "everything": 19318,
+     "memoryMB": 103
+    },
+    "t0": 19972,
+    "frames": {
+     "seconds": 4.2,
+     "fps": 60,
+     "low1": 60,
+     "worstMs": 17,
+     "mapDraws": 1,
+     "longTasks": 2,
+     "longTaskMs": 1313
+    },
+    "t1": 24214
+   },
+   {
+    "name": "Draw",
+    "notes": [
+     "one frame takes 179.3 ms flat, 196.3 ms tilted"
+    ],
+    "data": {
+     "flat": {
+      "msPerFrame": 179.3,
+      "frames": 11
+     },
+     "tilted": {
+      "msPerFrame": 196.3,
+      "frames": 11
+     },
+     "memoryMB": 103
+    },
+    "t0": 25807,
+    "t1": 43583
+   },
+   {
+    "name": "Pan",
+    "notes": [],
+    "data": {
+     "settleMs": null,
+     "memoryMB": 103
+    },
+    "t0": 45468,
+    "frames": {
+     "seconds": 10,
+     "fps": 0.8,
+     "low1": 0.6,
+     "worstMs": 1617,
+     "mapDraws": 8,
+     "longTasks": 8,
+     "longTaskMs": 7686
+    },
+    "t1": 67024
+   },
+   {
+    "name": "Pinch",
+    "notes": [],
+    "data": {
+     "settleMs": 3218.9199999999255,
+     "memoryMB": 103
+    },
+    "t0": 67669,
+    "frames": {
+     "seconds": 10.3,
+     "fps": 0.3,
+     "low1": 0.3,
+     "worstMs": 3600,
+     "mapDraws": 4,
+     "longTasks": 2,
+     "longTaskMs": 5128
+    },
+    "t1": 81231
+   },
+   {
+    "name": "Tilt 3D",
+    "notes": [],
+    "data": {
+     "switchedOnForTest": false,
+     "settleTiltedMs": 13592.044999999925,
+     "flatten": {
+      "seconds": 3.3,
+      "fps": 0.4,
+      "low1": 0.4,
+      "worstMs": 2300,
+      "mapDraws": 2,
+      "longTasks": 0,
+      "longTaskMs": 0
+     },
+     "memoryMB": 103
+    },
+    "t0": 83206,
+    "frames": {
+     "seconds": 8,
+     "fps": 0.5,
+     "low1": 0.4,
+     "worstMs": 2283,
+     "mapDraws": 4,
+     "longTasks": 2,
+     "longTaskMs": 3899
+    },
+    "t1": 111612
+   },
+   {
+    "name": "Drag time",
+    "notes": [
+     "21 of 48 steps drawn while dragging",
+     "caught up 2.23 s after the finger stopped"
+    ],
+    "data": {
+     "steps": 48,
+     "drawn": 21,
+     "medianDelayMs": 1015,
+     "catchUpMs": 2228,
+     "memoryMB": 103
+    },
+    "t0": 112112,
+    "frames": {
+     "seconds": 53.8,
+     "fps": 1.8,
+     "low1": 0.9,
+     "worstMs": 1133,
+     "mapDraws": 74,
+     "longTasks": 75,
+     "longTaskMs": 51452
+    },
+    "t1": 165865
+   },
+   {
+    "name": "Play",
+    "notes": [
+     "10 of 10 steps drawn",
+     "each step drawn 0.97 s after it came"
+    ],
+    "data": {
+     "steps": 10,
+     "drawn": 10,
+     "medianDelayMs": 967,
+     "tap": {
+      "handlerMs": 0,
+      "responseMs": 1200
+     },
+     "memoryMB": 103
+    },
+    "t0": 166972,
+    "frames": {
+     "seconds": 12.5,
+     "fps": 1.8,
+     "low1": 0.9,
+     "worstMs": 1167,
+     "mapDraws": 15,
+     "longTasks": 15,
+     "longTaskMs": 11192
+    },
+    "t1": 189507
+   },
+   {
+    "name": "Switch layers",
+    "notes": [
+     "Temperature: 0 s, worst hitch 1267 ms",
+     "Wind: 14 s, worst hitch 1133 ms",
+     "Radar: 1.9 s, worst hitch 1050 ms",
+     "Avalanche: 3.7 s, worst hitch 867 ms",
+     "Air quality: 3.7 s, worst hitch 1017 ms",
+     "Precipitation: 0 s, worst hitch 983 ms"
+    ],
+    "data": {
+     "switches": [
+      {
+       "layer": "temperature",
+       "openMenuMs": 8,
+       "pickMs": 1153,
+       "readyMs": 48,
+       "settleMs": null,
+       "worstFrameMs": 1267
+      },
+      {
+       "layer": "wind",
+       "openMenuMs": 26,
+       "pickMs": 905,
+       "readyMs": 14022,
+       "settleMs": 1824,
+       "worstFrameMs": 1133
+      },
+      {
+       "layer": "radar",
+       "openMenuMs": 28,
+       "pickMs": 1068,
+       "readyMs": 1940,
+       "settleMs": 8030,
+       "worstFrameMs": 1050
+      },
+      {
+       "layer": "avalanche",
+       "openMenuMs": 20,
+       "pickMs": 1822,
+       "readyMs": 3692,
+       "settleMs": 1157,
+       "worstFrameMs": 867
+      },
+      {
+       "layer": "air-quality",
+       "openMenuMs": 25,
+       "pickMs": 1708,
+       "readyMs": 3653,
+       "settleMs": 1334,
+       "worstFrameMs": 1017
+      },
+      {
+       "layer": "precipitation",
+       "openMenuMs": 28,
+       "pickMs": 2234,
+       "readyMs": 17,
+       "settleMs": 2010,
+       "worstFrameMs": 983
+      }
+     ],
+     "memoryMB": 103
+    },
+    "t0": 190007,
+    "frames": {
+     "seconds": 66.6,
+     "fps": 29.6,
+     "low1": 1.1,
+     "worstMs": 1267,
+     "mapDraws": 47,
+     "longTasks": 56,
+     "longTaskMs": 34082
+    },
+    "t1": 256622
+   },
+   {
+    "name": "Panels",
+    "notes": [
+     "taps answered in 6–33 ms (median 33)"
+    ],
+    "data": {
+     "taps": [
+      {
+       "id": "layer-button",
+       "openMs": 6,
+       "openCodeMs": 4,
+       "closeMs": 31
+      },
+      {
+       "id": "model-pill",
+       "openMs": 33,
+       "openCodeMs": 6,
+       "closeMs": 33
+      },
+      {
+       "id": "settings-button",
+       "openMs": 33,
+       "openCodeMs": 5,
+       "closeMs": 33
+      },
+      {
+       "id": "map-layers",
+       "openMs": 32,
+       "openCodeMs": 6,
+       "closeMs": 33
+      },
+      {
+       "id": "search-button",
+       "openMs": 33,
+       "openCodeMs": 4,
+       "closeMs": 33
+      },
+      {
+       "id": "window-button",
+       "openMs": 33,
+       "openCodeMs": 3,
+       "closeMs": 33
+      },
+      {
+       "id": "sheet",
+       "openMs": 33,
+       "openCodeMs": 8,
+       "closeMs": 33
+      }
+     ],
+     "memoryMB": 103
+    },
+    "t0": 257123,
+    "frames": {
+     "seconds": 9.8,
+     "fps": 60,
+     "low1": 60,
+     "worstMs": 33,
+     "mapDraws": 0,
+     "longTasks": 0,
+     "longTaskMs": 0
+    },
+    "t1": 266960
+   },
+   {
+    "name": "Idle",
+    "notes": [
+     "0 map draws, 0 frame requests, 0 downloads, 0 page changes in 15 s"
+    ],
+    "data": {
+     "seconds": 15,
+     "mapDraws": 0,
+     "frameRequests": 0,
+     "downloads": 0,
+     "pageChanges": 0,
+     "changedWhere": {},
+     "downloaded": [],
+     "memoryMB": 103
+    },
+    "t0": 276591,
+    "t1": 291592
+   }
+  ],
+  "memoryMB": 103,
+  "done": true
+ }
+}

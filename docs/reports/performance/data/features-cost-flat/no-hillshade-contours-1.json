@@ -1,0 +1,198 @@
+{
+ "label": "no-hillshade-contours-1",
+ "url": "http://localhost:4173/?perf=cost&idle=30&off=hillshade,contours",
+ "weather": "recorded",
+ "cpu": 1,
+ "net": "none",
+ "prefs": {
+  "terrain3d": false,
+  "buildings3d": false,
+  "hillshade": true,
+  "contours": true,
+  "stations": false,
+  "layer": "precipitation",
+  "mapSettings": {
+   "ground": "shaded",
+   "trails": true,
+   "trailNames": true,
+   "huts": true,
+   "camps": true,
+   "peaks": false,
+   "peakHeights": true,
+   "contours": true,
+   "smallRoads": true,
+   "skiLifts": false,
+   "parkBoundaries": false,
+   "regionBoundaries": true,
+   "municipalBoundaries": true,
+   "sun": true
+  },
+  "features": {}
+ },
+ "wallSeconds": 21,
+ "marks": {
+  "html": 7,
+  "appStarted": 391,
+  "firstMap": 1736,
+  "mapComplete": 1752,
+  "pinForecast": 3852,
+  "firstWeather": 6391,
+  "everything": 6743
+ },
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": false,
+   "buildings3d": false,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {
+    "ground": "shaded",
+    "trails": true,
+    "trailNames": true,
+    "huts": true,
+    "camps": true,
+    "peaks": false,
+    "peakHeights": true,
+    "contours": true,
+    "smallRoads": true,
+    "skiLifts": false,
+    "parkBoundaries": false,
+    "regionBoundaries": true,
+    "municipalBoundaries": true,
+    "sun": true
+   },
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 7,
+     "appStarted": 391,
+     "firstMap": 1736,
+     "mapComplete": 1752,
+     "pinForecast": 3852,
+     "firstWeather": 6391,
+     "everything": 6743,
+     "memoryMB": 81
+    },
+    "t0": 7041,
+    "frames": {
+     "seconds": 3,
+     "fps": 47.7,
+     "low1": 4.6,
+     "worstMs": 217,
+     "mapDraws": 3,
+     "longTasks": 4,
+     "longTaskMs": 717
+    },
+    "t1": 10042
+   },
+   {
+    "name": "Yardstick",
+    "notes": [
+     "11.8 ms"
+    ],
+    "data": {
+     "ms": 11.8,
+     "memoryMB": 81
+    },
+    "t0": 10543,
+    "t1": 10622
+   },
+   {
+    "name": "Draw",
+    "notes": [
+     "one frame takes 212.9 ms flat, 246.1 ms tilted"
+    ],
+    "data": {
+     "flat": {
+      "msPerFrame": 212.9,
+      "frames": 11
+     },
+     "tilted": {
+      "msPerFrame": 246.1,
+      "frames": 11
+     },
+     "memoryMB": 81
+    },
+    "t0": 11122,
+    "t1": 19520
+   }
+  ],
+  "memoryMB": 81,
+  "done": true
+ },
+ "errors": [],
+ "api": [
+  {
+   "at": 2326,
+   "calls": 1,
+   "url": "https://api.open-meteo.com/data/cmc_gem_hrdps/static/meta.json",
+   "step": "Load"
+  },
+  {
+   "at": 3252,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 4186,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 4204,
+   "calls": 7.7,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.3895&longitude=-122.9480&hourly=temperature_1015hPa%2Ctemperature_1000hPa%2Ctemperature_985hPa%2Ctemperature_970hPa%2Ctemperature_950hPa%2Ctemperature_925hPa%2Ctemperature_900hPa%2Ctemperature_875hPa%2Ctemperature_850hPa%2Ctemperature_800hPa%2Ctempe",
+   "step": "Load"
+  },
+  {
+   "at": 7034,
+   "calls": 84,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.1200%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.2800%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.4400%2C49.6000%2C49.6000%2C49.6000%2C49.6000%2C49.6000&longitude=-123.1200%2C-123.0400%2C-122.9600%2C-122.880",
+   "step": "Load"
+  },
+  {
+   "at": 15023,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 16559,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "Draw"
+  },
+  {
+   "at": 20164,
+   "calls": 58.8,
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=48.9600%2C48.9600%2C48.9600%2C48.9600%2C49.2800%2C49.2800%2C49.2800%2C49.6000%2C49.6000%2C49.6000%2C49.9200%2C49.9200%2C49.9200%2C49.9200&longitude=-123.5200%2C-123.2000%2C-122.8800%2C-122.5600%2C-123.5200%2C-123.2000%2C-122.5600%2C-123.5200%2C-123.200",
+   "step": "between"
+  }
+ ],
+ "apiByStep": {
+  "Load": {
+   "requests": 5,
+   "calls": 108.1
+  },
+  "Draw": {
+   "requests": 2,
+   "calls": 117.6
+  },
+  "between": {
+   "requests": 1,
+   "calls": 58.8
+  }
+ }
+}
