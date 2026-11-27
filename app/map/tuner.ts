@@ -3,24 +3,28 @@
 // and its one call in setup.ts once the look is settled.
 //
 //   Overlays off   hides the map's overlays (peaks, trails, huts and so on)
-//   Weather layers off   hides the weather: fills, wind flow, lines, avalanche, smoke, radar
+//   Weather layers off   hides the weather: fills, wind streaks, lines, avalanche, smoke, radar
 //   Satellite      the Satellite ground
 //   Sun & shadows  the time of day from the scrubber, with mountain shadows
 //   Haze           background haze and fog in 3D
 //   Relief, Shadow tint, Mountain shadows   how strong the lighting is
 //   Bloom          a soft glow on bright things (a blurred, brightened copy of the map laid over it)
+//   Wind look      the 3D wind streaks: how many, how long, wide, bright and fast, how high,
+//                  and how much the hills, patchiness and gusts shape the forecast's wind
+//                  (app/effects/wind-look.ts; Kaden, Nov 27)
 import { S } from '../state';
 import { precipLayer, tempLayer, windLayer } from '../weather/fills';
 import { mapSettings, type MapSettings } from './map-settings';
 import { tuning, type Tuning } from './tuning';
+import { windLook, type WindLook } from '../effects/wind-look';
 
 const OVERLAY_KEYS: (keyof MapSettings)[] = ['trails', 'trailNames', 'huts', 'camps', 'peaks', 'peakHeights', 'contours', 'smallRoads', 'skiLifts', 'parkBoundaries', 'regionBoundaries', 'municipalBoundaries'];
 /** Map layers the weather and safety sections draw, by id: lines, fills and radar pictures. */
-const WEATHER_STYLE = /^(avy-|ates-|air-|freezing-line|radar-)/;
+const WEATHER_STYLE = /^(avy-|ates-|air-|freezing-line|radar-|wind-particles$)/;
 
 /**
  * Hides every weather drawing: the colour fills (custom layers that decide their own
- * visibility, so it is overridden on the layer itself), the wind flow canvas, and the
+ * visibility, so it is overridden on the layer itself), the 3D wind streaks, and the
  * lines, avalanche, smoke and radar layers. Kept hidden while on, even if the weather
  * code shows one again, by checking after each draw.
  */
@@ -33,8 +37,6 @@ function setWeatherHidden(hide: boolean): void {
       Object.defineProperty(layer, 'visible', { get: () => (weatherHidden ? false : layer.__real!), set: (v: boolean) => { layer.__real = v; }, configurable: true });
     }
   }
-  const flowCanvas = document.querySelector<HTMLElement>('.flow-canvas');
-  if (flowCanvas) flowCanvas.style.visibility = hide ? 'hidden' : '';
   enforce();
   S.map.triggerRepaint();
 }
@@ -62,20 +64,31 @@ function pressed(b: HTMLButtonElement, on: boolean) {
   b.style.color = on ? 'var(--surface)' : 'var(--ink)';
 }
 
-function slider(label: string, key: keyof Tuning, min: number, max: number): HTMLElement {
+interface Store<T> { get(): T; set(change: Partial<T>): void; onChange(fn: (t: T) => void): unknown }
+
+function rangeRow<T>(store: Store<T>, label: string, key: keyof T, min: number, max: number, step = 0.05, unit = ''): HTMLElement {
   const row = document.createElement('label');
   css(row, { display: 'grid', gridTemplateColumns: '1fr auto', gap: '2px 8px', font: 'var(--type-secondary)', color: 'var(--ink-2)' });
   const value = document.createElement('span');
   const input = document.createElement('input');
-  input.type = 'range'; input.min = String(min); input.max = String(max); input.step = '0.05';
-  input.value = String(tuning.get()[key]);
+  input.type = 'range'; input.min = String(min); input.max = String(max); input.step = String(step);
+  input.value = String(store.get()[key]);
   css(input, { gridColumn: '1 / 3', width: '100%', minHeight: '32px' });
-  const show = () => { value.textContent = Number(input.value).toFixed(2); };
-  input.addEventListener('input', () => { show(); tuning.set({ [key]: Number(input.value) }); });
-  tuning.onChange((t) => { input.value = String(t[key]); show(); });
+  const show = () => { value.textContent = `${Number(input.value).toFixed(step >= 1 ? 0 : 2)}${unit}`; };
+  input.addEventListener('input', () => { show(); store.set({ [key]: Number(input.value) } as Partial<T>); });
+  store.onChange((t) => { input.value = String(t[key]); show(); });
   show();
   row.append(label, value, input);
   return row;
+}
+const slider = (label: string, key: keyof Tuning, min: number, max: number) => rangeRow(tuning, label, key, min, max);
+const windSlider = (label: string, key: keyof WindLook, min: number, max: number, step?: number, unit?: string) => rangeRow(windLook, label, key, min, max, step, unit);
+
+function heading(text: string): HTMLElement {
+  const h = document.createElement('div');
+  h.textContent = text;
+  css(h, { font: 'var(--type-panel-title)', marginTop: '4px' });
+  return h;
 }
 
 /**
@@ -123,7 +136,7 @@ export function setupTuner(): void {
     display: 'none', gap: '8px', padding: '12px', background: 'var(--panel)', border: '1px solid var(--stroke)', borderRadius: 'var(--radius-grow-panel)', color: 'var(--ink)', font: 'var(--type-body)',
   });
   const title = document.createElement('div');
-  title.textContent = 'Map tuning (temporary)';
+  title.textContent = 'Tuning (temporary)';
   css(title, { font: 'var(--type-panel-title)' });
 
   // Switches
@@ -154,7 +167,23 @@ export function setupTuner(): void {
   switches.append(overlays, weather, satellite, sun);
 
   const reset = button('Reset sliders', () => tuning.reset());
-  panel.append(title, switches,
+  // The wind's look first: the panel is for tuning the wind for now (Kaden, Nov 27).
+  const windReset = button('Reset wind', () => windLook.reset());
+  panel.append(title,
+    heading('Wind look'),
+    windSlider('Streaks', 'count', 100, 3000, 50),
+    windSlider('Streak length', 'trailSeconds', 0.1, 2, 0.05, ' s'),
+    windSlider('Line width', 'widthPx', 0.5, 5, 0.1, ' px'),
+    windSlider('Brightness', 'brightness', 0.1, 1),
+    windSlider('Movement speed', 'speedScale', 0.1, 4, 0.05, '×'),
+    windSlider('Height above ground', 'clearance', 0, 300, 5, ' m'),
+    windSlider('Hills bend the wind', 'terrain', 0, 1),
+    windSlider('Patchiness', 'gusty', 0, 1),
+    windSlider('Gusts', 'gust', 0, 1),
+    windSlider('Gust size', 'gustSize', 0.25, 3),
+    windReset,
+    heading('Map'),
+    switches,
     slider('Haze (3D background)', 'haze', 0, 1),
     slider('Relief strength', 'relief', 0, 1.8),
     slider('Shadow and light tint', 'tint', 0, 2.5),

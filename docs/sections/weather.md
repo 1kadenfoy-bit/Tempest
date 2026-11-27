@@ -2,7 +2,7 @@
 
 Each forecast and observed weather layer, from its colours to its numbers:
 - the fills drawn on the GPU, colour ramps and legends;
-- the 0 °C and snow lines, wind arrows and flow;
+- the 0 °C and snow lines, and the wind they hand to the 3D streaks;
 - radar pictures and weather stations;
 - each layer's readout, chart, summary, cards and settings.
 
@@ -44,8 +44,9 @@ The exact list is `weather` in `docs/sections/sections.json`.
   on the device from a lookup strip.
   - New ramps or colour schemes are Kaden's call. Show him options side by
     side; the lead puts his pick in the tokens.
-- **The wind's flow canvas** (`render/flow/`) belongs to Effects. Ask them for
-  changes to the particles.
+- **The wind's animation** is Effects' 3D streaks (`render/effects/`). The
+  wind layer hands them its forecast wind (`onForecastWind` in
+  `app/weather/fills.ts`); the flat flow canvas is gone (Nov 27).
 
 ## Ideas waiting
 

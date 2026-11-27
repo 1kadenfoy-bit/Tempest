@@ -84,6 +84,8 @@ export class WindParticlesLayer implements CustomLayerInterface {
   private last = 0;
   private times: number[] = [];
   private work = 0;
+  /** Frames moved so far: counts up while the streaks animate, stands still while paused (for tests). */
+  frames = 0;
   /** Top of the usable screen (CSS pixels from the top): below the sky, and not too far away to matter. */
   private topPx = 0;
   private view: ParticleView = {
@@ -261,6 +263,7 @@ export class WindParticlesLayer implements CustomLayerInterface {
       const dt = this.last ? Math.min(0.05, (now - this.last) / 1000) : 0;
       this.last = now;
       this.times.push(now);
+      this.frames++;
       if (this.times.length > 90) this.times.shift();
       const unitsPerPx = 1 / (512 * 2 ** map.getZoom());
       this.view.matrix = options.defaultProjectionData.mainMatrix as unknown as Float32Array;

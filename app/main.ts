@@ -30,7 +30,7 @@ import { addTerrain } from './map/terrain';
 import { setupThreeD } from './map/three-d';
 import { applyTerrainPrefs, buildingsOk, createMap, fitPadding, locate, recolourMap, setupMapControls } from './map/setup';
 import { setupRadar, radar, radarBefore, radarPinData, loadRadarFrames, scheduleRadarPin, setFrameSteps } from './radar/frames';
-import { addFreezingLineLayers, flow, precipLayer, recolourFills, scheduleFills, setupFills, tempLayer, updateFills, windLayer } from './weather/fills';
+import { addFreezingLineLayers, onForecastWind, precipLayer, recolourFills, scheduleFills, setupFills, tempLayer, updateFills, windLayer } from './weather/fills';
 import { drawSavedOutlines, recolourSavedOutlines, registerSavedAreas, setSavedOnly } from './offline/wiring';
 import { hydrateIcons } from './shell/icons';
 import { applyInsetOverride } from './shell/insets';
@@ -124,6 +124,11 @@ S.air = setupAir(S.map, {
 // The condition layers that work, in menu order. One is shown at a time.
 S.layers = [precipitation, temperature, wind, radar, avalanche, airQuality];
 S.active = S.layers.find((l) => l.id === S.prefs.layer) ?? precipitation;
+/** The Wind animation is on while the Wind layer is shown, and back to the saved choice after (Kaden, Nov 27). */
+function holdWindAnimation() { features.hold('wind', S.active.id === 'wind' ? true : null); }
+holdWindAnimation();
+/** The 3D wind streaks shown or not, from the Wind switch and the layer (set once the map has loaded). */
+let syncStreaks = () => {};
 S.profiles = new ProfileSource(() => S.savedParts, () => S.usingSaved);
 setupSaveEngine();
 
@@ -166,12 +171,12 @@ function seriesIndex(): number {
   return S.series.times.findIndex((s) => s.getTime() === t.getTime());
 }
 
-// Radar's pictures, the weather fills and the wind's flow.
+// Radar's pictures and the weather fills.
 setupRadar();
 setupFills();
-// 3D terrain and buildings. The flow is drawn in screen space for a flat,
-// north-up map, so it waits while the map is tilted or turned.
-S.threeD = setupThreeD(S.map, document.querySelector<HTMLElement>('.thumbs')!, () => S.settings.theme(), (flat) => flow.setShown(S.active.id === 'wind' && flat));
+// 3D terrain and buildings. Nothing needs to know when the map goes flat now
+// that the wind's flat flow is gone (Kaden, Nov 27: the 3D streaks only).
+S.threeD = setupThreeD(S.map, document.querySelector<HTMLElement>('.thumbs')!, () => S.settings.theme(), () => {});
 // The avalanche layer's regions, report pins and panels (online only).
 S.avy = setupAvalanche(S.map, {
   theme: () => S.settings.theme(),
@@ -286,6 +291,8 @@ function setLayerSetting(layer: LayerSlots, key: string, v: string | boolean) {
 function setActive(l: LayerSlots) {
   if (l === S.active) return;
   S.active = l;
+  holdWindAnimation();
+  syncStreaks();
   S.prefs.layer = l.id;
   savePrefs(S.prefs);
   S.stations.setLayer(l.id);
@@ -353,9 +360,13 @@ S.map.on('load', () => {
   S.threeD.apply({ terrain: S.prefs.terrain3d, buildings: buildingsOk() && S.prefs.buildings3d }, false);
   radarBefore(firstLabel);
   // Clouds and 3D wind streaks (Effects), drawn only while their Map panel switch is on.
+  // On the Wind layer the wind animation is held on (feature-switches.ts).
   const effects = setupEffects(map, firstLabel);
-  for (const id of ['clouds', 'wind'] as const) effects.setOn(id, features.get(id));
-  features.onChange((id, on) => { if (id === 'clouds' || id === 'wind') effects.setOn(id, on); });
+  syncStreaks = () => effects.setOn('wind', features.get('wind'));
+  effects.setOn('clouds', features.get('clouds'));
+  syncStreaks();
+  features.onChange((id, on) => { if (id === 'clouds') effects.setOn(id, on); if (id === 'wind') syncStreaks(); });
+  onForecastWind((w) => effects.setForecastWind(w));
   S.mapReady = true;
   void loadRadarFrames();
   drawSavedOutlines();
@@ -365,6 +376,12 @@ S.map.on('load', () => {
 });
 window.addEventListener('resize', fitPadding);
 S.map.on('idle', () => { document.body.dataset.idle = 'true'; });
+// The wind streaks keep the map redrawing, so its 'idle' never comes while they animate. The map has
+// still settled once its style, tiles and terrain are loaded and it is not moving: say so then too.
+S.map.on('render', () => {
+  if (document.body.dataset.idle === 'true' || !features.get('wind')) return;
+  if (S.map.loaded() && S.map.areTilesLoaded() && !S.map.isMoving()) document.body.dataset.idle = 'true';
+});
 
 // Installed app: keep the app's own files on the device.
 // A section preview (VITE_PREVIEW at build time) is named in the top bar and

@@ -511,14 +511,6 @@ body[data-save-mode='true'] .maplibregl-marker { visibility: hidden; }
 }
 .primary-button:disabled { opacity: 0.6; }
 
-/* Wind flow (M7): streaks over the map, never in the way of a tap. */
-.flow-canvas {
-  position: absolute;
-  left: 0;
-  top: 0;
-  pointer-events: none;
-}
-
 /* Frame-rate check (?fps in the address); not part of the design. */
 .fps-meter {
   position: fixed;
