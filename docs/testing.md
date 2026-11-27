@@ -41,7 +41,7 @@ once, and the test's log lists what was missing:
 ```
 
 The fix for those three is a new recording that covers what they read
-(`docs/tasks/test-upkeep.md`, task 1).
+(`docs/tasks/test-upkeep.md`, tasks 2 and 3).
 
 ## Report pictures
 
@@ -89,11 +89,12 @@ show up in a test.
 | A time or day shown in the phone's own time zone instead of BC's | `consistency`: time zone; all tests in BC time |
 | The data's age wrong (day boundaries, UTC versus local) | `consistency`: the data's age |
 | A unit converted in one place and not another | `consistency`: imperial units; `settings`: units everywhere |
-| Saved (offline) numbers differ from the live ones | `offline` (red until task 1 is done) |
+| Saved (offline) numbers differ from the live ones | `offline` (red until tasks 2 and 3 of `docs/tasks/test-upkeep.md` are done) |
 | Safety data re-scored or recoloured | `avalanche`, `alerts`, `air-quality` (ECCC's own colours and words) |
 | Readouts blended between model steps | `shell`: one cursor (steps are whole hours) |
 | Auto picks the wrong model past HRDPS's end | `offline` (RDPS past HRDPS), `models` |
 | Recorded weather quietly replaced by live (tests pass, then break days later) | strict recorded weather (above) |
+| The app asks the free servers more than it needs to (the same answer again before new data could exist, retries that never stop), using up the shared limits (Data rule 1) | **not covered yet**: `docs/tasks/test-upkeep.md`, task 1 |
 | The forecast summary's totals differ from the hours charted | **not covered** in the browser; unit tests cover the sums |
 | Snow/rain split or freezing line wrong at height | unit tests (`core/precip`, `core/temperature`) only |
 
@@ -139,4 +140,4 @@ show up in a test.
 - **The forecast-summary tests use live weather**, so they fail when the
   point service refuses (it refused this build machine all day on Nov 27).
   Two of the five pass on the recording; three drop the pin where the
-  recording has no forecast (task 1).
+  recording has no forecast (`docs/tasks/test-upkeep.md`, task 3).
