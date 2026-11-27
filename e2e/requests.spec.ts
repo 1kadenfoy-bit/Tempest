@@ -158,6 +158,8 @@ test('a normal session, then an hour untouched, stays within each server’s bud
 
   // Two hours later HRDPS's next run could be there (from 03:00 UTC): the app
   // looks for it within 10 minutes, as before, and not yet for RDPS's (03:30).
+  // Labelled first: the jump itself starts the look (the 10-minute check fires on it).
+  c.phase = 'a run due';
   await page.clock.fastForward('02:00:00');
   await runClock(page, 10, c, () => 'a run due');
   await calm(page, c);
