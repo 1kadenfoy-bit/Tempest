@@ -21,10 +21,10 @@ section chats knew lives in files, not in chats:
    - the area guide and Kaden's rules for the areas it will touch.
 3. **It works with Kaden.** It changes what the task needs, shows it on its
    preview address, and repeats until he is happy.
-4. **It checks.** Run the browser tests that failed on the last run first
-   (`npm run screenshots:failed`), then, for each area touched,
-   `npm run check:section -- <area>`. It also runs the browser tests of any
-   other area whose files it changed.
+4. **It checks.** `npm run check:section -- <area>` runs the browser tests
+   that failed on the last run first, then the area's own and those of every
+   other area whose files it changed (Nov 27). On GitHub the tests most
+   likely to fail also go first (`docs/testing.md`).
 5. **It opens a pull request.** The description says, in plain words:
    - what changed and what to try;
    - Kaden's rules added or changed;
@@ -118,8 +118,15 @@ the weather layers or loading, and add `&off=<feature>` to compare.
   missing part (`S.cursor?.…`, `S.settings?.…`).
 - **Recorded weather freezes the clock** to the recording's day. Dates follow
   the page's clock, never a date typed into a test.
-- **Pictures redrawn by tests** (`docs/reports/…`) are committed only when you
-  meant to change them.
+- **Pictures redrawn by tests** go to `test-results/reports/`; only
+  `REPORTS=1` writes them into `docs/reports/`, and they are committed only
+  when you meant to change them (Nov 27).
+- **Recorded weather is strict** (Nov 27). An answer the recording lacks is
+  refused, and the test's log says "not in the recorded weather". A new
+  test that moves the map or the pin somewhere new may need a new recording
+  (`docs/tasks/test-upkeep.md`); never let it read live weather quietly: a
+  run is deleted from Open-Meteo a few days later and the test breaks then.
+- **Tests run in BC's time zone** (`playwright.config.ts`), like Kaden's phone.
 - **A busy page delays finger moves and lifts.** Gestures decide by the
   events' own time stamps and wait a frame before deciding (press-and-hold,
   Nov 21).
