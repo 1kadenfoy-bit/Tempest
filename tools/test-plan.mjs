@@ -17,8 +17,8 @@
 // they finish together instead of one waiting for the slowest.
 import { createHash } from 'node:crypto';
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, ...v] = a.replace(/^--/, '').split('='); return [k, v.join('=') || true]; }));
 const sh = (cmd) => { try { return execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); } catch { return ''; } };
@@ -78,7 +78,10 @@ const plan = {
 };
 
 // Every machine's failures in one list, for playwright's --last-failed-file.
-if (typeof args['write-failed'] === 'string') writeFileSync(args['write-failed'], JSON.stringify({ status: 'failed', failedTests: [...failedIds] }));
+if (typeof args['write-failed'] === 'string') {
+  mkdirSync(dirname(args['write-failed']), { recursive: true });
+  writeFileSync(args['write-failed'], JSON.stringify({ status: 'failed', failedTests: [...failedIds] }));
+}
 
 if (args.github) {
   // Step outputs for .github/workflows/ci.yml.
