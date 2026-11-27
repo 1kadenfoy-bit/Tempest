@@ -1,0 +1,52 @@
+/* The ?perf test mode's banner and results card (Performance section). Loaded
+   only with ?perf. Neutral like every control: colours come from the theme. */
+.perf-banner {
+  position: fixed;
+  left: var(--screen-edge);
+  right: var(--screen-edge);
+  top: calc(var(--safe-top) + var(--topbar-h) + 8px);
+  z-index: 60;
+  padding: 6px 10px;
+  border-radius: var(--radius-chip);
+  background: var(--sheet);
+  color: var(--ink);
+  font: var(--type-caption);
+  font-family: var(--font-body);
+  text-align: center;
+  pointer-events: none;
+}
+
+.perf-card {
+  position: fixed;
+  left: var(--screen-edge);
+  right: var(--screen-edge);
+  top: calc(var(--safe-top) + 8px);
+  bottom: calc(var(--bottom-inset) + 8px);
+  z-index: 70;
+  overflow: auto;
+  padding: 12px;
+  border-radius: var(--radius-sheet-top);
+  background: var(--panel);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.perf-title { font: var(--type-panel-title); font-family: var(--font-body); }
+.perf-sub { font: var(--type-micro); font-family: var(--font-body); color: var(--ink-2); margin-top: 2px; }
+
+.perf-table { width: 100%; border-collapse: collapse; margin-top: 8px; font: var(--type-caption); font-family: var(--font-body); }
+.perf-table td { padding: 4px 2px; border-top: 1px solid var(--stroke); vertical-align: top; }
+.perf-table td:first-child { color: var(--ink-2); white-space: nowrap; padding-right: 6px; }
+.perf-mark { text-align: right; font-weight: 600; }
+
+.perf-buttons { display: flex; gap: var(--gap-controls); margin-top: 12px; }
+.perf-buttons button {
+  flex: 1;
+  min-height: var(--touch-min);
+  border: 1px solid var(--stroke-strong);
+  border-radius: var(--radius-button-tile-row);
+  background: var(--fill-control);
+  color: var(--ink);
+  font: var(--type-body);
+  font-family: var(--font-body);
+}

@@ -54,6 +54,9 @@ import { setupEffects } from './effects';
 import { features } from './shell/feature-switches';
 import { consumeLongPressClick, loadSummarySeries, refreshSummary, setupSummary, summaryWants } from './summary/wiring';
 
+// The ?perf test mode (Performance section): loaded only with ?perf in the address.
+if (new URLSearchParams(location.search).has('perf')) void import('./perf').then((m) => m.startPerf(S));
+
 // Recorded weather (dev server, ?weather=recorded): before anything asks for data.
 await startRecordedWeather(location.search, document.baseURI);
 
