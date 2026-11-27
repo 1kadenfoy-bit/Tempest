@@ -194,6 +194,24 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
     r.frames = rec.stop();
   });
 
+  // A fixed piece of arithmetic, the same on every device, to compare this
+  // processor with the build machine's (the kind of loop the app runs over
+  // terrain pictures: 4 million pixels turned into heights).
+  await step('Yardstick', async (r) => {
+    const n = 2048 * 2048;
+    const px = new Uint8ClampedArray(n * 4);
+    for (let i = 0; i < px.length; i++) px[i] = (i * 2654435761) >>> 24;
+    const out = new Float32Array(n);
+    const times: number[] = [];
+    for (let k = 0; k < 3; k++) {
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) out[i] = px[i * 4]! * 256 + px[i * 4 + 1]! + px[i * 4 + 2]! / 256 - 32768;
+      times.push(performance.now() - t0);
+    }
+    r.data.ms = round(Math.min(...times), 1);
+    r.notes.push(`${r.data.ms} ms`);
+  });
+
   // The drawing alone, flat and tilted (camera still, every frame redrawn).
   await step('Draw', async (r) => {
     r.data.flat = await drawCost(S);

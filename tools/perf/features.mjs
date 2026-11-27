@@ -16,7 +16,7 @@ const only = arg('only', '');
 const repeat = Number(arg('repeat', '1'));
 // cost: load and the still-frame drawing only (about a minute a run); tour: the whole tour.
 const mode = arg('mode', 'cost');
-const dir = arg('dir', `docs/reports/performance/data/features-${process.argv.find((x) => x.startsWith('--mode=tour')) ? 'tour' : 'cost'}`);
+const dir = arg('dir', `docs/reports/performance/data/features-${process.argv.find((x) => x.startsWith('--mode=tour')) ? 'tour' : 'cost'}${process.argv.includes('--flat') ? '-flat' : ''}`);
 
 // Kaden's setup from his first speed test (Nov 27): 3D terrain and buildings on,
 // sun on, Terrain ground, peaks off, clouds, wind streaks and water switches off.
@@ -25,6 +25,10 @@ const KADEN = {
   mapSettings: { ground: 'shaded', trails: true, trailNames: true, huts: true, camps: true, peaks: false, peakHeights: true, contours: true, smallRoads: true, skiLifts: false, parkBoundaries: false, regionBoundaries: true, municipalBoundaries: true, sun: true },
   features: {},
 };
+// --flat: every run with 3D terrain and buildings off (the app's default), to see each layer's own drawing cost
+// (with 3D on, MapLibre keeps the flat layers as pictures on the terrain and does not redraw them every frame).
+const flat = process.argv.includes('--flat');
+if (flat) Object.assign(KADEN, { terrain3d: false, buildings3d: false });
 const withPrefs = (p) => ({ ...KADEN, ...p, mapSettings: { ...KADEN.mapSettings, ...(p.mapSettings ?? {}) }, features: { ...KADEN.features, ...(p.features ?? {}) } });
 
 export const RUNS = [

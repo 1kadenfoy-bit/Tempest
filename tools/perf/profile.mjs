@@ -69,13 +69,49 @@ for (let i = 0; i < profile.samples.length; i++) {
   const s = steps.find((x) => t >= x.t0 && t < x.t1);
   if (s) add(s);
 }
+// Stretches of uninterrupted script (no idle, no native wait): the freezes the
+// app's own code causes, with the app function they ran under.
+const parent = new Map();
+for (const n of profile.nodes) for (const c of n.children ?? []) parent.set(c, n.id);
+const ownerOf = (id) => {
+  for (let x = id; x !== undefined; x = parent.get(x)) {
+    const cf = byId.get(x)?.callFrame;
+    if (cf?.url && /\/(app|core|render|layers|adapters)\//.test(cf.url) && !/\/app\/perf\//.test(cf.url)) return `${cf.functionName || '(anonymous)'} · ${short(cf.url)}:${cf.lineNumber + 1}`;
+  }
+  const cf = byId.get(id)?.callFrame;
+  return cf?.url ? `${cf.functionName || '(anonymous)'} · ${short(cf.url)}` : (cf?.functionName ?? '?');
+};
+const stretches = [];
+{
+  let tt = p0, cur = null;
+  for (let i = 0; i < profile.samples.length; i++) {
+    tt += (profile.timeDeltas[i] ?? 0) / 1000;
+    const fn = byId.get(profile.samples[i])?.callFrame.functionName;
+    const js = fn !== '(idle)' && fn !== '(program)';
+    if (js) {
+      if (!cur) cur = { start: tt, end: tt, owners: new Map() };
+      cur.end = tt;
+      const o = ownerOf(profile.samples[i]);
+      cur.owners.set(o, (cur.owners.get(o) ?? 0) + 1);
+    } else if (cur) { stretches.push(cur); cur = null; }
+  }
+  if (cur) stretches.push(cur);
+}
+const longest = stretches.map((x) => ({
+  ms: Math.round(x.end - x.start),
+  step: tour.steps.find((st) => x.start >= st.t0 && x.start < st.t1)?.name ?? '',
+  mostly: [...x.owners].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} (${Math.round((v / [...x.owners.values()].reduce((a, b) => a + b, 0)) * 100)}%)`),
+})).sort((a, b) => b.ms - a.ms).slice(0, 25);
 const topOf = (m) => [...m].sort((a, b) => b[1] - a[1]).slice(0, top).map(([k, v]) => ({ what: k, ms: Math.round(v) }));
 const result = {
   label, url, prefs, off, at: new Date().toISOString(),
+  longestScript: longest,
   steps: [all, ...steps].map((s) => ({ name: s.name, seconds: s.t1 ? Math.round((s.t1 - s.t0) / 100) / 10 : null, busyMs: Math.round(s.busyMs), functions: topOf(s.fns), files: topOf(s.files) })),
   tour,
 };
 if (out) { mkdirSync(dirname(out), { recursive: true }); writeFileSync(out, JSON.stringify(result, null, 1)); }
+console.log('\n=== Longest stretches of script (ms, step, mostly)');
+for (const x of longest.slice(0, 15)) console.log(`  ${String(x.ms).padStart(5)}  ${x.step.padEnd(14)} ${x.mostly.join('; ')}`);
 for (const s of result.steps) {
   console.log(`\n=== ${s.name}${s.seconds ? ` (${s.seconds} s)` : ''}: busy ${s.busyMs} ms`);
   for (const f of s.files.slice(0, 8)) console.log(`  file ${String(f.ms).padStart(6)} ms  ${f.what}`);
