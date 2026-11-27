@@ -17,7 +17,7 @@ const hide = (map: MapLibreMap, test: (l: { id: string; type: string; source?: s
 };
 
 export const SWITCHES: Record<string, (map: MapLibreMap) => number> = {
-  /** The glow (a blurred copy of the map laid over it after every frame; app/map/tuner.ts). */
+  /** The glow (a blurred copy of the map laid over it after every frame; app/map/bloom.ts). */
   bloom: () => { tuning.set({ bloom: 0 }); return 1; },
   /** Haze and fog in 3D. */
   haze: () => { tuning.set({ haze: 0 }); return 1; },

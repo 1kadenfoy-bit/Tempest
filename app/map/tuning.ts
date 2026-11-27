@@ -1,6 +1,7 @@
-// Temporary design controls (Maps section): numbers Kaden can move with the tuning panel
-// (app/map/tuner.ts) to judge the map's look on his phone. Once the look is settled these
-// become fixed values and the panel goes away.
+// The map's look settings (Maps section, rule 23): haze, relief, tint, shadows and bloom.
+// Kaden settled them with a temporary Tune panel, which is gone (Nov 27); they stay at
+// the values below. The store remains so the look code can read them, and so the speed
+// tour (app/perf) can switch the glow or the haze off for a comparison.
 export interface Tuning {
   /** Background haze and fog in 3D, 0 (clear) to 1 (thick). */
   haze: number;

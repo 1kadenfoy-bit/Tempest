@@ -12,8 +12,8 @@
 // wind layer's own wind at the terrain over the view, so each streak moves in
 // the direction and at the speed the forecast gives where it is, for the hour
 // on the scrubber. Before the first forecast arrives the streaks wait (no
-// made-up wind is shown). Their look comes from app/effects/wind-look.ts (the
-// Tune panel's wind sliders). The clouds are still a stand-in: `setCloudWeather`
+// made-up wind is shown). Their look comes from app/effects/wind-look.ts, and
+// grows with the zoom. The clouds are still a stand-in: `setCloudWeather`
 // takes plain numbers (cloud cover as a share of the sky, base heights in
 // metres), so the forecast only has to call it once cloud cover is available.
 import type { Map as MapLibreMap } from 'maplibre-gl';
@@ -21,7 +21,7 @@ import { CloudLayer, type CloudSheet } from '../../render/effects/cloud-layer';
 import { WindParticlesLayer } from '../../render/effects/wind-particles-layer';
 import { shapeWind } from '../effects-lab/synthetic-wind';
 import type { MercatorWind } from '../map/wind-field';
-import { windLook, type WindLook } from './wind-look';
+import { PX_PER_KMH, WIND_LOOK, zoomScale } from './wind-look';
 import { TERRAIN_3D_SOURCE } from '../map/terrain';
 
 export type EffectId = 'clouds' | 'wind';
@@ -77,24 +77,27 @@ export function setupEffects(map: MapLibreMap, beforeId: string | undefined): Ef
   const clouds = new CloudLayer();
   const on: Record<EffectId, boolean> = { clouds: false, wind: false };
 
-  // The forecast wind, shaped by the hills and gusts as the Tune panel sets them.
+  // The forecast wind, shaped by the hills and gusts (app/effects/wind-look.ts).
   let forecast: MercatorWind | null = null;
-  let look: WindLook = windLook.get();
+  const look = WIND_LOOK;
+  // The streaks grow with the zoom: faster and a little wider the further in (zoomScale).
+  let speedScale = zoomScale(map.getZoom()).speed;
   const still = (_x: number, _y: number, out: Float32Array) => { out[0] = 0; out[1] = 0; };
   let base = still;
   const metresPerUnit = () => 40_075_016.686 * Math.cos((map.getCenter().lat * Math.PI) / 180);
   const clock = {
     seconds: () => performance.now() / 1000,
-    groundMps: () => (forecast?.meanKmh ?? 0) * 2.2 * look.speedScale * (metresPerUnit() / (512 * 2 ** map.getZoom())),
+    groundMps: () => (forecast?.meanKmh ?? 0) * PX_PER_KMH * look.speedScale * speedScale * (metresPerUnit() / (512 * 2 ** map.getZoom())),
   };
   wind.setWind(shapeWind((x, y, out) => base(x, y, out), () => look, wind.grid, metresPerUnit, clock));
-  const applyLook = (l: WindLook) => {
-    look = l;
-    wind.setLook({ count: l.count, trailSeconds: l.trailSeconds, widthPx: l.widthPx, brightness: l.brightness, speedScale: l.speedScale, clearance: l.clearance });
-    if (on.wind) map.triggerRepaint();
+  const applyZoom = () => {
+    const z = zoomScale(map.getZoom());
+    speedScale = z.speed;
+    wind.setLook({ pxPerKmh: PX_PER_KMH * z.speed, widthPx: look.widthPx * z.width });
   };
-  applyLook(look);
-  windLook.onChange(applyLook);
+  wind.setLook({ count: look.count, trailSeconds: look.trailSeconds, brightness: look.brightness, speedScale: look.speedScale, clearance: look.clearance });
+  applyZoom();
+  map.on('zoom', applyZoom);
   // Nothing to draw until the forecast's wind has arrived.
   const syncWind = () => wind.setVisible(on.wind && forecast !== null);
   wind.setVisible(false);
