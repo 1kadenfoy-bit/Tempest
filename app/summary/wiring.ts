@@ -13,7 +13,8 @@ import { avalanche } from '../../layers/avalanche';
 import { airQuality } from '../../layers/air-quality';
 import { nameNear } from '../shell/pin';
 import { savePrefs } from '../shell/prefs';
-import { loadObserved, modelSeries, stitch } from '../data/forecast';
+import { loadObserved, modelSeries, stitch, STOPPED_STATUS } from '../data/forecast';
+import { retryDelay } from '../../core/time/retry';
 import { includedLayers, needsSeries, unionNeeds } from './choice';
 import { setupLongPress } from './long-press';
 import { setupSummaryWindow } from './summary-window';
@@ -32,10 +33,10 @@ export function consumeLongPressClick(): boolean { return longPress?.consumeClic
 // Opens with press-and-hold on the map (or a right click) and from the details.
 // Loads only while open, through the same read path as the sheet.
 let summarySeries: PointSeries | null = null;
-let summaryState: 'loading' | 'ready' | 'busy' | 'outside' = 'loading';
+let summaryState: 'loading' | 'ready' | 'busy' | 'stopped' | 'outside' = 'loading';
 let summaryFor = '';
 let summarySeq = 0;
-const summaryRetry = { timer: 0, tries: 0 };
+const summaryRetry = { timer: 0, tries: 0, key: '' };
 const summaryShown = () => includedLayers(S.layers, S.prefs.summaryLayers);
 export const summaryWants = (l: LayerSlots) => !!summaryWin?.isOpen() && summaryShown().includes(l);
 
@@ -77,9 +78,8 @@ export async function loadSummarySeries() {
   } catch (err) {
     if (mine !== summarySeq) return;
     console.warn('no series for the forecast summary', err);
-    summaryState = S.usingSaved ? 'outside' : 'busy';
+    summaryState = S.usingSaved ? 'outside' : retrySummary(key) ? 'busy' : 'stopped';
     refreshSummary();
-    if (!S.usingSaved) retrySummary();
     return;
   }
   if (mine !== summarySeq) return;
@@ -93,13 +93,22 @@ export async function loadSummarySeries() {
   summarySeries = stitch(parts);
   // Kept only when whole; a stretch that did not come is asked for again while the window is open.
   if (parts.every(Boolean)) { if (summarySeries) S.store.put(key, summarySeries); summaryRetry.tries = 0; }
-  else if (!S.usingSaved) retrySummary();
+  else if (!S.usingSaved) retrySummary(key);
   refreshSummary();
 }
-export function retrySummary() {
+/**
+ * Ask again for what did not come, backing off, and stop after a few tries
+ * (core/time/retry.ts, Data rule 1); false once stopped. Another place, run
+ * or choice of strips starts afresh.
+ */
+export function retrySummary(key: string): boolean {
+  if (summaryRetry.key !== key) { summaryRetry.key = key; summaryRetry.tries = 0; }
   clearTimeout(summaryRetry.timer);
-  const delay = Math.max(Math.min(60_000, 3_000 * 2 ** summaryRetry.tries++), S.profiles.apiRetryAt - Date.now() + 500);
+  const backoff = retryDelay(summaryRetry.tries++);
+  if (backoff === null) return false;
+  const delay = Math.max(backoff, S.profiles.apiRetryAt - Date.now() + 500);
   summaryRetry.timer = window.setTimeout(() => void loadSummarySeries(), delay);
+  return true;
 }
 
 /** Sets up the window and press-and-hold once the map, pin and scrubber exist. */
@@ -118,7 +127,7 @@ summaryWin = setupSummaryWindow({
     if (!l.pinNeeds.length) return '';
     if (!S.run && document.body.dataset.run === 'error') return 'Could not reach the weather data';
     if (summaryState === 'outside') return 'The pin is outside the saved areas';
-    if (!summarySeries) return summaryState === 'busy' ? 'The forecast service is busy · trying again shortly' : 'Loading the pin’s forecast…';
+    if (!summarySeries) return summaryState === 'busy' ? 'The forecast service is busy · trying again shortly' : summaryState === 'stopped' ? STOPPED_STATUS : 'Loading the pin’s forecast…';
     const values = summarySeries.values;
     if (l.pinNeeds.some((v) => values[v]?.some(Number.isFinite))) return '';
     // Online, a part that has not come is still being asked for (the service busy: the map files, read hour by hour, are slow).

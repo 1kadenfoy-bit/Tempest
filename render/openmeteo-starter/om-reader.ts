@@ -12,7 +12,11 @@ import type { NativeBox } from './index';
 /** 8 kB blocks: one compressed chunk of a small box is a few kB. */
 const BLOCK = 8 * 1024;
 const cache = new LruBlockCache(BLOCK, 4096);
-const pool = new OmHttpBackendPool({ backendOptions: { retries: 2, timeoutMs: 20_000 } });
+// One reader per file, keeping the file's size: the library keeps 64 by default,
+// fewer than the steps of one pin's series (HRDPS 48, RDPS 84), so each new read
+// of a series asked every file's size again (thousands of HEAD requests an hour,
+// measured Nov 27). A reader is a few numbers; the blocks stay in `cache`.
+const pool = new OmHttpBackendPool({ backendOptions: { retries: 2, timeoutMs: 20_000 }, maxBackends: 1024 });
 /** Browsers open about six connections per host; more only queue. */
 const PARALLEL = 6;
 

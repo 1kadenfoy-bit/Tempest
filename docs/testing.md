@@ -9,13 +9,15 @@ one, or "not covered" where none does yet.
 | Step | What | Time |
 | --- | --- | --- |
 | Typecheck, lint | The code is consistent; the architecture rules hold | under a minute |
-| Unit tests | The calculations, without a browser (384 checks) | under 10 s |
+| Unit tests | The calculations, without a browser (388 checks) | under 10 s |
 | Browser tests | The app itself at 390 × 844, on recorded weather | about 10 min on each of 4 GitHub machines |
 
 **The order (Kaden, Nov 27): the tests most likely to fail go first,** on
 each machine:
 1. the tests that failed on the branch's last run;
-2. the test files of the areas the branch changed (`docs/sections/sections.json`);
+2. the test files of the areas the branch changed (`docs/sections/sections.json`),
+   and on every branch the server budget (`e2e/requests.spec.ts`, below), which
+   any change can trip;
 3. the rest.
 
 A machine stops at the first step that fails, so a run that is going to fail
@@ -49,6 +51,54 @@ Tests that take report pictures (avalanche, ATES, air quality, stations,
 summary) now save them in `test-results/reports/`. Before, every run rewrote
 about 25 pictures under `docs/reports/`, ready to be committed by mistake. To
 refresh the pictures in `docs/reports/` on purpose: `REPORTS=1 npx playwright test <file>`.
+
+## The server budget (Nov 27, Data rule 1)
+
+**`e2e/requests.spec.ts`: does the app ask the servers more than it needs
+to?** A normal session on recorded weather: open, every layer, the pin
+dropped in three places and back, the time dragged and Now, the forecast
+summary (press-and-hold), Temperature at that last pin, then an hour left
+open and untouched (the page's clock fast-forwarded), then two hours more to
+when HRDPS's next run could exist. The recording has the point forecast at
+your location only, so at the dropped pins the point service refuses, as it
+does when its free limit is spent: the refused case is part of the session
+on purpose. About 2 minutes. It fails when:
+- a server is asked more than its budget in the session;
+- anything at all is asked between 10 and 60 minutes of the untouched hour;
+- more than 20 answered requests are asked again in the same words;
+- HRDPS's next run is not looked for within 10 minutes once it could exist,
+  or RDPS's is looked for before it could (the timetable in
+  `docs/05-data-sources.md`, "How often the app asks").
+
+It also checks that "The forecast service is not answering" is on screen once
+the retries stop, and prints the whole table in its log.
+
+**The counts, measured Nov 27 on the build machine** (the same session; the
+session before the fix did not end on Temperature):
+
+| Server | Before: session | Before: the untouched hour | After: session | After: the untouched hour | Budget |
+| --- | --- | --- | --- | --- | --- |
+| Open-Meteo point API (forecasts) | 114 to 156 | 99 to 138 | 33 | 18, all in the first 10 min | 45 |
+| Open-Meteo point API (which run it serves) | 7 | 6 | 1 | 0 | 2 |
+| Open-Meteo air API | 0 | 0 | 0 | 0 | 5 |
+| Open-Meteo map files (pieces and sizes) | 7,810 to 8,191 | 5,425 to 5,808 | 1,927 to 2,168 | 0 | 2,800 |
+| Open-Meteo map files (each model's newest run) | 35 | 30 | 5 | 0 | 6 |
+| ECCC (radar, smoke, observed rain, AQHI, alerts) | 211 | 0 | 201 | 0 | 260 |
+| Avalanche Canada | 3 | 0 | 3 | 0 | 5 |
+| BC (fires) | 2 | 0 | 2 | 0 | 4 |
+
+**The same request asked twice.** Before: answered requests asked again
+4,776 extra times (the map files' sizes, each asked 33 to 34 times: the reader
+kept only 64 files' sizes, fewer than one pin's series reads), and refused ones
+1,458 extra times (the dropped pin's temperature 99 times in the hour, every
+minute, plus the map-file pieces read for it each time). After: 9 and 177 extra
+(the refused pin's forecast 21 times in all, every one in the first minutes,
+then the app stops and says so).
+
+**What the map files' count is.** Most of the map-file pieces (about 1,800)
+are the three dropped pins' forecasts read from the map files hour by hour,
+because the point service refuses there. With the service answering, those
+are a few point requests instead.
 
 ## New tests (Nov 27)
 
@@ -94,7 +144,8 @@ show up in a test.
 | Readouts blended between model steps | `shell`: one cursor (steps are whole hours) |
 | Auto picks the wrong model past HRDPS's end | `offline` (RDPS past HRDPS), `models` |
 | Recorded weather quietly replaced by live (tests pass, then break days later) | strict recorded weather (above) |
-| The app asks the free servers more than it needs to (the same answer again before new data could exist, retries that never stop), using up the shared limits (Data rule 1) | **not covered yet**: `docs/tasks/test-upkeep.md`, task 1 |
+| The app asks the free servers more than it needs to (the same answer again before new data could exist, retries that never stop), using up the shared limits (Data rule 1) | `requests`: the server budget |
+| A new run is looked for later than before (the timetable too late) | `requests`: HRDPS looked for within 10 min once possible; unit tests (`core/time/run-schedule`): never later than the fastest run seen Nov 20 to 27 |
 | The forecast summary's totals differ from the hours charted | **not covered** in the browser; unit tests cover the sums |
 | Snow/rain split or freezing line wrong at height | unit tests (`core/precip`, `core/temperature`) only |
 
@@ -120,7 +171,7 @@ show up in a test.
 | A new run lands while the app is open (every 10 minutes) and the readout mixes two runs | **not covered** (needs two recorded runs) |
 | The app closed or reloaded while saving an area | **not covered** |
 | A new version of the app installed over an old offline copy | **not covered** |
-| The forecast service refuses (limits) and the pin waits forever | partly: `models` (model unavailable). Seen in the tests: away from the recorded spot, temperature at a dropped pin waits on "the forecast service is busy" for good when the point service keeps refusing (by design today: the map-file route is used only once the service is out for hours; performance task 6 changes this) |
+| The forecast service refuses (limits) and the pin waits forever | `requests`: temperature at a refused pin is asked six times in about 3 minutes, then the app stops and says "The forecast service is not answering · move the pin to try again" (before Nov 27 it asked every minute for good); `models` (model unavailable). The map-file route for temperature is still used only once the service is out for hours (performance task 6) |
 
 ### Found while writing these tests
 

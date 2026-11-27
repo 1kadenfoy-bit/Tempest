@@ -73,6 +73,41 @@ Open-Meteo comes first: free for a personal, non-commercial app, no key, and alm
 
 **Use:** Open-Meteo for point forecasts, model comparison, ensembles and gridded layers. GeoMet for radar, alerts and smoke while online. Direct GRIB processing only if a wall is hit: REPS probabilities, HRDPS fields Open-Meteo lacks, or saved-area files. Meteoblue's free year is worth taking only to compare its forecast against HRDPS at Kaden's spots.
 
+### How often the app asks (Data rule 1, Nov 27, 2026)
+
+The free limits are shared by the app, the tests and every chat, so the app asks a server again only when something new could be there, and uses what it already has in between (in memory, or kept on the phone). Never at the cost of speed: a new run still shows as soon as before. Checked by the server budget test (`e2e/requests.spec.ts`, `docs/testing.md`).
+
+**When each model's runs appear.** Measured Nov 27 from Open-Meteo's own map-file bucket (when each run's last file and its `latest.json` were written, every run from Nov 20 to 27) and the point API's `meta.json` (`update_interval_seconds` 21600 for HRDPS, `last_run_availability_time` 3 h 23 min after the 12Z run). Open-Meteo's model-updates page and ECCC's HRDPS page could not be opened from the build machine (their hosts are not allowed in this environment); the timestamps are the source's own record.
+
+| Model | Runs (UTC) | Complete on Open-Meteo after the run time | The app asks again from |
+| --- | --- | --- | --- |
+| HRDPS | 00, 06, 12, 18 | 3.3 to 5.4 h (most 3.3 to 4.5) | run + 6 h + 3 h |
+| RDPS | 00, 06, 12, 18 | 3.9 to 4.9 h | run + 6 h + 3.5 h |
+| GDPS (surface and profile files) | 00, 12 | 4.8 to 5.9 h | run + 12 h + 4.5 h |
+| ECMWF IFS | 00, 06, 12, 18 (06 and 18 shorter: 109 hours, not 145) | 6.0 to 7.0 h | run + 6 h + 5.5 h |
+| The point API's HRDPS run | as HRDPS | about the same as the map files | when the map files have a newer run than the point API served |
+
+"Asks again from" sits below the fastest run seen, so a run is never shown later. From then the app looks every 10 minutes while it is on screen, and when it comes back to the screen, as it always did. On opening it always asks (one small file per model). Without signal it always asks: the failure is what sends it to a saved area. The timetable is `core/time/run-schedule.ts`; a model not listed there is asked every time.
+
+**Every source:**
+
+| What | Changes | The app asks |
+| --- | --- | --- |
+| Newest run of each model (`latest.json`) | At the times above | On opening; then only once a newer run could be complete; then every 10 min while on screen |
+| Point forecasts (pin, map nodes, saved areas) | With each run | Once per run and place; kept on the phone until the next run (`app/data/api-cache.ts`); a count of the free limit kept on the phone |
+| Map files (`.om` pieces) | Never, once written | Each piece once, kept in memory (32 MB of pieces; the size of up to 1,024 files, before Nov 27 only 64) |
+| Radar frames (GeoMet) | Every 6 minutes | At most once every 6 minutes, only while radar is shown |
+| Radar at the pin | Final once issued | Once per frame and place; a failure once more after 3 s |
+| Observed precipitation (HRDPA) | Every 6 hours | Once per place and 6 hours; the last 16 places kept |
+| Avalanche bulletins | Once a day (late afternoon), updated now and then | At most every 30 min, only while the layer or its summary strip is shown; kept on the phone. Safety data: an update is never held back for a day |
+| Avalanche field reports | As they come | At most every 10 min while shown |
+| Weather alerts | As issued | When the pin moves or the app comes back, at most every 5 min per place |
+| Stations | Hourly (ECCC), 10 to 60 min (Avalanche Canada) | Only while the overlay is on: ECCC at most every 5 min, Avalanche Canada's list once a day, its readings every 10 min |
+| Air quality: RAQDPS runs, AQHI, fires | Twice a day; hourly; about every 15 min | Only while shown: runs every 10 min, AQHI every 15 min, fires every 30 min (kept on the phone) |
+| ATES areas | Rarely | Kept on the phone 30 days |
+
+**After a refusal or an error.** The pin's forecast and the forecast summary ask again after 3, 6, 12, 24, 48 and 96 seconds (about 3 minutes), or at the time the service gave, then stop (`core/time/retry.ts`). With nothing to show, the time line says "The forecast service is not answering · move the pin to try again". Another place, layer or run starts afresh, and so do the app coming back to the screen and the connection coming back. Before Nov 27 a dropped pin's forecast was asked every minute for as long as the service refused (99 times in an hour). Bulletins, alerts and fires try once more after 3 s, then show the copy kept on the phone with its age; avalanche and air quality say "tap to retry".
+
 ## Map, terrain and base layers
 
 MapLibre GL JS draws everything. Base map, terrain and contours can all be free, open and cut out by region as PMTiles files.

@@ -20,6 +20,8 @@ import { groundNear } from '../map/elevation';
 import { loadSavedWeather, savedStep } from '../offline/saved-areas';
 import { SURFACE_VARIABLES } from './profile-source';
 import { savedOnlyActive } from './connection';
+import { newerRunPossible } from '../../core/time/run-schedule';
+import { retryDelay } from '../../core/time/retry';
 
 /** Layers read from the pressure-level profile (GDPS's separate profile files, its 3-hourly steps). */
 export const usesProfile = (l: LayerSlots) => l.id === 'temperature' || l.id === 'wind';
@@ -101,8 +103,13 @@ export async function loadPinGround() {
   app.refreshSummary();
 }
 
-/** Fetch the past two days' observed 6-hour totals at the pin (once per place and 6 hours). */
+/**
+ * Fetch the past two days' observed 6-hour totals at the pin (once per place
+ * and 6 hours). The last few places are kept, so moving the pin back asks
+ * nothing.
+ */
 let observedFor = '';
+const observedKept = new Map<string, Awaited<ReturnType<typeof fetchObserved>>>();
 export async function loadObserved() {
   const p = S.pin?.get();
   if (!p || S.usingSaved) return;
@@ -110,8 +117,18 @@ export async function loadObserved() {
   const key = `${p.lat.toFixed(3)},${p.lng.toFixed(3)}|${Math.floor(now.getTime() / 21_600_000)}`;
   if (key === observedFor) return;
   observedFor = key;
+  const kept = observedKept.get(key);
+  if (kept) {
+    S.observed = kept.length ? kept : undefined;
+    S.scrubber.refresh();
+    app.scheduleDetails();
+    app.refreshSummary();
+    return;
+  }
   try {
     const got = await fetchObserved(p.lat, p.lng, new Date(now.getTime() - PAST_HOURS * 3_600_000), now);
+    observedKept.set(key, got);
+    if (observedKept.size > 16) observedKept.delete(observedKept.keys().next().value!);
     if (key !== observedFor) return;
     S.observed = got.length ? got : undefined;
     S.scrubber.refresh();
@@ -157,15 +174,41 @@ export async function sharedRun(latest: RunMetadata): Promise<RunMetadata> {
   return { ...latest, referenceTime: api, validTimes: latest.validTimes.map((t) => new Date(t.getTime() - shift)) };
 }
 
+/**
+ * Each map-file model's newest run as last read, so it is asked again only
+ * once a newer run could be there (core/time/run-schedule.ts; Data rule 1).
+ * Without signal it is always asked: the answer (none) is what sends the app
+ * to its saved areas.
+ */
+const latestRead = new Map<string, RunMetadata>();
+async function latestRun(mapModel: string): Promise<RunMetadata> {
+  const had = latestRead.get(mapModel);
+  if (had?.completed && navigator.onLine && !newerRunPossible(mapModel, had.referenceTime, new Date())) return had;
+  const got = await fetchRunMetadata(mapModel);
+  latestRead.set(mapModel, got);
+  return got;
+}
+/**
+ * HRDPS's shared run (sharedRun), asked again only when the map files have a
+ * newer run, or while the point API still serves an older one than they do.
+ */
+let sharedRead: RunMetadata | null = null;
+async function sharedRunFor(latest: RunMetadata): Promise<RunMetadata> {
+  // The point API already serves this run: nothing newer to learn from it.
+  if (sharedRead?.referenceTime.getTime() === latest.referenceTime.getTime()) return latest;
+  sharedRead = await sharedRun(latest);
+  return sharedRead;
+}
+
 /** Every model's newest run, in parallel. HRDPS follows the point API's run (see sharedRun). */
 export async function fetchAllRuns() {
   const ids = Object.keys(REGISTRY) as ModelId[];
   const got = await Promise.all(ids.map(async (m) => {
     const spec = REGISTRY[m];
     try {
-      const latest = await fetchRunMetadata(spec.mapModel);
-      const surface = m === 'hrdps' ? await sharedRun(latest) : latest;
-      const prof = spec.profileMapModel ? await fetchRunMetadata(spec.profileMapModel).catch(() => null) : null;
+      const latest = await latestRun(spec.mapModel);
+      const surface = m === 'hrdps' ? await sharedRunFor(latest) : latest;
+      const prof = spec.profileMapModel ? await latestRun(spec.profileMapModel).catch(() => null) : null;
       return [m, surface, prof] as const;
     } catch {
       return [m, null, null] as const;
@@ -222,16 +265,35 @@ export async function loadRun() {
   S.scrubber.setStatus('Could not reach the weather data');
 }
 export let seriesSeq = 0;
-/** Asking again for parts of the pin's series that did not come (service busy, connection dropped). */
-export let seriesRetry = { timer: 0, key: '', tries: 0 };
-export function retrySeries(key: string) {
-  if (seriesRetry.key !== key) seriesRetry = { timer: 0, key, tries: 0 };
+/**
+ * Asking again for parts of the pin's series that did not come (service busy,
+ * connection dropped): soon at first, then less often, and after six tries
+ * (about 3 minutes) not at all (core/time/retry.ts). `stopped` then says so
+ * on screen until something changes: another place, layer or run starts
+ * afresh, and so do the app coming back to the screen and the connection
+ * coming back.
+ */
+export let seriesRetry = { timer: 0, key: '', tries: 0, stopped: false };
+/** Shown while the pin's forecast is no longer asked for. */
+export const STOPPED_STATUS = 'The forecast service is not answering · move the pin to try again';
+export function retrySeries(key: string): boolean {
+  if (seriesRetry.key !== key) seriesRetry = { timer: 0, key, tries: 0, stopped: false };
   clearTimeout(seriesRetry.timer);
-  // Soon at first, then less often; when the service gave a time, then.
-  const backoff = Math.min(60_000, 3_000 * 2 ** seriesRetry.tries++);
+  const backoff = retryDelay(seriesRetry.tries++);
+  if (backoff === null) { seriesRetry.stopped = true; return false; }
+  // When the service gave a time, then.
   const delay = Math.max(backoff, S.profiles.apiRetryAt - Date.now() + 500);
   seriesRetry.timer = window.setTimeout(() => void loadSeries(), delay);
+  return true;
 }
+/** After the tries ran out: start again (the app is back on screen, or the connection is). */
+function resumeSeries() {
+  if (!seriesRetry.stopped) return;
+  seriesRetry = { timer: 0, key: '', tries: 0, stopped: false };
+  void loadSeries();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeSeries(); });
+addEventListener('online', resumeSeries);
 
 /** One model's part of the pin's series, for the active layer. */
 export async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: number, lng: number, onPartial?: (s: PointSeries) => void, onLater?: (s: PointSeries) => void): Promise<PointSeries> {
@@ -366,8 +428,7 @@ export async function loadSeries() {
       if (mine !== seriesSeq) return;
       console.error(err);
       if (S.usingSaved) { S.scrubber.setStatus('The pin is outside the saved area'); return; }
-      S.scrubber.setStatus('The forecast service is busy · trying again shortly');
-      retrySeries(key);
+      S.scrubber.setStatus(retrySeries(key) ? 'The forecast service is busy · trying again shortly' : STOPPED_STATUS);
       return;
     }
     if (mine !== seriesSeq) return;
@@ -384,7 +445,7 @@ export async function loadSeries() {
     // Kept only when whole: a stretch that did not come is asked for again
     // (parts already read come from memory), never remembered as missing.
     document.body.dataset.seriesComplete = String(parts.every(Boolean));
-    if (parts.every(Boolean)) { if (S.series) S.store.put(key, S.series); clearTimeout(seriesRetry.timer); seriesRetry = { timer: 0, key: '', tries: 0 }; }
+    if (parts.every(Boolean)) { if (S.series) S.store.put(key, S.series); clearTimeout(seriesRetry.timer); seriesRetry = { timer: 0, key: '', tries: 0, stopped: false }; }
     else if (!S.usingSaved) retrySeries(key);
   }
   S.scrubber.setStatus('');
