@@ -25,7 +25,7 @@ The exact list is `performance` in `docs/sections/sections.json`.
   (`docs/06-decisions-and-open-items.md`) stay in force. A fix may make
   something faster; it may not change how it looks or behaves. That rules out:
   - removing an effect;
-  - lowering quality (sharpness, detail, frame of time, number of streaks);
+  - lowering quality (sharpness, detail, time steps, number of streaks);
   - dropping a layer, a label or a button;
   - changing a gesture.
   - **Trade-offs:** when the only way to meet a target is such a trade-off, put
