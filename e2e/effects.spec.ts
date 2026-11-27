@@ -23,6 +23,15 @@ test('wind particles draw, follow the wind, and stop when paused', async ({ page
   // Paused: no more frames are requested (the readout says so, and the layer stops its loop).
   await page.getByRole('button', { name: 'Pause' }).click();
   await expect(page.locator('#fps')).toHaveText('paused');
+  // Counted once the map has every piece in view: a terrain piece arriving
+  // late redraws the map once (on GitHub's slower machines, 6 times in the
+  // second counted, Nov 27), which is not the streaks asking for frames.
+  type LabMap = { on(e: string, f: () => void): void; off(e: string, f: () => void): void; loaded(): boolean; areTilesLoaded(): boolean; isMoving(): boolean };
+  await page.waitForFunction(() => {
+    const m = (window as unknown as { tempestEffectsLab: { map: LabMap } }).tempestEffectsLab.map;
+    return m.loaded() && m.areTilesLoaded() && !m.isMoving();
+  }, undefined, { timeout: 30_000 });
+  await page.waitForTimeout(500);
   const frames = await page.evaluate(() => new Promise<number>((resolve) => {
     const lab = (window as unknown as { tempestEffectsLab: { map: { on(e: string, f: () => void): void; off(e: string, f: () => void): void } } }).tempestEffectsLab;
     let n = 0;

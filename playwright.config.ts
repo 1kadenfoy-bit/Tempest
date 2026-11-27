@@ -17,6 +17,9 @@ export default defineConfig({
     deviceScaleFactor: 2,
     hasTouch: true,
     isMobile: true,
+    // Kaden's phone is in BC; GitHub's machines are on UTC. Pages run in BC's
+    // time zone so a mistake that only shows there shows here too.
+    timezoneId: 'America/Vancouver',
     // WebGL in headless Chromium needs a software GPU.
     launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
   },

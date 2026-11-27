@@ -17,6 +17,7 @@ The owner, Kaden, designs and tests. He does not read code. Write reports and qu
 | `docs/working.md` | How work is done: one chat per round of changes, checks, pull request, merge; the lessons |
 | `docs/sections/` + `docs/wishes/` | Each area's guide and files (`sections.json`), and Kaden's rules for it |
 | `docs/tasks/` | Ready-made tasks, one chat each |
+| `docs/testing.md` | What the tests check, their order, and what could still go wrong |
 
 ## Working rules
 
@@ -91,6 +92,8 @@ Node 22.12 or newer.
 | Build to `dist/` | `npm run build` |
 | Screenshot tests at 390 × 844 (Playwright; starts `vite preview` on 4173), on recorded weather (`e2e/fixtures.ts`; `WEATHER=live` for live data). Shell pixel baselines live in `e2e/shell.spec.ts-snapshots`; refresh with `npx playwright test --update-snapshots` after an intended change | `npm run screenshots` |
 | Only the browser tests that failed last time on this machine (run them first, then the rest) | `npm run screenshots:failed` |
+| Which browser tests run first, and each GitHub machine's share (`--shard=2/4`) | `npm run test:plan` |
+| Refresh the report pictures in `docs/reports/` (otherwise they go to `test-results/reports/`) | `REPORTS=1 npx playwright test <file>` |
 | Everything CI runs | `npm run check` |
 | Size or cut any PMTiles box | `node tools/pmtiles-extract.mjs <url> <out> --bbox=w,s,e,n --maxzoom=N [--dry-run]` |
 

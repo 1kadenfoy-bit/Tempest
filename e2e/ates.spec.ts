@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from './fixtures';
+import { expect, test, type BrowserContext, type Page, reportDir } from './fixtures';
 
 // Terrain complexity (ATES) inside the avalanche layer. Avalanche Canada's
 // answers are stubbed: the bulletins from the saved Nov 17 answers, and the
@@ -14,7 +14,7 @@ test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions:
 const avy = (name: string) => readFileSync(new URL(`../adapters/avalanche-canada/fixtures/${name}`, import.meta.url), 'utf8');
 const KMZ: Record<number, Buffer> = { 533: readFileSync(new URL('../adapters/avalanche-canada/fixtures/ates-533-2026-11-17.kmz', import.meta.url)) };
 const KMZ_DIR = process.env.ATES_KMZ_DIR;
-const SHOTS = 'docs/reports/ates';
+const SHOTS = reportDir('ates');
 type W = { tempestMap: import('maplibre-gl').Map };
 // The wait for the area's zones: measured under a slowed browser, the file is
 // fetched, read and drawn within about 5 s, but drawing the zones without a

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test, type Page, reportDir } from './fixtures';
 
 // The forecast summary window: press-and-hold on the map (or a right click)
 // moves the pin there and opens every chosen layer's chart, on one time line.
@@ -10,7 +10,7 @@ test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions:
 // Back to recorded weather once a fuller set is recorded (Data section).
 test.use({ weather: 'live' });
 const HOME = '/?insets=47,34';
-const SHOTS = 'docs/reports/summary';
+const SHOTS = reportDir('summary');
 
 // No live weather alerts: a real one would add the badge and change the pictures.
 test.beforeEach(async ({ context }) => {

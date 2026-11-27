@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from './fixtures';
+import { expect, test, type BrowserContext, type Page, reportDir } from './fixtures';
 
 /** The time the page sees: the recorded set's moment, or now with WEATHER=live. */
 function pageNow(): number {
@@ -15,7 +15,7 @@ function pageNow(): number {
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'], serviceWorkers: 'block' });
 
 const fixture = (name: string) => readFileSync(new URL(`../adapters/avalanche-canada/fixtures/${name}`, import.meta.url), 'utf8');
-const SHOTS = 'docs/reports/avalanche';
+const SHOTS = reportDir('avalanche');
 
 /** A drawn test picture (sky and snow) in place of the report's photos, which come from Cloudinary. */
 const PHOTO = readFileSync(new URL('./avalanche-test-photo.png', import.meta.url));

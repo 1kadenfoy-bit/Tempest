@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test, type Page, upTo } from './fixtures';
 
 // Mt Seymour area, where the v8 screens place "You · 1,180 m".
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
@@ -12,7 +12,7 @@ const frames = (page: Page) => page.evaluate(() => (window as unknown as Streaks
 const moving = async (page: Page, ms = 1500) => { const a = await frames(page); await page.waitForTimeout(ms); return (await frames(page)) > a; };
 
 test('wind: terrain fill, streaks that pause, readout, chart, cards, settings', async ({ page }) => {
-  test.setTimeout(720_000);
+  test.setTimeout(upTo(720_000, 300_000));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?insets=47,34');
@@ -22,8 +22,8 @@ test('wind: terrain fill, streaks that pause, readout, chart, cards, settings', 
   const menu = page.getByRole('dialog', { name: 'Condition layer' });
   await menu.getByRole('button', { name: 'Wind' }).click();
   await expect(page.locator('#layer-name')).toHaveText('Wind');
-  await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: 180_000 });
-  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 400_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: upTo(180_000) });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: upTo(400_000) });
 
   // Readout: speed, gusts, compass direction with degrees, elevation.
   await expect(page.locator('.readout-text strong')).toHaveText(/^\d+ km\/h$/);

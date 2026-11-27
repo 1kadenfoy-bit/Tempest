@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test, type Page, upTo } from './fixtures';
 
 // M8 done-test: save a touring area at home with all three layers, then with
 // no signal all three work there, with the same numbers, through the same
@@ -12,7 +12,7 @@ const pickLayer = async (page: Page, name: string) => {
 };
 
 test('a saved area works with no signal, for every layer, past HRDPS', async ({ page, context }) => {
-  test.setTimeout(900_000);
+  test.setTimeout(upTo(900_000, 720_000));
   // Observed precipitation is online only (ECCC asks that it not be bulk-copied),
   // so this compares forecast with forecast.
   await context.route('**/geo.weather.gc.ca/**', (r) => r.abort());
@@ -54,7 +54,7 @@ test('a saved area works with no signal, for every layer, past HRDPS', async ({ 
   // The Notification Centre says when it is done.
   await page.click('#alert-badge');
   const centre = page.getByRole('dialog', { name: 'Notification Centre' });
-  await expect(centre.locator('.notice-words', { hasText: 'Saved for offline' })).toBeVisible({ timeout: 720_000 });
+  await expect(centre.locator('.notice-words', { hasText: 'Saved for offline' })).toBeVisible({ timeout: upTo(720_000, 480_000) });
   console.log(`saved in ${Math.round((Date.now() - started) / 1000)} s`);
   await page.keyboard.press('Escape');
   await expect(centre).toBeHidden();

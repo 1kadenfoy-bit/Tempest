@@ -22,7 +22,8 @@
     "check:section": "node tools/check-section.mjs",
     "weather:record": "node tools/record-weather.mjs",
     "tiles:all": "node tools/build-basemap.mjs",
-    "screenshots:failed": "playwright test --trace off --last-failed"
+    "screenshots:failed": "playwright test --trace off --last-failed",
+    "test:plan": "node tools/test-plan.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

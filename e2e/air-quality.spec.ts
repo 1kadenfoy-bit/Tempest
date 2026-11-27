@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from './fixtures';
+import { expect, test, type BrowserContext, type Page, reportDir } from './fixtures';
 
 // The Air quality layer with every air source stubbed from saved real answers:
 // - ECCC RAQDPS (10 km): a real answer from Nov 18, 2026 (clean air: GeoMet
@@ -14,7 +14,7 @@ import { expect, test, type BrowserContext, type Page } from './fixtures';
 const MANNING = { latitude: 49.07, longitude: -120.8 };
 test.use({ geolocation: MANNING, permissions: ['geolocation'], serviceWorkers: 'block' });
 
-const SHOTS = 'docs/reports/air-quality';
+const SHOTS = reportDir('air-quality');
 mkdirSync(SHOTS, { recursive: true });
 const file = (dir: string, name: string) => readFileSync(new URL(`../adapters/${dir}/fixtures/${name}`, import.meta.url));
 const json = (dir: string, name: string) => JSON.parse(file(dir, name).toString('utf8'));
