@@ -56,6 +56,23 @@ async function readings(page: Page) {
   };
 }
 
+/**
+ * The readings once they stop changing: the same twice, 1.5 s apart, with
+ * nothing still loading ("…"). Parts of a forecast arrive one after another,
+ * and a comparison made between two of them would blame the wrong thing.
+ */
+async function steady(page: Page) {
+  let last = await readings(page);
+  for (let k = 0; k < 20; k++) {
+    await page.waitForTimeout(1500);
+    const now = await readings(page);
+    const loading = !now.readout || [now.readout, now.before, now.after].some((t) => t?.includes('…'));
+    if (!loading && JSON.stringify(now) === JSON.stringify(last)) return now;
+    last = now;
+  }
+  return last;
+}
+
 /** The map has drawn, the pin's forecast is in, and nothing is on its way. */
 async function settled(page: Page) {
   await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 90_000 });
@@ -104,7 +121,7 @@ test('zooming, panning and tilting the map never change the numbers', async ({ p
   for (const name of ['Precipitation', 'Temperature', 'Wind']) {
     if (name !== 'Precipitation') await pick(page, name);
     await settled(page);
-    const first = await readings(page);
+    const first = await steady(page);
     expect(first.readout, `${name}: a value at the pin`).toMatch(/\d|Dry|Calm/);
 
     // Close in on the pin, far out over BC, and off to one side tilted: the
@@ -117,7 +134,7 @@ test('zooming, panning and tilting the map never change the numbers', async ({ p
       await jump(page, view);
       await page.waitForTimeout(200);
       await settled(page);
-      expect(await readings(page), `${name} after moving the map to ${JSON.stringify(view)}`).toEqual(first);
+      expect(await steady(page), `${name} after moving the map to ${JSON.stringify(view)}`).toEqual(first);
     }
     await jump(page, { ...home, pitch: 0, bearing: 0 });
   }
@@ -134,26 +151,26 @@ test('quick taps end on the last choice: layers, pin and time', async ({ page })
   // The answers reached slowly, one step at a time. (Precipitation for the
   // dropped pin: the recorded set holds the point forecast for your location
   // only, and precipitation reads the map files elsewhere.)
-  const rainAtYou = await readings(page);
+  const rainAtYou = await steady(page);
   await pick(page, 'Temperature');
   await settled(page);
-  const tempAtYou = await readings(page);
+  const tempAtYou = await steady(page);
   await pick(page, 'Precipitation');
   await settled(page);
-  expect(await readings(page), 'precipitation again').toEqual(rainAtYou);
+  expect(await steady(page), 'precipitation again').toEqual(rainAtYou);
   await page.mouse.click(250, 330);
   await settled(page);
-  const rainThere = await readings(page);
+  const rainThere = await steady(page);
   expect(rainThere.place, 'the tap moved the pin').not.toBe(rainAtYou.place);
   await page.click('#locate');
   await settled(page);
-  expect(await readings(page), 'back at your location').toEqual(rainAtYou);
+  expect(await steady(page), 'back at your location').toEqual(rainAtYou);
 
   // Layers chosen one after another without waiting: what each started
   // loading must not land on top of the last one chosen.
   for (const name of ['Temperature', 'Wind', 'Precipitation', 'Wind', 'Temperature']) await pick(page, name);
   await settled(page);
-  expect(await readings(page), 'temperature after quick layer changes').toEqual(tempAtYou);
+  expect(await steady(page), 'temperature after quick layer changes').toEqual(tempAtYou);
   await expect(page.locator('body')).toHaveAttribute('data-layer', 'temperature');
   await pick(page, 'Precipitation');
   await settled(page);
@@ -163,7 +180,7 @@ test('quick taps end on the last choice: layers, pin and time', async ({ page })
   await page.mouse.click(300, 420);
   await page.mouse.click(250, 330);
   await settled(page);
-  expect(await readings(page), 'the last tapped place').toEqual(rainThere);
+  expect(await steady(page), 'the last tapped place').toEqual(rainThere);
 
   // Time dragged ahead, then Now: the same hour and the same numbers as before.
   await page.click('#locate');
@@ -172,7 +189,7 @@ test('quick taps end on the last choice: layers, pin and time', async ({ page })
   await expect(page.locator('#cursor-note')).toHaveText(/^in \d+ h$/);
   await page.click('#now-button');
   await settled(page);
-  expect(await readings(page), 'back at now').toEqual(rainAtYou);
+  expect(await steady(page), 'back at now').toEqual(rainAtYou);
   expect(errors).toEqual([]);
 });
 

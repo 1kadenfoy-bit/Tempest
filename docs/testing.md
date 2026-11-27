@@ -123,6 +123,11 @@ show up in a test.
 
 ### Found while writing these tests
 
+- **Fixed: the charts' look depended on the last draw.** A line setting left
+  by one draw (round line ends) carried into the next, so the temperature
+  chart's dotted 0° line was drawn differently on the first draw and on every
+  redraw after it, for example after zooming. Found by the zoom check; each
+  draw now starts fresh (`app/shell/scrubber.ts`, `app/summary/summary-window.ts`).
 - **Three of the four tests failing on main fail for one reason:** the
   recording is missing what they read now (above). Not an app bug.
 - **The effects lab's "paused" check** counted redraws from a terrain piece

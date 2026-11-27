@@ -213,7 +213,10 @@ export function setupSummaryWindow(deps: SummaryWindowDeps) {
     if (ctx) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
+      // Each draw starts from the canvas's own settings (as the sheet's chart, app/shell/scrubber.ts).
+      ctx.save();
       if (!status) s.layer.drawChart(ctx, w, h, pin, start, end);
+      ctx.restore();
     }
     const span = end.getTime() - start.getTime();
     const nx = (Date.now() - start.getTime()) / span;

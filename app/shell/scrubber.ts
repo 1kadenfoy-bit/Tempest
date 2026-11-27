@@ -95,7 +95,12 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     const ctx = canvas.getContext('2d')!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
+    // Each draw starts from the canvas's own settings: a line style left by
+    // the last draw (round line ends) changed the 0° guide's dashes on every
+    // redraw after the first (found by e2e/consistency.spec.ts, Nov 27).
+    ctx.save();
     layer?.drawChart(ctx, w, h, start, end);
+    ctx.restore();
     const span = end.getTime() - start.getTime();
     const nowLine = $('chart-now');
     const nx = (now.getTime() - start.getTime()) / span;
