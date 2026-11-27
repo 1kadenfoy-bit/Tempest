@@ -14,7 +14,9 @@ const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=
 const url = arg('url', 'http://localhost:4173/');
 const only = arg('only', '');
 const repeat = Number(arg('repeat', '1'));
-const dir = arg('dir', 'docs/reports/performance/data/features');
+// cost: load and the still-frame drawing only (about a minute a run); tour: the whole tour.
+const mode = arg('mode', 'cost');
+const dir = arg('dir', `docs/reports/performance/data/features-${process.argv.find((x) => x.startsWith('--mode=tour')) ? 'tour' : 'cost'}`);
 
 // Kaden's setup from his first speed test (Nov 27): 3D terrain and buildings on,
 // sun on, Terrain ground, peaks off, clouds, wind streaks and water switches off.
@@ -52,7 +54,7 @@ for (let k = 1; k <= repeat; k++) {
     const name = repeat > 1 ? `${r.name}-${k}` : r.name;
     const out = `${dir}/${name}.json`;
     if (existsSync(out)) { console.log(`skip ${name} (done)`); continue; }
-    const u = `${url}${url.includes('?') ? '&' : '?'}idle=30${r.off ? `&off=${r.off}` : ''}`;
+    const u = `${url}${url.includes('?') ? '&' : '?'}perf=${mode}&idle=30${r.off ? `&off=${r.off}` : ''}`;
     console.log(`\n>>> ${name}`);
     spawnSync('node', ['tools/perf/tour.mjs', `--url=${u}`, `--label=${name}`, `--prefs=${JSON.stringify(r.prefs)}`, `--out=${out}`], { stdio: 'inherit' });
   }

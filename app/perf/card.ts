@@ -23,6 +23,8 @@ export function rows(r: TourResult): Row[] {
   out.push({ what: '· first map', got: s(open?.firstMap), target: '', ok: null });
   out.push({ what: '· first weather', got: s(open?.firstWeather), target: '', ok: null });
   out.push({ what: '· pin forecast', got: open?.pinForecastFailed ? 'failed' : s(open?.pinForecast), target: '', ok: null });
+  const draw = by('Draw')?.data as { flat?: { msPerFrame: number }; tilted?: { msPerFrame: number } } | undefined;
+  if (draw?.flat) out.push({ what: 'One frame, still', got: `${draw.flat.msPerFrame} ms flat · ${draw.tilted?.msPerFrame ?? '—'} ms tilted`, target: '', ok: null });
   out.push(frameRow(by('Pan'), 'Pan'));
   out.push(frameRow(by('Pinch'), 'Pinch'));
   out.push(frameRow(by('Tilt 3D'), 'Tilt 3D'));

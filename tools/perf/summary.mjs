@@ -7,7 +7,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
-const dir = arg('dir', 'docs/reports/performance/data/features');
+const dir = arg('dir', 'docs/reports/performance/data/features-cost');
 const md = process.argv.includes('--md');
 
 const runs = readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
@@ -21,6 +21,8 @@ const ms = (r, n) => {
 };
 const row = (r) => ({
   name: r.label,
+  flat: step(r, 'Draw')?.data?.flat?.msPerFrame ?? null,
+  tilted: step(r, 'Draw')?.data?.tilted?.msPerFrame ?? null,
   everything: r.marks?.everything ?? null,
   firstMap: r.marks?.firstMap ?? null,
   pan: fps(r, 'Pan'), panLow: low(r, 'Pan'), panMs: ms(r, 'Pan'),
@@ -32,13 +34,28 @@ const row = (r) => ({
   idleDraws: step(r, 'Idle')?.data?.mapDraws ?? null,
   idleFrames: step(r, 'Idle')?.data?.frameRequests ?? null,
 });
-const rows = runs.map(row).sort((a, b) => (a.name === 'base' ? -1 : b.name === 'base' ? 1 : a.name.localeCompare(b.name)));
-const base = rows.find((r) => r.name === 'base');
+// Repeated runs (name-1, name-2, ...) are averaged into one row, with how many there were.
+const groups = new Map();
+for (const r of runs.map(row)) {
+  const k = r.name.replace(/-\d+$/, '');
+  groups.set(k, [...(groups.get(k) ?? []), r]);
+}
+const avg = (list) => {
+  const out = { name: list.length > 1 ? `${list[0].name.replace(/-\d+$/, '')} (×${list.length})` : list[0].name.replace(/-\d+$/, ''), key: list[0].name.replace(/-\d+$/, '') };
+  for (const k of Object.keys(list[0])) {
+    if (k === 'name') continue;
+    const xs = list.map((r) => r[k]).filter((x) => typeof x === 'number');
+    out[k] = xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  }
+  return out;
+};
+const rows = [...groups.values()].map(avg).sort((a, b) => (a.key === 'base' ? -1 : b.key === 'base' ? 1 : a.key.localeCompare(b.key)));
+const base = rows.find((r) => r.key === 'base');
 const pct = (x, b) => (x === null || b === null || !b ? '' : `${x >= b ? '+' : ''}${Math.round(((x - b) / b) * 100)}%`);
 const f1 = (x) => (x === null ? '—' : typeof x === 'number' ? (Math.round(x * 10) / 10).toString() : String(x));
 
-const head = ['run', 'all loaded s', 'pan fps', 'vs base', 'pan ms/frame', 'pinch fps', 'tilt fps', 'vs base', 'drag fps', 'drag drawn', 'play fps', 'idle draws'];
-const body = rows.map((r) => [r.name, f1(r.everything && r.everything / 1000), f1(r.pan), pct(r.pan, base?.pan ?? null), f1(r.panMs), f1(r.pinch), f1(r.tilt), pct(r.tilt, base?.tilt ?? null), f1(r.drag), f1(r.dragDrawn), f1(r.play), f1(r.idleDraws)]);
+const head = ['run', 'flat ms', 'vs base', 'tilted ms', 'vs base', 'all loaded s', 'pan fps', 'vs base', 'pan ms/frame', 'pinch fps', 'tilt fps', 'vs base', 'drag fps', 'drag drawn', 'play fps', 'idle draws'];
+const body = rows.map((r) => [r.name, f1(r.flat), pct(r.flat, base?.flat ?? null), f1(r.tilted), pct(r.tilted, base?.tilted ?? null), f1(r.everything && r.everything / 1000), f1(r.pan), pct(r.pan, base?.pan ?? null), f1(r.panMs), f1(r.pinch), f1(r.tilt), pct(r.tilt, base?.tilt ?? null), f1(r.drag), f1(r.dragDrawn), f1(r.play), f1(r.idleDraws)]);
 if (md) {
   console.log(`| ${head.join(' | ')} |\n|${head.map(() => ' --- ').join('|')}|`);
   for (const b of body) console.log(`| ${b.join(' | ')} |`);

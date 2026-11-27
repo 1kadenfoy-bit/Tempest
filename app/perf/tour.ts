@@ -19,6 +19,9 @@ export interface StepResult {
   /** Numbers for the build machine's runs. */
   data: Record<string, unknown>;
   error?: string;
+  /** When the step started and ended (ms on the page's clock), to line it up with a profile. */
+  t0?: number;
+  t1?: number;
 }
 
 export interface TourResult {
@@ -53,11 +56,11 @@ function memoryMB(): number | null {
 }
 
 /** Waits until the map has every piece in view and the app has no request on its way, or the time runs out. */
-async function settled(S: AppState, state: PerfState, maxMs: number): Promise<number | null> {
+async function settled(S: AppState, state: PerfState | null, maxMs: number): Promise<number | null> {
   const t0 = performance.now();
   await sleep(100);
   while (performance.now() - t0 < maxMs) {
-    const busy = state.fetches.some((f) => f.status === 0 && !f.error && f.ms === 0);
+    const busy = !!state && state.fetches.some((f) => f.status === 0 && !f.error && f.ms === 0);
     if (!busy && S.map.areTilesLoaded() && !S.map.isMoving()) return performance.now() - t0;
     await sleep(50);
   }
@@ -105,6 +108,31 @@ async function tap(el: HTMLElement | null): Promise<{ handlerMs: number; respons
   return { handlerMs: Math.round(t1 - t0), responseMs: Math.round(performance.now() - t0) };
 }
 
+/**
+ * What one frame of the map costs to draw with the camera still: the map is
+ * asked to redraw itself frame after frame, and the time between draws is
+ * averaged. Nothing loads or moves meanwhile, so the number is the drawing
+ * alone (on a phone it cannot read below one screen refresh, about 17 ms).
+ */
+export async function drawCost(S: AppState, frames = 12): Promise<{ msPerFrame: number; frames: number }> {
+  await settled(S, null, 15_000);
+  return new Promise((resolve) => {
+    const times: number[] = [];
+    const onRender = () => {
+      times.push(performance.now());
+      if (times.length > frames) {
+        S.map.off('render', onRender);
+        const gaps = times.slice(2).map((t, i) => t - times[i + 1]!).sort((a, b) => a - b);
+        resolve({ msPerFrame: round(gaps[Math.floor(gaps.length / 2)]!, 1), frames: gaps.length });
+        return;
+      }
+      S.map.triggerRepaint();
+    };
+    S.map.on('render', onRender);
+    S.map.triggerRepaint();
+  });
+}
+
 export async function runTour(S: AppState, state: PerfState): Promise<void> {
   const banner = document.createElement('div');
   banner.className = 'perf-banner';
@@ -136,12 +164,21 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
   let peakMemory = memoryMB();
   const step = async (name: string, fn: (r: StepResult) => Promise<void>) => {
     say(name);
-    const r: StepResult = { name, notes: [], data: {} };
+    const r: StepResult = { name, notes: [], data: {}, t0: Math.round(performance.now()) };
     try { await fn(r); } catch (err) { r.error = err instanceof Error ? err.message : String(err); }
     const m = memoryMB();
     if (m !== null) { r.data.memoryMB = m; peakMemory = Math.max(peakMemory ?? 0, m); }
+    r.t1 = Math.round(performance.now());
     result.steps.push(r);
     await sleep(500);
+  };
+
+  const finish = () => {
+    ready.stop();
+    banner.remove();
+    result.memoryMB = peakMemory;
+    result.done = true;
+    showCard(result);
   };
 
   // Where the tour starts, put back at the end.
@@ -156,6 +193,18 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
     await sleep(3000);
     r.frames = rec.stop();
   });
+
+  // The drawing alone, flat and tilted (camera still, every frame redrawn).
+  await step('Draw', async (r) => {
+    r.data.flat = await drawCost(S);
+    S.map.jumpTo({ pitch: 55, bearing: 30 });
+    r.data.tilted = await drawCost(S);
+    S.map.jumpTo({ pitch: home.pitch, bearing: home.bearing });
+    await settled(S, state, 10_000);
+    const f = r.data.flat as { msPerFrame: number }, t = r.data.tilted as { msPerFrame: number };
+    r.notes.push(`one frame takes ${f.msPerFrame} ms flat, ${t.msPerFrame} ms tilted`);
+  });
+  if (state.mode === 'cost') { finish(); return; }
 
   // 2. Pan: four one-second moves, about a third of the screen each.
   await step('Pan', async (r) => {
@@ -320,9 +369,5 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
     r.notes.push(`${draws} map draws, ${rafCalls} frame requests, ${downloads} downloads, ${changes} page changes in ${idleSeconds} s`);
   });
 
-  ready.stop();
-  banner.remove();
-  result.memoryMB = peakMemory;
-  result.done = true;
-  showCard(result);
+  finish();
 }

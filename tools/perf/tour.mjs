@@ -13,6 +13,7 @@
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { apiCalls } from './api-weight.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.slice(k.length + 3) : d; };
 const url = arg('url', 'http://localhost:4173/');
@@ -53,15 +54,25 @@ export async function runTour() {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message.slice(0, 300)));
   const sep = url.includes('?') ? '&' : '?';
+  // Requests to Open-Meteo's point APIs, with what each counts against the free limit.
+  const api = [];
+  context.on('request', (req) => {
+    const u = req.url();
+    if (/api\.open-meteo\.com/.test(u)) api.push({ at: Date.now() - t0, calls: Math.round(apiCalls(u) * 10) / 10, url: u.slice(0, 300) });
+  });
   const t0 = Date.now();
-  await page.goto(`${url}${sep}perf`, { waitUntil: 'commit' });
+  await page.goto(/[?&]perf/.test(url) ? url : `${url}${sep}perf`, { waitUntil: 'commit' });
   // The tour takes about two minutes on a phone; far longer with a slow-down here.
   await page.waitForFunction(() => window.tempestPerf?.tour?.done === true, null, { timeout: 30 * 60_000, polling: 1000 });
   const tour = await page.evaluate(() => window.tempestPerf.tour);
   const marks = await page.evaluate(() => window.tempestPerf.marks);
   if (shot) { mkdirSync(dirname(shot), { recursive: true }); await page.screenshot({ path: shot }); }
   await browser.close();
-  const result = { label, url, weather, cpu, net, prefs, wallSeconds: Math.round((Date.now() - t0) / 1000), marks, tour, errors };
+  // Each request to the step it fell in (the page's clock starts about when it was asked for).
+  for (const a of api) a.step = tour.steps.find((x) => a.at >= x.t0 && a.at < x.t1)?.name ?? (a.at < (tour.steps[0]?.t0 ?? 0) ? 'Load' : 'between');
+  const apiByStep = {};
+  for (const a of api) { const b = (apiByStep[a.step] ??= { requests: 0, calls: 0 }); b.requests++; b.calls = Math.round((b.calls + a.calls) * 10) / 10; }
+  const result = { label, url, weather, cpu, net, prefs, wallSeconds: Math.round((Date.now() - t0) / 1000), marks, tour, errors, api, apiByStep };
   if (out) { mkdirSync(dirname(out), { recursive: true }); writeFileSync(out, JSON.stringify(result, null, 1)); }
   return result;
 }
@@ -70,7 +81,9 @@ const r = await runTour();
 console.log(`\n=== ${r.label} (cpu x${r.cpu}, ${r.weather}, ${r.wallSeconds} s)`);
 console.log('load:', JSON.stringify(r.marks));
 for (const s of r.tour.steps) {
+  if (s.name === 'Draw') { console.log(`Draw           ${s.notes.join('; ')}`); continue; }
   const f = s.frames ? `${s.frames.fps} fps, 1% ${s.frames.low1}, worst ${s.frames.worstMs} ms, map draws ${s.frames.mapDraws}, long tasks ${s.frames.longTasks} (${s.frames.longTaskMs} ms)` : '';
   console.log(`${s.name.padEnd(14)} ${f} ${s.notes.join('; ')}${s.error ? ` ERROR ${s.error}` : ''}`);
 }
+console.log('Open-Meteo free-limit calls by step:', JSON.stringify(r.apiByStep));
 for (const e of r.errors.slice(0, 10)) console.log('  page error:', e);

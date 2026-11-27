@@ -1,0 +1,122 @@
+{
+ "label": "no-bloom",
+ "url": "http://localhost:4173/?perf=cost&idle=30&off=bloom",
+ "weather": "recorded",
+ "cpu": 1,
+ "net": "none",
+ "prefs": {
+  "terrain3d": true,
+  "buildings3d": true,
+  "hillshade": true,
+  "contours": true,
+  "stations": false,
+  "layer": "precipitation",
+  "mapSettings": {
+   "ground": "shaded",
+   "trails": true,
+   "trailNames": true,
+   "huts": true,
+   "camps": true,
+   "peaks": false,
+   "peakHeights": true,
+   "contours": true,
+   "smallRoads": true,
+   "skiLifts": false,
+   "parkBoundaries": false,
+   "regionBoundaries": true,
+   "municipalBoundaries": true,
+   "sun": true
+  },
+  "features": {}
+ },
+ "wallSeconds": 47,
+ "marks": {
+  "html": 8,
+  "appStarted": 413,
+  "firstMap": 1990,
+  "mapComplete": 2006,
+  "pinForecast": 11380,
+  "firstWeather": 15119,
+  "everything": 19834
+ },
+ "tour": {
+  "started": "2026-11-20T00:11:00.000Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "screen": "390×844 @2x",
+  "standalone": false,
+  "setup": {
+   "layer": "precipitation",
+   "terrain3d": true,
+   "buildings3d": true,
+   "hillshade": true,
+   "contours": true,
+   "stations": false,
+   "mapSettings": {
+    "ground": "shaded",
+    "trails": true,
+    "trailNames": true,
+    "huts": true,
+    "camps": true,
+    "peaks": false,
+    "peakHeights": true,
+    "contours": true,
+    "smallRoads": true,
+    "skiLifts": false,
+    "parkBoundaries": false,
+    "regionBoundaries": true,
+    "municipalBoundaries": true,
+    "sun": true
+   },
+   "features": {}
+  },
+  "steps": [
+   {
+    "name": "Open",
+    "notes": [],
+    "data": {
+     "html": 8,
+     "appStarted": 413,
+     "firstMap": 1990,
+     "mapComplete": 2006,
+     "pinForecast": 11380,
+     "firstWeather": 15119,
+     "everything": 19834,
+     "memoryMB": 97
+    },
+    "t0": 19843,
+    "frames": {
+     "seconds": 3,
+     "fps": 57,
+     "low1": 60,
+     "worstMs": 167,
+     "mapDraws": 1,
+     "longTasks": 1,
+     "longTaskMs": 168
+    },
+    "t1": 22843
+   },
+   {
+    "name": "Draw",
+    "notes": [
+     "one frame takes 163.1 ms flat, 176.8 ms tilted"
+    ],
+    "data": {
+     "flat": {
+      "msPerFrame": 163.1,
+      "frames": 11
+     },
+     "tilted": {
+      "msPerFrame": 176.8,
+      "frames": 11
+     },
+     "memoryMB": 97
+    },
+    "t0": 24341,
+    "t1": 46439
+   }
+  ],
+  "memoryMB": 97,
+  "done": true
+ },
+ "errors": []
+}
