@@ -26,6 +26,8 @@ export interface StepResult {
 
 export interface TourResult {
   started: string;
+  /** The address's options (?perf, &off=...), so a pasted result says how it was run. */
+  address: string;
   userAgent: string;
   screen: string;
   standalone: boolean;
@@ -143,6 +145,7 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
   const ready = watchReady();
   const result: TourResult = {
     started: new Date().toISOString(),
+    address: location.search,
     userAgent: navigator.userAgent,
     screen: `${innerWidth}×${innerHeight} @${devicePixelRatio}x`,
     standalone: matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true,

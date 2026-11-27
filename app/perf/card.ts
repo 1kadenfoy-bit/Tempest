@@ -59,7 +59,7 @@ export function showCard(r: TourResult): void {
   const browser = /CriOS|Chrome/.test(r.userAgent) ? 'Chrome' : /Safari/.test(r.userAgent) ? 'Safari' : 'browser';
   const head = `<div class="perf-title">Speed test</div>
     <div class="perf-sub">${esc(new Date(r.started).toLocaleString())} · ${esc(ua)} · ${browser}${r.standalone ? ' · installed app' : ''} · ${esc(r.screen)}</div>
-    <div class="perf-sub">Layer ${esc(String(r.setup.layer))} · 3D ${r.setup.terrain3d ? 'on' : 'off'}${r.steps.find((x) => x.name === 'Tilt 3D')?.data.switchedOnForTest ? ' (on for the 3D step)' : ''}</div>`;
+    <div class="perf-sub">${esc(r.address)} · Layer ${esc(String(r.setup.layer))} · 3D ${r.setup.terrain3d ? 'on' : 'off'}${r.steps.find((x) => x.name === 'Tilt 3D')?.data.switchedOnForTest ? ' (on for the 3D step)' : ''}</div>`;
   const table = rows(r).map((x) => `<tr><td>${esc(x.what)}</td><td>${esc(x.got)}</td><td class="perf-mark">${x.ok === null ? '' : x.ok ? 'pass' : 'miss'}</td></tr>`).join('');
   card.innerHTML = `${head}<table class="perf-table"><tbody>${table}</tbody></table>
     <div class="perf-buttons"><button class="perf-copy">Copy numbers</button><button class="perf-again">Run again</button><button class="perf-close">Close</button></div>`;
