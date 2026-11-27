@@ -2,6 +2,8 @@
 //
 //   ?perf        records the load, then runs the tour by itself and shows the results card
 //   ?perf=load   records the load only (the build machine's download runs)
+//   &off=a,b     switches features off before the tour (app/perf/switches.ts)
+//   &idle=70     a longer quiet step at the end
 //
 // It is loaded only when the address has ?perf (app/main.ts), so the app is
 // unchanged for everyone else. It reads the app's shared state; it never
@@ -13,6 +15,8 @@ export interface PerfState {
   mode: string;
   marks: LoadMarks;
   fetches: FetchRecord[];
+  /** Features switched off for this run (?perf&off=...), with the map layers each touched. */
+  off?: Record<string, number>;
   /** Set by the tour as it runs. */
   tour?: unknown;
 }
@@ -25,7 +29,9 @@ export function startPerf(S: AppState): PerfState {
   const mode = new URLSearchParams(location.search).get('perf') || 'tour';
   const fetches = watchFetches();
   const state: PerfState = { mode, marks: {}, fetches };
-  state.marks = watchLoad(() => S.map, () => {
+  const off = new URLSearchParams(location.search).get('off');
+  state.marks = watchLoad(() => S.map, async () => {
+    if (off) state.off = (await import('./switches')).applyOff(S.map, off);
     if (mode !== 'load') void import('./tour').then((m) => m.runTour(S, state));
   });
   window.tempestPerf = state;

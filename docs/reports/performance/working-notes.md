@@ -33,3 +33,10 @@ github.com/open-meteo/open-meteo-website, routes/en/pricing and terms)
 - The pin series: 77 variables x 1 location = 7.7 calls per model; three models
   on open = ~23 calls.
 - The map's profile nodes: 20 locations x 42 variables = 84 calls per request.
+
+## Kaden's phone (iPhone 12, Safari, iOS 18.7, Nov 27)
+
+- Runs 1 and 2 were with **Low Power Mode on** (Kaden confirmed). Safari then
+  caps drawing at 30 fps (seen: still map = exactly 30.0) and the processor runs
+  slower. A run with it off is asked for.
+- Setup: 3D terrain and buildings on, sun on, shaded ground, layer precipitation.
