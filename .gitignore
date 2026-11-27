@@ -10,3 +10,6 @@ public/tiles/*.pmtiles
 
 # Helper agents' working copies
 .claude/worktrees/
+
+# Recorded weather being recorded: each test process's answers, merged into the set by tools/record-weather.mjs
+recorded/*/fill/

@@ -1,4 +1,4 @@
-import { expect, reportDir, test, type Page, type Request } from './fixtures';
+import { expect, reportDir, test, type BrowserContext, type Page, type Request } from './fixtures';
 import { readFileSync } from 'node:fs';
 
 // How much the app asks the weather and safety servers (Data rule 1,
@@ -14,7 +14,26 @@ import { readFileSync } from 'node:fs';
 // of the session on purpose (seen Nov 27, a dropped pin asked every minute).
 // The budgets and what they were before are in docs/testing.md.
 
-test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
+const YOU = { latitude: 49.3895, longitude: -122.948 };
+test.use({ geolocation: YOU, permissions: ['geolocation'] });
+
+/**
+ * A pin's forecast (one place) is answered at your location only, and
+ * refused (busy) anywhere else, whatever the recorded set holds: a newer set
+ * that also holds the dropped pins' forecasts (other tests drop pins at the
+ * same places) must not quietly take the refused case out of this session.
+ * The view's grids (many places at once) are answered from the set as usual.
+ */
+async function pointServiceAtYourLocationOnly(context: BrowserContext) {
+  await context.route('https://api.open-meteo.com/v1/**', (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    const lat = q.get('latitude') ?? '';
+    const lng = q.get('longitude') ?? '';
+    const here = Math.abs(Number(lat) - YOU.latitude) < 0.001 && Math.abs(Number(lng) - YOU.longitude) < 0.001;
+    if (lat.includes(',') || here) return route.fallback();
+    return route.fulfill({ status: 503, contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body: 'Busy (this test: the point service answers at your location only)' });
+  });
+}
 const HOME = '/?insets=47,34';
 
 /** The servers, in plain names. */
@@ -106,6 +125,7 @@ test('a normal session, then an hour untouched, stays within each server’s bud
   test.setTimeout(300_000);
   const c = new Counter();
   context.on('request', (r) => void c.add(r));
+  await pointServiceAtYourLocationOnly(context);
   // A clock that can be fast-forwarded, from the recording's moment.
   const meta = JSON.parse(readFileSync(`recorded/${weather}/meta.json`, 'utf8')) as { now: string };
   await context.clock.install({ time: new Date(meta.now) });

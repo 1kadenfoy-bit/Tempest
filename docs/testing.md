@@ -43,7 +43,51 @@ once, and the test's log lists what was missing:
 ```
 
 The fix for those three is a new recording that covers what they read
-(`docs/tasks/test-upkeep.md`, tasks 2 and 3).
+(`docs/tasks/test-upkeep.md`, task 3).
+
+## Recording a set that covers every test (Nov 27)
+
+**A piece of a file is found by what it holds, not only by how it was asked.**
+The map-file reader asks for byte ranges of each file. Before, an answer was
+found only by its exact range, so a reader that asked slightly different
+pieces found nothing. Now the replay answers any range whose every byte the
+recording holds: inside one recorded piece, or across pieces that touch or
+overlap (the same recorded bytes, so the same numbers). A file's size is
+answered from any recorded piece of it. One lookup does this for the tests
+(`e2e/recorded.ts`) and the dev server (`public/recorded-sw.js`):
+`app/data/recorded-replay.ts`, with its unit tests. The Nov 20 set's missing
+pieces are truly missing (not other ranges of recorded ones), so the three
+tests stay red until the new recording.
+
+**The tests record what they read.** `npm run weather:record -- --set=<name>`:
+1. the tour: each layer at each spot, the hours played through, the forecast
+   summary where the summary tests press (200, 300 on the screen at Mt
+   Seymour) (`tools/record/tour.spec.ts`);
+2. every browser test on the new set with `RECORD=<set>`: what the set lacks
+   is asked live and kept, so the phone tests page, the saved area, the
+   consistency checks' views and any new test are covered without changing
+   the recorder. Live-weather tests run on the set too. A check that fails
+   does not stop its test while recording (it is "soft"), so the test still
+   asks for everything it reads; the failures are listed;
+3. the merge into `recorded/<set>/`, each body kept once, and a report: the
+   size (on disk and in git), what the servers refused (not recorded), and
+   whether a model's newer run came out during the recording (which would mix
+   two runs: record again).
+
+**On GitHub: the "Record weather" workflow** (Actions › Record weather › Run
+workflow; `.github/workflows/record-weather.yml`). The tour on one machine,
+the tests on four at once, then the merge and a pull request with the new
+set, its report in the description, and the tests started on it (GitHub does
+not start them on a pull request a workflow opened). It stops without a pull
+request when the set is over the size limit (60 MB unless changed). For the
+pull request to open, Settings › Actions › General › "Allow GitHub Actions to
+create and approve pull requests" must be on; otherwise the set is still
+pushed to a `record/…` branch and the run says so.
+
+**The server budget keeps its refused case.** `e2e/requests.spec.ts` now
+refuses a pin's forecast away from your location itself, instead of relying
+on the set to lack it: a set recorded by every test holds the forecasts at
+the places other tests drop pins, which are the same places.
 
 ## Report pictures
 

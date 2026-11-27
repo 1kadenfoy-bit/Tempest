@@ -189,6 +189,7 @@
         "public/recorded-sw.js",
         "recorded/**",
         "tools/record-weather.mjs",
+        "tools/record/**",
         "tools/build-satellite.py",
         "public/satellite/**",
         "e2e/offline.spec.ts",

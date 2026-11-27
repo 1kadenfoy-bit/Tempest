@@ -21,7 +21,7 @@ The exact list is `data` in `docs/sections/sections.json`.
 | Open-Meteo map files and point API, ECCC precipitation analysis | `adapters/openmeteo-maps/`, `adapters/openmeteo-api/`, `adapters/eccc-geomet/hrdpa*`, `render/openmeteo-starter/` |
 | Store, time, grid requests; the run timetable and retries (when to ask again, Data rule 1) | `core/store/`, `core/time/` (`run-schedule.ts`, `retry.ts`), `core/geo/grid-request*` |
 | Saved areas and the region file | `app/offline/`, `core/offline/`, `core/region-file/`, `public/sw.js` |
-| Recorded weather | `app/data/recorded.ts`, `public/recorded-sw.js`, `tools/record-weather.mjs`, `recorded/` |
+| Recorded weather | `app/data/recorded.ts`, `app/data/recorded-replay.ts`, `public/recorded-sw.js`, `tools/record-weather.mjs`, `tools/record/`, `recorded/`; the workflow `.github/workflows/record-weather.yml` |
 | Browser tests | `e2e/offline.spec.ts`, `e2e/models.spec.ts`, `e2e/consistency.spec.ts`, `e2e/requests.spec.ts` (the server budget: runs early on every branch) |
 | A data viewer page (yours to build) | `data-viewer.html`, `app/data-viewer/` |
 
@@ -61,15 +61,27 @@ Example: plane routes.
 
 You keep the recorded sets.
 - `npm run weather:record -- --set=<name> --description="..."` records one:
-  - add `--add` to add spots or layers to an existing set;
-  - add `--spots=` and `--layers=` to choose what to record.
+  the tour (layers, spots, hours, the summary), then every browser test on
+  the new set, each filling what it reads (`docs/testing.md`, "Recording a
+  set that covers every test");
+  - add `--add` to add to an existing set (only while its runs still exist);
+  - add `--spots=` and `--layers=` to choose the tour, `--tests=` to run only
+    some test files, `--step=tour|tests|merge` for one step.
+- **Better on GitHub:** the "Record weather" workflow (Actions › Record
+  weather › Run workflow) records on GitHub's machines and opens a pull
+  request with the set and its report. The cloud chat machine's share of the
+  point service can be spent (refused all day on Nov 27).
+- A piece of a map file is replayed from any recorded pieces that hold its
+  bytes (`app/data/recorded-replay.ts`), so a change in how files are read
+  does not need a new recording.
 - Record interesting days when they come: a storm, a big wind, deep cold. Tell
   Kaden so the other sections can use them.
 - **When the Open-Meteo daily limit is spent** (shared by every chat), the
   recorder reads the map files instead. It still works, but it is slower and
   bigger.
 - **Size:** keep sets to tens of MB. A set is stored in the repository for
-  good, so replace sets rarely.
+  good, so replace sets rarely. The recorder reports the size and stops over
+  60 MB (`--max-mb=`).
 
 ## Rules for this section
 

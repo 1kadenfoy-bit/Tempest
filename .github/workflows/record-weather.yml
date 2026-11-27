@@ -1,0 +1,160 @@
+name: Record weather
+
+# Records a new recorded-weather set (recorded/<set>/, docs/sections/data.md)
+# on GitHub's machines, which have their own share of the forecast servers'
+# free limits (the point service refused the cloud chat machine all day on
+# Nov 27), and opens a pull request with it. Started by hand: Actions ›
+# Record weather › Run workflow. tools/record-weather.mjs does the work:
+#   1. the tour (each layer at each spot, the hours, the forecast summary),
+#      on one machine; the set's clock is frozen when it starts;
+#   2. every browser test on the new set, filling what it reads that the set
+#      lacks (RECORD=<set>), on four machines at once, like CI;
+#   3. the merge, the size check, the report, and the pull request.
+on:
+  workflow_dispatch:
+    inputs:
+      set:
+        description: Set name (recorded/<name>; "default" is the one the tests use)
+        default: default
+      description:
+        description: What the day holds, in a few words (e.g. "Snow to 600 m, strong outflow")
+        default: ''
+      max_mb:
+        description: Stop if the set is bigger than this many MB (it is stored in git for good)
+        default: '60'
+
+# One recording at a time.
+concurrency:
+  group: record-weather
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SET: ${{ inputs.set }}
+
+jobs:
+  tour:
+    name: 1. tour
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Week number
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: public/tiles
+          key: basemap-ci-${{ hashFiles('tools/regions.json', 'tools/build-basemap.mjs', 'tools/lib/*.mjs') }}-${{ steps.week.outputs.week }}
+      - name: Base map pieces the tests use
+        run: npm run tiles
+      - name: Browser
+        run: npx playwright install --with-deps chromium
+      - name: Record the tour
+        run: node tools/record-weather.mjs --step=tour --set="$SET" --description="$DESCRIPTION"
+        env:
+          DESCRIPTION: ${{ inputs.description }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: set-after-tour
+          path: recorded/${{ inputs.set }}/
+          retention-days: 3
+
+  tests:
+    name: 2. tests (${{ matrix.shard }} of 4)
+    needs: tour
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Week number
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: public/tiles
+          key: basemap-ci-${{ hashFiles('tools/regions.json', 'tools/build-basemap.mjs', 'tools/lib/*.mjs') }}-${{ steps.week.outputs.week }}
+      - name: Base map pieces the tests use
+        run: npm run tiles
+      - name: Browser
+        run: npx playwright install --with-deps chromium
+      - uses: actions/download-artifact@v8
+        with:
+          name: set-after-tour
+          path: recorded/${{ inputs.set }}/
+      # Checks that fail on the new day do not stop the recording: they are listed in the pull request.
+      - name: Every browser test, filling what the set lacks
+        run: node tools/record-weather.mjs --step=tests --set="$SET" --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fill-${{ matrix.shard }}
+          path: recorded/${{ inputs.set }}/fill/
+          retention-days: 3
+
+  merge:
+    name: 3. merge and pull request
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v8
+        with:
+          name: set-after-tour
+          path: recorded/${{ inputs.set }}/
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: fill-*
+          path: recorded/${{ inputs.set }}/fill/
+          merge-multiple: true
+      - name: Merge, check the size, report
+        run: |
+          node tools/record-weather.mjs --step=merge --set="$SET" --max-mb=${{ inputs.max_mb }} --summary=../summary.md
+          cat ../summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          day=$(node -p "require('./recorded/$SET/meta.json').now.slice(0, 16).replace(':', '')")
+          branch="record/$SET-$day"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "recorded/$SET"
+          git commit -q -m "Recorded weather: $SET, $day UTC" -m "Recorded by the Record weather workflow (run ${{ github.run_id }})."
+          git push -u origin "$branch"
+          {
+            echo "A new recorded-weather set, recorded on GitHub's machines by the **Record weather** workflow ([this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}))."
+            echo
+            cat ../summary.md
+            echo
+            echo "**What next** (docs/tasks/test-upkeep.md, task 3): a chat runs every browser test on this set and fixes what fails for the right reason before it merges. The tests below were started on this branch by the workflow."
+          } > ../body.md
+          # Needs Settings › Actions › General › "Allow GitHub Actions to create and approve pull requests".
+          gh pr create --base "${{ github.ref_name }}" --head "$branch" --title "Recorded weather: $SET, $day UTC" --body-file ../body.md \
+            || echo "::warning::The set is on the branch $branch, but GitHub refused to open the pull request (allow it in Settings › Actions › General, or open it by hand: ${{ github.server_url }}/${{ github.repository }}/compare/${{ github.ref_name }}...$branch)"
+          # A pull request opened by a workflow does not start the tests by itself (GitHub's rule); start them here.
+          gh workflow run ci.yml --ref "$branch"
