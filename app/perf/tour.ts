@@ -356,6 +356,15 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
   S.map.jumpTo(home);
   S.cursor.setIndex(homeIndex);
   await settled(S, state, 15_000);
+  // The map finishes on its own after a move (late pieces, fades): wait for it
+  // to say it is idle, so the quiet step counts only work done while untouched.
+  const idleWait = performance.now();
+  const reachedIdle = await new Promise<boolean>((resolve) => {
+    const t = setTimeout(() => resolve(false), 20_000);
+    S.map.once('idle', () => { clearTimeout(t); resolve(true); });
+    S.map.triggerRepaint();
+  });
+  const idleAfterMs = Math.round(performance.now() - idleWait);
 
   // 9. Not touching it: fifteen quiet seconds. Counts the map's draws, frame
   // requests, downloads and changes to the page.
@@ -386,7 +395,7 @@ export async function runTour(S: AppState, state: PerfState): Promise<void> {
     S.map.off('render', onRender);
     obs.disconnect();
     const downloads = Math.max(state.fetches.length - fetches0, performance.getEntriesByType('resource').length - res0);
-    r.data = { seconds: idleSeconds, mapDraws: draws, frameRequests: rafCalls, downloads, pageChanges: changes, changedWhere: Object.fromEntries([...where].sort((a, b) => b[1] - a[1]).slice(0, 8)), downloaded: state.fetches.slice(fetches0).map((f) => f.url.slice(0, 120)) };
+    r.data = { mapIdleAfterMs: idleAfterMs, mapReachedIdle: reachedIdle, seconds: idleSeconds, mapDraws: draws, frameRequests: rafCalls, downloads, pageChanges: changes, changedWhere: Object.fromEntries([...where].sort((a, b) => b[1] - a[1]).slice(0, 8)), downloaded: state.fetches.slice(fetches0).map((f) => f.url.slice(0, 120)) };
     r.notes.push(`${draws} map draws, ${rafCalls} frame requests, ${downloads} downloads, ${changes} page changes in ${idleSeconds} s`);
   });
 

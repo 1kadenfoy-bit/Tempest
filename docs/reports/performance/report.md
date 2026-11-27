@@ -10,28 +10,30 @@ measured" near the end.
 
 ## In short
 
-1. **Moving the map averages close to your target, but it stops for 0.15 to
-   0.5 s several times a pan.** Those stops are what you feel. On your iPhone 12
-   (Low Power Mode off), panning averaged 30 frames a second, but the slowest
-   1% of frames ran at 5 a second and the longest stop was 0.27 s; dragging the
-   time had a 0.51 s stop.
-2. **The stops come from a few pieces of the app's own code**, not from the map
-   library:
-   - the glow (bloom) copies the finished map picture back after every frame,
-     which makes the phone wait for the drawing to finish each time; with the
-     glow switched off for one run, your phone panned 46% faster and drew 72%
-     more frames while dragging the time (Low Power Mode on);
-   - rain or snow at each spot's real height is worked out again twice a
-     second while the map moves, and after every time step (up to 0.2 s each
-     time on the build machine);
-   - the mountain shadows are worked out again each time the map stops (up to
-     0.3 s);
-   - the wind layer's ground smoothing (0.16 s when switching to wind).
+1. **Moving the map is too slow on average and stops for 0.13 to 0.5 s
+   several times a pan.** On your iPhone 12 at full speed, panning averaged 21
+   to 30 frames a second, the slowest 1% of frames ran at 5 to 6 a second, and
+   the longest stops were 0.17 to 0.51 s.
+2. **Two different causes:**
+   - **The averages: the glow.** It copies the finished map picture back after
+     every frame, so the phone waits for the drawing each time. With the glow
+     off for one run on your phone, panning went from 21 to 34 frames a
+     second, pinching from 17 to 31 and dragging the time from 11 to 23.
+   - **The stops: a few pieces of the app's own code** that run on the main
+     processor, during which nothing can be drawn (they stay the same with the
+     glow off):
+     - rain or snow at each spot's real height, worked out again twice a
+       second while the map moves and at each time step (up to 0.2 s on the
+       build machine, about 0.12 s on your phone at full speed);
+     - the mountain shadows, worked out again each time the map stops (up to
+       0.3 s, about 0.18 s on your phone);
+     - the terrain heights both of those read, decoded from pictures;
+     - the wind layer's ground smoothing (0.16 s when switching to wind).
 3. **Dragging the time slider draws fewer than half the steps** (21 of 48),
    because the map waits for the finger to pause for 0.06 s before drawing.
    It catches up 0.06 s after the finger stops.
-4. **Opening is near the target on a good connection** (7.0 s and 5.8 s on your
-   phone) **but not reliably** (13.5 s once). Nothing about the weather starts
+4. **Opening passes when the app's files are already on the phone** (3.9 to
+   5.8 s) **and misses on a first open** (7.0, 7.1, 7.2 and 13.5 s). Nothing about the weather starts
    until the map has its first full picture, and the weather then waits on five
    steps one after another.
 5. **A weather layer can fail to arrive because the app uses up the forecast
@@ -59,21 +61,22 @@ below a phone's; it is used to compare features and versions with each other,
 not to judge the targets.
 
 Calibration: the tour's Yardstick (a fixed loop of the kind the app runs over
-terrain pictures) took 15 ms on the iPhone 12 (twice, Low Power Mode on) and
-14.8 ms on the build machine. The phone runs the app's own code at about the
-build machine's speed, so the lengths of the stops the build machine's code
-profile finds (causes 2 to 6) carry over to the phone about one to one. Its
-drawing does not: the phone's graphics chip is far faster than drawing in
-software.
+terrain pictures) took 14.8 ms on the build machine, 15 ms on the iPhone 12
+with Low Power Mode on and 8–9 ms at full speed. So the phone runs the app's
+own code at about the build machine's speed in Low Power Mode and about 1.7
+times faster at full speed: a 0.3 s stop of the app's code on the build
+machine is about 0.3 s on the phone in Low Power Mode and about 0.18 s at full
+speed. Drawing does not carry over: the phone's graphics chip is far faster
+than drawing in software.
 
-| Target (Kaden, Nov 27) | iPhone 12, full speed | iPhone 12, LPM (2 runs) | Build machine | Result |
+| Target (Kaden, Nov 27) | iPhone 12, full speed (runs 3 and 6) | iPhone 12, Low Power Mode (runs 1, 2, 4) | Build machine | Result |
 | --- | --- | --- | --- | --- |
-| 1. Open, everything loaded, under 7 s | 13.5 s (first open after a new version) | 7.0 s first, 5.8 s repeat | 6.9 s first, 6.6 s repeat (recorded weather, local); 10.5 s first, 6.5 s repeat, 15.9 s on slow mobile (the real site, live weather) | **Fails sometimes** |
-| 2. Pan, pinch, tilt: 30 fps average, slowest 1% at 24 | Pan 30 / 5; pinch 24 / 5; tilt 44 / 8 | Pan 11–12 / 3; pinch 12 / 5; tilt 16–18 / 5–6 | (software drawing: 1–4 fps) | **Fails** (the slowest 1%) |
-| 3. Time slider and play keep up | Drag: 21 of 48 steps drawn, 17 fps, stop of 0.51 s. Play: 14 of 14 steps, 45 fps | Drag: 21–22 of 48. Play: 13 of 13 | Drag: 23 of 48 | **Drag fails, play passes** |
+| 1. Open, everything loaded, under 7 s | 13.5 s and 7.2 s (each the first open after a new preview); 3.9 s on the next open | 7.0 s and 7.1 s first; 5.8 s repeat | 6.9 s first, 6.6 s repeat (recorded weather, local); 10.5 s first, 6.5 s repeat, 15.9 s on slow mobile (the real site, live weather) | **Fails on a first open; passes when the files are already on the phone** |
+| 2. Pan, pinch, tilt: 30 fps average, slowest 1% at 24 | Pan 30 / 5 and 21 / 6; pinch 24 / 5 and 17 / 7; tilt 44 / 8 and 24 / 8 | Pan 11–12 / 3; pinch 11–12 / 4–5; tilt 16–18 / 4–6 | (software drawing: 1–4 fps) | **Fails** (the slowest 1% everywhere, the average in most runs) |
+| 3. Time slider and play keep up | Drag: 21 of 48 steps drawn, 11–17 fps, stops of 0.17–0.51 s. Play: 14 of 14 steps, 38–45 fps | Drag: 21–22 of 48. Play: 13 of 13 | Drag: 23 of 48 | **Drag fails, play passes** |
 | 4. Taps answer in 0.1–0.2 s | 0.02–0.09 s | 0.03–0.10 s | 0.01–0.03 s | **Passes** |
-| 5. Layer switch under 1 s | Temperature 0.1, radar 0.3, avalanche 0.3, precipitation 0.0, **wind 1.0, air quality 1.4** | Wind 0.2–1.4, air quality 0.5–1.2, avalanche 0.5–1.1, radar 0.3–1.0 | Wind 9 s or none in 15 s (point API refused: see "Why a layer sometimes never arrives") | **Mostly passes; wind and air quality miss** |
-| 6. No work while untouched | 24 map redraws in 15 s | 3 and 0 redraws | 0 redraws; the time chart is redrawn every 30 s; timers every 60 s and 10 min | **Fails** (small) |
+| 5. Layer switch under 1 s | Temperature 0.1, wind 0.1–1.0, radar 0.3, avalanche 0.2–0.3, air quality 0.6–1.4, precipitation 0.0 | Wind 0.2–1.4, air quality 0.4–1.2, avalanche 0.2–1.1, radar 0.3–3.8 | Wind 9 s or none in 15 s (point API refused: see "Why a layer sometimes never arrives") | **Mostly passes; wind, air quality and radar sometimes miss** |
+| 6. No work while untouched | 11–24 map redraws in 15 s, all while the map was still finishing after the tour moved it home (see "Not measured") | 0–18 redraws, the same | 0 redraws; the time chart is redrawn every 30 s; timers every 60 s and 10 min | **Fails** (small: the timers) |
 | 7. Memory below Safari's reload point | Safari does not report memory | — | 57–109 MB of script memory | **Not measurable on the phone** |
 | 8. Feels "live" | the stops in 2 and 3 | | | **Fails** until 2 and 3 pass |
 
@@ -96,21 +99,24 @@ Evidence:
   where the waiting shows, not extra work.
 - Still-frame drawing cost: the glow adds 12% to every frame with 3D on, 10%
   with 3D off (`data/features-cost*`).
-- **On Kaden's iPhone 12** (both runs with Low Power Mode on, a few minutes
-  apart, `data/phone-iphone12-safari-4.json` and `-5.json`; run 5 was the one
-  opened with `?perf&off=bloom`, per the order of the links Kaden was given):
+- **On Kaden's iPhone 12**, the same tour with the glow on and off
+  (`?perf&off=bloom`), a few minutes apart (`data/phone-iphone12-safari-4` to
+  `-7`):
 
-  | | Glow on | Glow off | Change |
-  | --- | --- | --- | --- |
-  | Pan | 11.4 fps | 16.6 fps | +46% |
-  | Drag the time | 7.8 fps | 13.4 fps | +72% |
-  | Tilt 3D | 17.3 fps | 20.2 fps | +17% |
-  | Pinch | 10.8 fps | 10.5 fps | same |
-  | Play | 18.9 fps | 21.6 fps | +14% |
+  | | Full speed: glow on | Glow off | Change | Low Power Mode: glow on | Glow off | Change |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | One still frame | 27 ms | 17 ms (one screen refresh) | −10 ms | 33 ms (the 30 fps cap) | 33 ms | — |
+  | Pan | 21.2 fps | 34.2 fps | **+61%** | 11.4 | 16.6 | +46% |
+  | Pinch | 16.8 | 31.1 | **+85%** | 10.8 | 10.5 | — |
+  | Tilt 3D | 24.1 | 42.9 | **+78%** | 17.3 | 20.2 | +17% |
+  | Drag the time | 10.7 | 22.6 | **+111%** | 7.8 | 13.4 | +72% |
+  | Play | 38.1 | 44.0 | +15% | 18.9 | 21.6 | +14% |
+  | Longest stop while panning | 0.17 s | 0.19 s | same | 0.38 s | 0.35 s | same |
 
-  Run 4 matches the two earlier Low Power Mode runs with the glow on within a
-  frame or two, so the change is the glow's. At full speed it has not been
-  measured yet.
+  The glow is the largest single cost of the averages: without it, panning
+  and pinching pass the 30 fps average at full speed. It does not cause the
+  stops: the slowest 1% and the longest stops are the same with it off. Those
+  come from causes 2 to 4.
 
 ### 2. Rain or snow at real height, worked out on the main thread
 
@@ -373,9 +379,12 @@ checked on your phone before you decide.
   (repeat opens) and full screen.
 - **The 13.5 s open:** once, against 7.0 and 5.8 s; most likely the first open
   after a new preview was published (every file new). Not confirmed.
-- **24 map redraws while untouched** (full-speed run): not seen in the other
-  two phone runs or on the build machine. Possibly late map pieces arriving;
-  the phone's test cannot see the map's own downloads.
+- **Map redraws while untouched** (11 to 24 in 15 s in four phone runs, none
+  in three): in every run that had them, the map announced "idle" during the
+  quiet step, so it was still finishing after the tour moved it back home
+  (late pieces, fades), not redrawing on its own. The tour now waits for the
+  map's "idle" before the quiet step (from the 05:10 preview on), so the next
+  run measures only what happens untouched.
 - **Pixel 11 Pro:** not yet.
 
 ## How this was measured
