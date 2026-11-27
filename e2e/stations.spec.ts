@@ -1,5 +1,5 @@
-import { mkdirSync, readFileSync } from 'node:fs';
-import { expect, test, type BrowserContext, type Page } from './fixtures';
+import { readFileSync } from 'node:fs';
+import { expect, test, type BrowserContext, type Page, reportDir } from './fixtures';
 
 // The weather stations overlay: the switch, markers over the layer, and a
 // station's panel. Station answers are stubbed from saved real ones (ECCC,
@@ -9,6 +9,7 @@ const YOU = { latitude: 49.3895, longitude: -122.948 };
 test.use({ geolocation: YOU, permissions: ['geolocation'], serviceWorkers: 'block' });
 
 const LIVE = process.env.STATIONS_LIVE === '1';
+const SHOTS = reportDir('stations');
 const read = (path: string) => JSON.parse(readFileSync(new URL(`../adapters/${path}`, import.meta.url), 'utf8')) as Record<string, unknown>;
 const H = 3_600_000;
 const thisHour = () => Math.floor(Date.now() / H) * H;
@@ -82,8 +83,7 @@ test('weather stations: switch on, markers with measured values, tap one for its
   // Precipitation (the first layer): the past hour's amount beside each marker that measures it.
   await expect(page.locator('.station-value:visible').first()).toHaveText(/ mm$/);
   await page.waitForTimeout(800);
-  mkdirSync('docs/reports/stations', { recursive: true });
-  await page.screenshot({ path: 'docs/reports/stations/map.png' });
+    await page.screenshot({ path: `${SHOTS}/map.png` });
 
   // Remembered.
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('tempest.prefs.v1')!).stations)).toBe(true);
@@ -107,7 +107,7 @@ test('weather stations: switch on, markers with measured values, tap one for its
   await expect(panel.locator('.station-panel')).toHaveAttribute('data-series', 'ready', { timeout: 30_000 });
   await expect(panel.locator('canvas.station-chart')).toBeVisible();
   await page.waitForTimeout(500);
-  await page.screenshot({ path: 'docs/reports/stations/station.png' });
+  await page.screenshot({ path: `${SHOTS}/station.png` });
   await page.keyboard.press('Escape');
   await expect(page.locator('#place-text')).toHaveText(pinBefore ?? '');
 });
@@ -128,7 +128,7 @@ test('weather stations: wind layer labels with arrows, units follow the setting;
   await page.evaluate(() => (window as unknown as { tempestMap: { jumpTo(o: unknown): void } }).tempestMap.jumpTo({ center: [-123.1, 49.75], zoom: 9.5, pitch: 55 }));
   await page.waitForFunction(() => document.body.dataset.stations !== 'loading', undefined, { timeout: 30_000 });
   await page.waitForTimeout(2500);
-  await page.screenshot({ path: 'docs/reports/stations/light-3d-wind.png' });
+  await page.screenshot({ path: `${SHOTS}/light-3d-wind.png` });
 });
 
 test('weather stations offline: the switch says it needs a connection', async ({ page, context }) => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test, type Page, upTo } from './fixtures';
 
 // Mt Seymour area, where the v8 screens place "You · 1,180 m".
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
@@ -11,14 +11,14 @@ async function openDetails(page: Page, layer: string) {
     localStorage.setItem('tempest.prefs.v1', JSON.stringify(p));
   }, layer);
   await page.reload();
-  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: upTo(360_000) });
   await expect(page.locator('body')).toHaveAttribute('data-pin', 'ready', { timeout: 60_000 });
   await page.click('#sheet-handle');
   await expect(page.locator('body')).toHaveAttribute('data-details', 'ready');
 }
 
 test('temperature details: the standard cards in order, and settings remembered', async ({ page }) => {
-  test.setTimeout(480_000);
+  test.setTimeout(upTo(480_000, 240_000));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await openDetails(page, 'temperature');
@@ -41,14 +41,14 @@ test('temperature details: the standard cards in order, and settings remembered'
   await panel.getByRole('button', { name: 'Feels-like' }).click();
   await page.screenshot({ path: 'test-results/screens/m5-temperature-settings.png' });
   await page.reload();
-  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: upTo(360_000) });
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerSettings: Record<string, Record<string, unknown>> }).layerSettings.temperature);
   expect(saved).toEqual({ map: 'feels' });
   expect(errors).toEqual([]);
 });
 
 test('precipitation details: totals by elevation, snow ratio and type shown', async ({ page }) => {
-  test.setTimeout(480_000);
+  test.setTimeout(upTo(480_000, 240_000));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await openDetails(page, 'precipitation');
@@ -67,7 +67,7 @@ test('precipitation details: totals by elevation, snow ratio and type shown', as
   await expect(d.locator('.details-footer')).toContainText('Snow ratio 10:1 (fixed)');
   await panel.getByRole('button', { name: 'Rain only' }).click();
   await page.reload();
-  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: upTo(360_000) });
   const saved = await page.evaluate(() => (JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerSettings: Record<string, Record<string, unknown>> }).layerSettings.precipitation);
   expect(saved).toEqual({ ratio: '10:1', type: 'rain' });
   expect(errors).toEqual([]);

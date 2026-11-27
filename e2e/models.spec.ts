@@ -1,10 +1,10 @@
-import { expect, test } from './fixtures';
+import { expect, test, upTo } from './fixtures';
 
 // Mt Seymour area.
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
 
 test('model menu: only fitting models, info card, switching changes everything together', async ({ page }) => {
-  test.setTimeout(480_000);
+  test.setTimeout(upTo(480_000, 240_000));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?insets=47,34');
@@ -34,7 +34,7 @@ test('model menu: only fitting models, info card, switching changes everything t
   await page.getByRole('dialog', { name: 'Model' }).locator('.model-row', { hasText: 'GDPS' }).click();
   await expect(page.locator('#model-pill-label')).toHaveText('GDPS');
   await expect(page.locator('.panel')).toHaveCount(0);
-  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 300_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: upTo(300_000) });
   const reach = await page.evaluate(() => {
     const p = JSON.parse(localStorage.getItem('tempest.prefs.v1')!) as { layerModels: Record<string, string> };
     return p.layerModels.precipitation;
@@ -59,7 +59,7 @@ test.describe('fallback', () => {
   // Requests the service worker makes are not seen by page.route.
   test.use({ serviceWorkers: 'block' });
   test('an unavailable model falls back visibly', async ({ page }) => {
-    test.setTimeout(300_000);
+    test.setTimeout(upTo(300_000, 180_000));
     // HRDPS cannot be reached.
     await page.route('**/data_spatial/cmc_gem_hrdps/**', (r) => r.abort());
     await page.goto('/?insets=47,34');

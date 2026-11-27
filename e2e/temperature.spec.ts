@@ -1,10 +1,10 @@
-import { expect, test } from './fixtures';
+import { expect, test, upTo } from './fixtures';
 
 // Mt Seymour area, where the v8 screens place "You · 1,180 m".
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
 
 test('temperature: layer menu, terrain fill, readout, summary, week values', async ({ page }) => {
-  test.setTimeout(420_000);
+  test.setTimeout(upTo(420_000, 240_000));
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/?insets=47,34');
@@ -21,8 +21,8 @@ test('temperature: layer menu, terrain fill, readout, summary, week values', asy
   await expect(page.locator('#layer-name')).toHaveText('Temperature');
   // Without the point API (its daily limit is shared on test machines) the
   // map files answer, hour by hour: slower, same numbers.
-  await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: 180_000 });
-  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: 360_000 });
+  await expect(page.locator('body')).toHaveAttribute('data-fill', 'ready', { timeout: upTo(180_000) });
+  await expect(page.locator('body')).toHaveAttribute('data-series', 'ready', { timeout: upTo(360_000) });
   await expect(page.locator('.readout-text strong')).toHaveText(/^(−)?\d+ °C$/);
   // The pin shows only name · value · elevation (Kaden's interface rule, Nov 21).
   await expect(page.locator('.readout-text .muted')).toHaveText(/^[\d,]+ m$/);
