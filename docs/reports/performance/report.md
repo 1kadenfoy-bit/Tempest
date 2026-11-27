@@ -18,7 +18,9 @@ measured" near the end.
 2. **The stops come from a few pieces of the app's own code**, not from the map
    library:
    - the glow (bloom) copies the finished map picture back after every frame,
-     which makes the phone wait for the drawing to finish each time;
+     which makes the phone wait for the drawing to finish each time; with the
+     glow switched off for one run, your phone panned 46% faster and drew 72%
+     more frames while dragging the time (Low Power Mode on);
    - rain or snow at each spot's real height is worked out again twice a
      second while the map moves, and after every time step (up to 0.2 s each
      time on the build machine);
@@ -56,6 +58,14 @@ It has no graphics chip and draws in software, so its frame rates are far
 below a phone's; it is used to compare features and versions with each other,
 not to judge the targets.
 
+Calibration: the tour's Yardstick (a fixed loop of the kind the app runs over
+terrain pictures) took 15 ms on the iPhone 12 (twice, Low Power Mode on) and
+14.8 ms on the build machine. The phone runs the app's own code at about the
+build machine's speed, so the lengths of the stops the build machine's code
+profile finds (causes 2 to 6) carry over to the phone about one to one. Its
+drawing does not: the phone's graphics chip is far faster than drawing in
+software.
+
 | Target (Kaden, Nov 27) | iPhone 12, full speed | iPhone 12, LPM (2 runs) | Build machine | Result |
 | --- | --- | --- | --- | --- |
 | 1. Open, everything loaded, under 7 s | 13.5 s (first open after a new version) | 7.0 s first, 5.8 s repeat | 6.9 s first, 6.6 s repeat (recorded weather, local); 10.5 s first, 6.5 s repeat, 15.9 s on slow mobile (the real site, live weather) | **Fails sometimes** |
@@ -86,9 +96,21 @@ Evidence:
   where the waiting shows, not extra work.
 - Still-frame drawing cost: the glow adds 12% to every frame with 3D on, 10%
   with 3D off (`data/features-cost*`).
-- On a phone the extra cost is the lost overlap: the processor waits for the
-  chip every frame. Its size on the iPhone is measured by the run with
-  `?perf&off=bloom` (asked of Kaden; see "Still to come").
+- **On Kaden's iPhone 12** (both runs with Low Power Mode on, a few minutes
+  apart, `data/phone-iphone12-safari-4.json` and `-5.json`; run 5 was the one
+  opened with `?perf&off=bloom`, per the order of the links Kaden was given):
+
+  | | Glow on | Glow off | Change |
+  | --- | --- | --- | --- |
+  | Pan | 11.4 fps | 16.6 fps | +46% |
+  | Drag the time | 7.8 fps | 13.4 fps | +72% |
+  | Tilt 3D | 17.3 fps | 20.2 fps | +17% |
+  | Pinch | 10.8 fps | 10.5 fps | same |
+  | Play | 18.9 fps | 21.6 fps | +14% |
+
+  Run 4 matches the two earlier Low Power Mode runs with the glow on within a
+  frame or two, so the change is the glow's. At full speed it has not been
+  measured yet.
 
 ### 2. Rain or snow at real height, worked out on the main thread
 
