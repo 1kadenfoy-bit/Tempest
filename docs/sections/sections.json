@@ -201,6 +201,21 @@
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts"
       ]
+    },
+    "performance": {
+      "title": "Performance",
+      "brief": "docs/sections/performance.md",
+      "paths": [
+        "app/perf/**",
+        "tools/perf/**",
+        "e2e/perf.spec.ts",
+        "docs/reports/performance/**",
+        "docs/handoffs/performance/**",
+        "docs/wishes/performance.md"
+      ],
+      "specs": [
+        "e2e/perf.spec.ts"
+      ]
     }
   },
   "shared": {
