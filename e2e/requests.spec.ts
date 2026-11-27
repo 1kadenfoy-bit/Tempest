@@ -152,6 +152,8 @@ test('a normal session, then an hour untouched, stays within each server’s bud
   await calm(page, c);
   // The refused forecast was asked again a few times, then no more, and the app says so.
   await expect(page.locator('#chart-status')).toHaveText(/not answering/);
+  // No spinning wheel at the pin once nothing more is asked.
+  await expect(page.locator('.pin-readout')).toHaveAttribute('data-loading', 'false');
   await page.screenshot({ path: `${reportDir('requests')}/stopped-asking.png` });
 
   // Two hours later HRDPS's next run could be there (from 03:00 UTC): the app

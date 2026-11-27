@@ -428,7 +428,9 @@ export async function loadSeries() {
       if (mine !== seriesSeq) return;
       console.error(err);
       if (S.usingSaved) { S.scrubber.setStatus('The pin is outside the saved area'); return; }
-      S.scrubber.setStatus(retrySeries(key) ? 'The forecast service is busy · trying again shortly' : STOPPED_STATUS);
+      if (retrySeries(key)) { S.scrubber.setStatus('The forecast service is busy · trying again shortly'); return; }
+      S.scrubber.setStatus(STOPPED_STATUS);
+      app.renderReadout();
       return;
     }
     if (mine !== seriesSeq) return;
