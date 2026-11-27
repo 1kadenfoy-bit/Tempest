@@ -17,7 +17,7 @@ handoff notes carry everything over, and a short chat is faster and cheaper.
 ## The prompt
 
 Replace `<section>` with one of `maps`, `interface`, `weather`, `effects`,
-`data`.
+`data`, `performance`.
 
 ```
 You are the <section> section chat for Tempest.

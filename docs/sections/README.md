@@ -22,6 +22,7 @@ and iterates quickly. One main chat (the lead) combines the work into the app.
 | Weather on the map | [weather.md](weather.md) | Each weather layer from colours to numbers: fills, colour ramps, legends, lines, arrows, radar, stations, readouts, charts, cards; avalanche, terrain ratings, air quality and fire, shown exactly as issued |
 | Effects | [effects.md](effects.md) | Animated weather over the map: rain, snow, clouds, wind particles, in 3D |
 | Data | [data.md](data.md) | Where the numbers come from: models, runs, new sources, caching, saved areas, recorded weather |
+| Performance | [performance.md](performance.md) | How fast the app opens, moves and answers on Kaden's phones: measures, ranks the causes, hands fixes to the owning section |
 | The lead | [lead.md](lead.md) | Combining, the shared files, the full checks, publishing |
 
 Who owns which file is listed in [sections.json](sections.json). The section
@@ -38,6 +39,7 @@ check reads it.
 | Where the numbers come from: models and runs, new data sources (planes, rivers…), caching, saved areas and offline, recorded weather days | **Data** |
 | Avalanche forecasts and terrain ratings, wildfires, air quality and smoke | **Weather on the map** |
 | Weather alerts (the bell and the Notification Centre) | **Interface** |
+| Why the app is slow, how fast it opens or moves, frame rates | **Performance** |
 | Combining sections into the app, anything that touches several sections at once, the shared files, publishing | **The main chat** |
 
 When it is unclear, the owner of the files that need to change decides: see
