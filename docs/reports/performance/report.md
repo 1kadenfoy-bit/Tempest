@@ -46,14 +46,16 @@ measured" near the end.
    and a layer that fails is not asked for again until you move the map or the
    time.
 6. **Taps and menus already pass** (0.02 to 0.1 s). **Layer switches mostly
-   pass** (under 0.5 s), except wind (1.0 to 1.4 s) and air quality (1.4 s).
+   pass** (under 0.5 s), except sometimes wind (up to 1.4 s), air quality (up
+   to 1.4 s) and radar (3.8 s once).
 
 ## Your targets, passed or failed
 
 Phone: iPhone 12, Safari, iOS 18.7, Kaden's setup (3D terrain and buildings
-on, sun on, Terrain ground, precipitation layer), live weather. "LPM" is Low
-Power Mode, which caps Safari at 30 frames a second and slows the processor;
-the full-speed run is the one that counts.
+on, sun on, Terrain ground, precipitation layer), live weather, seven runs
+(`data/phone-iphone12-safari-*.json`). Low Power Mode caps Safari at 30
+frames a second and slows the processor; the full-speed runs are the ones that
+count against the targets.
 
 Build machine: the same tour, in a phone-sized browser, on recorded weather.
 It has no graphics chip and draws in software, so its frame rates are far
@@ -80,7 +82,7 @@ than drawing in software.
 | 7. Memory below Safari's reload point | Safari does not report memory | — | 57–109 MB of script memory | **Not measurable on the phone** |
 | 8. Feels "live" | the stops in 2 and 3 | | | **Fails** until 2 and 3 pass |
 
-## Why it stops while moving (the causes, slowest first)
+## Why moving is slow and stops (the causes, biggest first)
 
 ### 1. The glow copies every frame back from the graphics chip
 
@@ -132,7 +134,10 @@ Evidence (build machine, code profile, longest uninterrupted stretches of
 script): 0.14 s during the pan, 0.15 s during the tilt, 0.09 s per step while
 playing, 0.20 s and 0.12 s when switching layers
 (`data/profile-kaden-3d-no-bloom.json`, `longestScript`). During those
-stretches the screen cannot draw.
+stretches the screen cannot draw. On the phone at full speed (1.7 times the
+build machine, see Calibration) that is about 0.05 to 0.12 s each, which
+matches the 0.13 to 0.19 s longest stops measured there once the time to draw
+the next frame is added.
 
 ### 3. Mountain shadows, worked out on the main thread
 
@@ -165,8 +170,9 @@ roughly a tile each (`(anonymous) · app/map/elevation.ts:84`).
 moving through steps faster than that gets no picture until it slows. When
 it does draw, each step costs the rain/snow work again (2).
 
-Evidence: iPhone 12, 21 of 48 steps drawn while dragging (all three runs); the
-map catches up 0.06 to 0.08 s after the finger stops. Play (one step every
+Evidence: iPhone 12, 21 or 22 of 48 steps drawn while dragging in all seven
+runs, with or without the glow; the map catches up 0.06 to 0.08 s after the
+finger stops. Play (one step every
 0.7 s) draws every step.
 
 ### 6. Wind's ground smoothing
@@ -212,7 +218,7 @@ Notes:
   of the ready-made pictures, but loading slower: everything loaded at about
   20 s with 3D on against 7 s with 3D off on this machine (drawing in software).
 - Each feature's drawing cost here is the graphics chip's work; the stops in
-  "Why it stops" are the processor's. Both matter on the phone.
+  "Why moving is slow and stops" (2 to 6) are the processor's. Both matter on the phone.
 
 ## Loading
 
@@ -244,7 +250,7 @@ loaded at 15.9 s.
    connection), the base map file's header and directory, then its tiles; the
    map fonts are only asked for once the first tiles are read.
 
-iPhone 12: first map at 3.8 to 4.0 s (8.4 s in the slow run). Build machine:
+iPhone 12: first map at 2.2 to 5.2 s in six runs, 8.4 s once. Build machine:
 2.2 s on recorded weather.
 
 ### What blocks the first weather
@@ -260,7 +266,8 @@ one after another:
    `render/openmeteo-starter/index.ts`), in 64 kB pieces;
 5. then the rain/snow work (cause 2).
 
-iPhone 12: first weather 1.3 to 2.2 s after the first map. The pin's forecast
+iPhone 12: first weather 1.5 to 2.2 s after the first map in six runs, 4.5 s
+once. The pin's forecast
 waits for step 1 too, then asks the point API for three models.
 
 The app's location (`locate`) is also asked for only after the map's `load`.
@@ -408,7 +415,7 @@ checked on your phone before you decide.
 
 | Option | Gains | Costs |
 | --- | --- | --- |
-| Glow off, or weaker | 10–12% of every frame, and the processor stops waiting each frame (until fix 1 lands) | The game look's glow (Maps 19, 23) |
+| Glow off, or weaker | Measured on your phone at full speed: pan 21 → 34 fps, pinch 17 → 31, tilt 24 → 43, drag the time 11 → 23 (fix 1 aims for the same without losing the glow) | The game look's glow (Maps 19, 23) |
 | Relief shading lighter with the sun on (one light instead of several) | Part of the 30% that relief and contours cost with 3D off | Less shaped relief |
 | Rain or snow by height worked out only once the map stops moving, not during a pan | The 0.14–0.20 s stops during pans | During a pan, the rain/snow colours at the edges lag until you lift your finger |
 | Shadows on a coarser grid | Shorter stop after each move (up to 0.3 s now) | Softer shadow edges |
@@ -423,8 +430,10 @@ checked on your phone before you decide.
 - **The installed app:** it always opens at its plain address, so `?perf`
   cannot be added. Its rendering is Safari's; what differs is the kept copy
   (repeat opens) and full screen.
-- **The 13.5 s open:** once, against 7.0 and 5.8 s; most likely the first open
-  after a new preview was published (every file new). Not confirmed.
+- **The 13.5 s open:** once in seven runs (the others 3.9 to 7.2 s); it was
+  the first open after a new preview was published, so every file was new,
+  but so were the 7.0 and 7.2 s opens. The connection (wifi or mobile) was
+  not recorded. Not explained.
 - **Map redraws while untouched** (11 to 24 in 15 s in four phone runs, none
   in three): in every run that had them, the map announced "idle" during the
   quiet step, so it was still finishing after the tour moved it back home
@@ -441,7 +450,7 @@ checked on your phone before you decide.
   open; a still-frame drawing cost; pan (four 1 s moves); pinch (±1.5 zoom
   levels); tilt to 55° and turn; drag the time (48 steps, one every 80 ms);
   play (10 s); every layer through the layer menu; every panel; 15 s
-  untouched. Frame rates are from the browser's frame callbacks; "slowest 1%"
+  untouched; and a Yardstick (a fixed loop) to compare processors. Frame rates are from the browser's frame callbacks; "slowest 1%"
   is the 99th percentile of the gaps between frames; tap times run from the
   click to the first frame after it. The map is moved with the map's own
   camera calls, not fake touches (iOS does not allow them); the drawing per
@@ -459,5 +468,5 @@ checked on your phone before you decide.
   hides one feature for a run, nothing saved (`app/perf/switches.ts`); 3D,
   sun, satellite, clouds, wind streaks and the layer were set through the saved
   choices before the app started.
-- **Live calls spent from the build machine:** two opens of the real site
-  (about 230 calls by the rule above) for the loading runs; nothing else.
+- **Live calls spent from the build machine:** three opens of the real site
+  (about 240 calls by the rule above) for the loading runs; nothing else.
