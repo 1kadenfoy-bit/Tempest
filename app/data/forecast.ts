@@ -315,11 +315,13 @@ export async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean,
   }
   if (m === 'hrdps' && amounts) {
     // Without the point API (or offline): amounts from the map files or the
-    // saved area; the profile joins when it comes, which can take minutes
-    // read from the files hour by hour.
+    // saved area. The profile joins from the files hour by hour (minutes,
+    // thousands of reads) only when the service is out for long (its daily
+    // limit); a brief refusal waits for the service (the series asks again).
+    // Before Nov 28 it always read the files: about 6,000 pieces a pin.
     const own = (S.usingSaved ? await savedSeries(r, lat, lng) : null) ?? (S.usingSaved ? null : await fetchPointSeries(r, precip.needs, lat, lng));
     if (!own) throw new Error('the pin is outside the saved areas');
-    const profP = S.profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past, extra }).catch((err) => { console.warn('no profile for the pin', err); return null; });
+    const profP = S.profiles.pinSeries(r, lat, lng, undefined, { amounts: past > 0, pastHours: past, extra, noFiles: !S.profiles.apiLongDown }).catch((err) => { console.warn('no profile for the pin', err); return null; });
     const quick = await Promise.race([profP, new Promise<null>((res) => setTimeout(() => res(null), 5000))]);
     if (quick) return overlay(quick, own);
     void profP.then((prof) => { if (prof) onLater?.(overlay(prof, own)); });
@@ -333,10 +335,11 @@ export async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean,
   // model's own split).
   try {
     // Never days of map files hour by hour (that takes many minutes): without
-    // the service, profiles wait for it (the series asks again); amounts read their own files.
+    // the service, profiles wait for it (the series asks again); amounts read
+    // their own files only when the service is out for long, like the profile.
     return await S.profiles.pinSeries(r, lat, lng, onPartial, { amounts, profile: spec.profile, pastHours: past, noFiles: true, extra });
   } catch (err) {
-    if (!amounts || S.usingSaved) throw err;
+    if (!amounts || S.usingSaved || !S.profiles.apiLongDown) throw err;
     return fetchPointSeries(S.runs[m]!, precip.needs, lat, lng);
   }
 }

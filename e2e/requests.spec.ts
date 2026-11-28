@@ -1,5 +1,6 @@
 import { expect, reportDir, test, type BrowserContext, type Page, type Request } from './fixtures';
 import { readFileSync } from 'node:fs';
+import { nextRunPossibleAt } from '../core/time/run-schedule';
 
 // How much the app asks the weather and safety servers (Data rule 1,
 // docs/wishes/data.md). Their free limits are shared by the app, the tests and
@@ -35,6 +36,15 @@ async function pointServiceAtYourLocationOnly(context: BrowserContext) {
   });
 }
 const HOME = '/?insets=47,34';
+
+/** The run a recorded set holds for a model (its recorded latest.json). */
+function recordedRun(set: string, model: string): Date {
+  const { entries } = JSON.parse(readFileSync(`recorded/${set}/index.json`, 'utf8')) as { entries: Record<string, { offset: number; length: number }> };
+  const e = entries[`GET https://openmeteo.s3.amazonaws.com/data_spatial/${model}/latest.json`];
+  if (!e) throw new Error(`the set "${set}" has no newest run for ${model}`);
+  const body = readFileSync(`recorded/${set}/bodies.bin`).subarray(e.offset, e.offset + e.length);
+  return new Date((JSON.parse(body.toString('utf8')) as { reference_time: string }).reference_time);
+}
 
 /** The servers, in plain names. */
 function serverOf(url: string): string {
@@ -166,8 +176,14 @@ test('a normal session, then an hour untouched, stays within each server’s bud
   await pick(page, 'Temperature');
   await calm(page, c);
 
-  // An hour untouched. No model's next run can be there yet (the recording's
-  // runs: HRDPS, RDPS and ECMWF 18Z, GDPS 12Z, at 00:11 UTC).
+  // When each model's next run could be there, from the runs the set holds
+  // (core/time/run-schedule.ts), so the session fits whatever day is recorded.
+  const nextDue = (model: string) => nextRunPossibleAt(model, recordedRun(weather, model))!.getTime();
+  const hrdpsDue = nextDue('cmc_gem_hrdps');
+  const rdpsDue = nextDue('cmc_gem_rdps_10km');
+  // An hour untouched. No model's next run can be there yet.
+  const firstDue = Math.min(...['cmc_gem_hrdps', 'cmc_gem_rdps_10km', 'cmc_gem_gdps_15km', 'cmc_gem_gdps_15km_upper_level', 'ecmwf_ifs'].map(nextDue));
+  expect(firstDue - (await page.evaluate(() => Date.now())), 'the recorded set leaves an hour before any next run could be there').toBeGreaterThan(62 * 60_000);
   await runClock(page, 60, c, (m) => (m < 10 ? 'hour: first 10 min' : 'hour: the other 50'));
   await calm(page, c);
   // The refused forecast was asked again a few times, then no more, and the app says so.
@@ -176,11 +192,12 @@ test('a normal session, then an hour untouched, stays within each server’s bud
   await expect(page.locator('.pin-readout')).toHaveAttribute('data-loading', 'false');
   await page.screenshot({ path: `${reportDir('requests')}/stopped-asking.png` });
 
-  // Two hours later HRDPS's next run could be there (from 03:00 UTC): the app
-  // looks for it within 10 minutes, as before, and not yet for RDPS's (03:30).
+  // Then to just after HRDPS's next run could be there: the app looks for it
+  // within 10 minutes, as before, and not yet for RDPS's (half an hour later).
   // Labelled first: the jump itself starts the look (the 10-minute check fires on it).
+  expect(rdpsDue - hrdpsDue, 'RDPS’s next run could come at least 15 minutes after HRDPS’s').toBeGreaterThanOrEqual(15 * 60_000);
   c.phase = 'a run due';
-  await page.clock.fastForward('02:00:00');
+  await page.clock.fastForward(Math.max(0, hrdpsDue - (await page.evaluate(() => Date.now()))) + 60_000);
   await runClock(page, 10, c, () => 'a run due');
   await calm(page, c);
 
