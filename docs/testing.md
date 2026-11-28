@@ -79,7 +79,7 @@ workflow; `.github/workflows/record-weather.yml`). The tour on one machine,
 the tests on four at once, then the merge and a pull request with the new
 set, its report in the description, and the tests started on it (GitHub does
 not start them on a pull request a workflow opened). It stops without a pull
-request when the set is over the size limit (60 MB unless changed). For the
+request when the set is over the size limit (120 MB on disk unless changed; the Nov 28 set: 109 MB, about 75 MB in git). For the
 pull request to open, Settings › Actions › General › "Allow GitHub Actions to
 create and approve pull requests" must be on; otherwise the set is still
 pushed to a `record/…` branch and the run says so.
