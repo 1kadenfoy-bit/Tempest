@@ -5,6 +5,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl';
 import { formatElevation } from '../../core/units/format';
 import type { Readout } from '../../layers/contract';
 import { elevationAt } from '../map/elevation';
+import { retryDelay } from '../../core/time/retry';
 import { maplibregl } from '../map/maplibre';
 import { terrainAt } from './pin-terrain';
 
@@ -113,9 +114,18 @@ export function createPin(map: MapLibreMap, onChange: (p: PinState) => void) {
     render();
     nameIt();
     if (!next.name) map.once('idle', nameIt);
-    elevationAt(next.lng, next.lat)
+    // The height under the pin. Without signal, or when its terrain piece did
+    // not come, it is asked again when the signal is back, or soon (then less
+    // often): before Nov 28 a drop mid-load left the pin's wheel spinning for good.
+    const height = (tries: number) => elevationAt(next.lng, next.lat)
       .then((m) => { if (mine === seq && state) { state.elevation = m; render(); } })
-      .catch(() => { /* offline or no terrain: elevation stays unknown */ });
+      .catch(() => {
+        if (mine !== seq) return;
+        const wait = retryDelay(tries);
+        if (!navigator.onLine) addEventListener('online', () => { if (mine === seq) void height(0); }, { once: true });
+        else if (wait !== null) setTimeout(() => { if (mine === seq) void height(tries + 1); }, wait);
+      });
+    void height(0);
   };
 
   /** The layer's readout for the pin at the cursor: the value in bold, its notes muted. */

@@ -53,6 +53,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
     $('cursor-note').textContent = t ? (layer?.frames ? formatMinutesAgo(t, now) : formatRelative(t, now)) : '';
     $('window-button').hidden = Boolean(layer?.frames);
     $('subject-time').textContent = t ? formatCursorTime(t) : '';
+    // Said even before there is a time line (no run reached yet: "No signal…"; Nov 28).
+    $('chart-status').textContent = status;
     if (!t) return;
     const { start, end } = windowRange(t, chartHours());
     $('window-label').textContent = WINDOW_OPTIONS.find((o) => o.hours === windowHours)?.label ?? `${windowHours} h`;
@@ -303,6 +305,8 @@ export function setupScrubber(cursor: TimeCursor, initialWindowHours = DEFAULT_W
   return {
     setLayer(l: ScrubberLayer) { layer = l; chart.setAttribute('aria-label', l.chartLabel); schedule(); },
     setStatus(s: string) { status = s; schedule(); },
+    /** What the chart says now (empty when nothing), so a part clears only its own words. */
+    get status() { return status; },
     setTimeline(t: { seams: { time: Date; label: string }[] }) { seams = t.seams; schedule(); },
     refresh: schedule,
     get windowHours() { return chartHours(); },

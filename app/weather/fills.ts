@@ -28,6 +28,7 @@ import { TerrainWindLayer } from '../../render/grid-gl/terrain-wind-layer';
 import { regridNative } from '../../render/openmeteo-starter';
 import { MODEL_SPACING_DEG, type NodeData } from '../data/profile-source';
 import { mapTime, nodeNeeds, runAt } from '../data/forecast';
+import { retryDelay } from '../../core/time/retry';
 import { loadSavedWeather, savedStep } from '../offline/saved-areas';
 import { elevationMosaic, type Mosaic } from '../map/elevation';
 import { levelLine, type LineFeatures, type LineKind } from '../map/freezing-line';
@@ -134,6 +135,7 @@ export async function updateTemperature(r: RunMetadata, t: Date, mine: number, c
   tempLayer.feels = feels;
   tempLayer.setProfiles(packLattice(grid));
   setLine(grid);
+  fillCame();
   document.body.dataset.fill = 'ready';
   // The next hour ahead of time (instant when the point API answered).
   const i = S.cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
@@ -146,11 +148,44 @@ export async function updateTemperature(r: RunMetadata, t: Date, mine: number, c
 export let apiRetryTimer = 0;
 export function unavailable(what: string) {
   const at = S.profiles.apiRetryAt;
+  // No signal: asked again when it is back (fillFailed).
+  if (!S.usingSaved && !navigator.onLine) { fillFailed(what); return; }
   if (!at || S.usingSaved) { S.scrubber.setStatus(S.usingSaved ? `${what} is not saved for this area` : `${what} for this view is not available`); return; }
   S.scrubber.setStatus(`${what}: the forecast service is busy · trying again shortly`);
   clearTimeout(apiRetryTimer);
   apiRetryTimer = window.setTimeout(() => { S.scrubber.setStatus(''); void updateFills(); }, at - Date.now() + 500);
 }
+
+/**
+ * A fill that did not come (no signal, a connection dropped mid-load): the
+ * map's weather is asked again soon, then less often, and not at all after
+ * six tries (core/time/retry.ts, Data rule 1); at once when the signal comes
+ * back. Meanwhile the chart says what is missing. Before Nov 28 a failed fill
+ * was never asked again: the map stayed without weather, and said nothing,
+ * until it was moved.
+ */
+let fillRetry = { timer: 0, tries: 0, said: '' };
+function fillFailed(what: string): void {
+  if (S.usingSaved) return;
+  clearTimeout(fillRetry.timer);
+  const wait = retryDelay(fillRetry.tries++);
+  fillRetry.said = !navigator.onLine ? `No signal · ${what} on the map will load when it is back`
+    : wait === null ? `${what} on the map did not load · move the map to try again`
+    : `${what} on the map did not load · trying again shortly`;
+  S.scrubber.setStatus(fillRetry.said);
+  if (wait !== null && navigator.onLine) fillRetry.timer = window.setTimeout(() => void updateFills(), wait);
+}
+/** A fill came: the tries start afresh, and the chart's words about it go. */
+function fillCame(): void {
+  clearTimeout(fillRetry.timer);
+  if (fillRetry.said && S.scrubber.status === fillRetry.said) S.scrubber.setStatus('');
+  fillRetry = { timer: 0, tries: 0, said: '' };
+}
+addEventListener('online', () => {
+  if (!fillRetry.said) return;
+  fillRetry.tries = 0;
+  void updateFills();
+});
 
 /** The model's ground under the mosaic, per mosaic and model grid (computed once each). */
 export let windGround: { key: string; data: Float32Array } | null = null;
@@ -331,14 +366,14 @@ export async function updateFills(moving = false) {
     precipLayer.setFields([]);
     tempLayer.visible = false;
     setLine(null);
-    await updateWind(at, when, ++fillSeq, moving).catch((err) => console.error(err));
+    await updateWind(at, when, ++fillSeq, moving).catch((err) => { console.error(err); fillFailed('Wind'); });
     return;
   }
   windLayer.setProfiles(null);
   if (S.active.id === 'temperature') {
     precipLayer.setFields([]);
     tempLayer.visible = true;
-    await updateTemperature(at, when, ++fillSeq, moving).catch((err) => console.error(err));
+    await updateTemperature(at, when, ++fillSeq, moving).catch((err) => { console.error(err); fillFailed('Temperature'); });
     return;
   }
   tempLayer.visible = false;
@@ -352,6 +387,7 @@ export async function updateFills(moving = false) {
     const f = await getField(r, t, req);
     if (mine !== fillSeq) return;
     precipLayer.setFields([precip.precipDrawField(f.field, f.key)]);
+    fillCame();
     document.body.dataset.fill = 'ready';
     // In view: the rates on screen, heaviest first.
     const field = f.field;
@@ -375,7 +411,9 @@ export async function updateFills(moving = false) {
     const nextRun = next ? runAt(next, false) : null;
     if (next && nextRun) void getField(nextRun, next, req).catch(() => undefined);
   } catch (err) {
+    if (mine !== fillSeq) return;
     console.error(err);
+    fillFailed('Precipitation');
   }
 }
 export const scheduleFills = (ms: number) => { clearTimeout(fillTimer); fillTimer = window.setTimeout(() => void updateFills(), ms); };

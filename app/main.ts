@@ -200,7 +200,9 @@ S.cursor.subscribe(() => {
 
 setInterval(() => { if (document.visibilityState === 'visible') renderRunAge(); }, 60_000);
 // A new run can land while the app stays open: look every 10 minutes while it is on screen.
-setInterval(() => { if (document.visibilityState === 'visible' && !S.usingSaved) void loadRun(); }, 10 * 60_000);
+// Also on a saved area when no signal sent the app there (not "saved data only"):
+// the signal can come back without the phone saying so (Nov 28).
+setInterval(() => { if (document.visibilityState === 'visible' && !savedOnlyActive()) void loadRun(); }, 10 * 60_000);
 // Radar: ECCC adds a frame every 6 minutes; ask again once one is due, while it is on screen.
 setInterval(() => { if (document.visibilityState === 'visible' && S.active.frames) { void loadRadarFrames(); renderRunAge(); S.scrubber.refresh(); } }, 60_000);
 addEventListener('online', () => void loadRadarFrames(true));
