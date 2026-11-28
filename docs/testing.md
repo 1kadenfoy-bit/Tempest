@@ -277,6 +277,17 @@ word, Nov 28):
 - `requests`: "two hours later" reached HRDPS's next run but not RDPS's only
   with the Nov 20 runs. The moment is now worked out from the set's runs.
 
+**Found once the wind was there.** The Nov 20 set lacked the wind, so the
+Wind layer's streaks never moved in the tests. On the Nov 28 set they redraw
+the map every frame, and after each frame the map's glow (the bloom) copies
+the picture; on GitHub's software drawing that copy takes about a second, so
+the page answers slowly. The zoom check in `consistency` read the screen in
+16 separate steps and ran out of time (one reading took about 50 s): it now
+reads everything in one step, and its time allowed went from 4 to 6 minutes
+(about 3.6 minutes on the build machine). On a phone the copy is done by the
+graphics chip; `?perf` on Wind is the way to see whether it costs anything
+there.
+
 **"Not in the recorded weather" lines that remain, and why.** A few view
 grids: the temperature layer asks the point service for its air profile at
 a lattice of points over the map view, and a view reached in the middle of
