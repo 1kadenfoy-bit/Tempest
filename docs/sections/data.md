@@ -20,9 +20,9 @@ The exact list is `data` in `docs/sections/sections.json`.
 | Fetching politely and keeping answers | `app/data/api-cache.ts`, `kept-fetch.ts`, `connection.ts` |
 | Open-Meteo map files and point API, ECCC precipitation analysis | `adapters/openmeteo-maps/`, `adapters/openmeteo-api/`, `adapters/eccc-geomet/hrdpa*`, `render/openmeteo-starter/` |
 | Store, time, grid requests; the run timetable and retries (when to ask again, Data rule 1) | `core/store/`, `core/time/` (`run-schedule.ts`, `retry.ts`), `core/geo/grid-request*` |
-| Saved areas and the region file | `app/offline/`, `core/offline/`, `core/region-file/`, `public/sw.js` |
+| Saved areas and the region file; the app's offline copy | `app/offline/`, `core/offline/`, `core/region-file/`, `public/sw.js` (stamped per build by `tools/stamp-sw.ts`, so each version installs whole) |
 | Recorded weather | `app/data/recorded.ts`, `app/data/recorded-replay.ts`, `public/recorded-sw.js`, `tools/record-weather.mjs`, `tools/record/`, `recorded/`; the workflow `.github/workflows/record-weather.yml` |
-| Browser tests | `e2e/offline.spec.ts`, `e2e/models.spec.ts`, `e2e/consistency.spec.ts`, `e2e/requests.spec.ts` (the server budget: runs early on every branch) |
+| Browser tests | `e2e/offline.spec.ts`, `e2e/models.spec.ts`, `e2e/consistency.spec.ts`, `e2e/requests.spec.ts` (the server budget: runs early on every branch); the sequences (Nov 28): `e2e/signal.spec.ts` (signal lost mid-load), `e2e/new-run.spec.ts` (a new run while open), `e2e/save-interrupted.spec.ts` (closed mid-save), `e2e/update.spec.ts` (a new version over the offline copy); shared readers `e2e/readings.ts`, `e2e/save-area.ts` |
 | A data viewer page (yours to build) | `data-viewer.html`, `app/data-viewer/` |
 
 ## Showing work without the app

@@ -196,6 +196,13 @@
         "e2e/models.spec.ts",
         "e2e/consistency.spec.ts",
         "e2e/requests.spec.ts",
+        "e2e/signal.spec.ts",
+        "e2e/new-run.spec.ts",
+        "e2e/save-interrupted.spec.ts",
+        "e2e/update.spec.ts",
+        "e2e/readings.ts",
+        "e2e/save-area.ts",
+        "tools/stamp-sw.ts",
         "docs/reports/data-*/**",
         "docs/handoffs/data/**",
         "docs/wishes/data.md"
@@ -204,7 +211,11 @@
         "e2e/offline.spec.ts",
         "e2e/models.spec.ts",
         "e2e/consistency.spec.ts",
-        "e2e/requests.spec.ts"
+        "e2e/requests.spec.ts",
+        "e2e/signal.spec.ts",
+        "e2e/new-run.spec.ts",
+        "e2e/save-interrupted.spec.ts",
+        "e2e/update.spec.ts"
       ]
     },
     "performance": {
