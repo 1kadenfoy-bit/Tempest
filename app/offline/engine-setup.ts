@@ -8,7 +8,7 @@ import { tilesForShape } from '../../core/geo/shape-tiles';
 import { coveringRanges } from '../../render/openmeteo-starter';
 import { S } from '../state';
 import { configureSaveEngine } from './engine';
-import { afterSavedChange } from './wiring';
+import { afterSavedChange, tidyAfterClose } from './wiring';
 
 /** The chain "auto" follows: HRDPS, then RDPS past its end. GDPS waits: its saved steps do not match ("step size mismatch", Nov 26); Data to add it. */
 const CHAIN: ModelId[] = ['hrdps', 'rdps'];
@@ -25,4 +25,6 @@ export function setupSaveEngine(): void {
     style: () => S.map.getStyle(),
     afterChange: () => afterSavedChange(),
   });
+  // What a save cut short by the app closing left behind (in the background).
+  void tidyAfterClose();
 }

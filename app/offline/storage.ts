@@ -29,6 +29,15 @@ export async function removeFile(name: string): Promise<void> {
   try { await (await dir()).removeEntry(name); } catch { /* already gone */ }
 }
 
+/** Every file in the folder, by name. */
+export async function listFiles(): Promise<string[]> {
+  const out: string[] = [];
+  try {
+    for await (const name of (await dir() as unknown as { keys(): AsyncIterable<string> }).keys()) out.push(name);
+  } catch { /* no folder, or no file system */ }
+  return out;
+}
+
 export async function readJson<T>(name: string): Promise<T | null> {
   const f = await readFile(name);
   if (!f) return null;
