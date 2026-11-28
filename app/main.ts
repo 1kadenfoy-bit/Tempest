@@ -404,18 +404,15 @@ if (preview) {
 
 if ('serviceWorker' in navigator && import.meta.env.PROD && !preview) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* runs without it */ });
-  // Files loaded before the worker took charge (a first visit) are not in its
-  // cache yet: keep them now, so the app opens without signal next time.
-  void navigator.serviceWorker.ready.then(async () => {
-    try {
-      const cache = await caches.open('tempest-app-v2');
-      const urls = new Set<string>([new URL('./', document.baseURI).href]);
-      for (const e of performance.getEntriesByType('resource')) {
-        const u = new URL(e.name);
-        if (u.origin === location.origin && !u.pathname.endsWith('.pmtiles') && !u.pathname.includes('/tiles/')) urls.add(u.href);
-      }
-      urls.add(new URL('tiles/basemap.json', document.baseURI).href);
-      for (const url of urls) if (!(await cache.match(url))) await cache.add(url).catch(() => undefined);
-    } catch { /* storage unavailable */ }
+  // Files loaded before the worker took charge (a first visit) may not be in
+  // its copy yet: the worker keeps them now (public/sw.js), in its own
+  // version's copy, so the app opens without signal next time.
+  void navigator.serviceWorker.ready.then((reg) => {
+    const urls = new Set<string>();
+    for (const e of performance.getEntriesByType('resource')) {
+      const u = new URL(e.name);
+      if (u.origin === location.origin && !u.pathname.endsWith('.pmtiles') && !u.pathname.includes('/tiles/')) urls.add(u.href);
+    }
+    reg.active?.postMessage({ keep: [...urls] });
   });
 }
