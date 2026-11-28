@@ -277,6 +277,12 @@ word, Nov 28):
 - `requests`: "two hours later" reached HRDPS's next run but not RDPS's only
   with the Nov 20 runs. The moment is now worked out from the set's runs.
 
+**The map panel's reference picture** (`e2e/shell.spec.ts-snapshots/shell-map-panel-linux.png`)
+still showed the Tune button removed on Nov 27, and the parts it ignores
+(magenta boxes over live times behind the see-through panel) change size with
+the day. Refreshed from GitHub's own drawing on the Nov 28 set, checked by eye:
+the same panel, without Tune.
+
 **Found once the wind was there.** The Nov 20 set lacked the wind, so the
 Wind layer's streaks never moved in the tests. On the Nov 28 set they redraw
 the map every frame, and after each frame the map's glow (the bloom) copies
