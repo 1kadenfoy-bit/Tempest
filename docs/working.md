@@ -32,8 +32,8 @@ section chats knew lives in files, not in chats:
 6. **It merges the pull request** once GitHub's tests pass, then tells Kaden
    it is live.
    - **A test failure:** find the cause and fix it. A test may be re-run once
-     only when the failure has nothing to do with the change (the
-     live-weather summary tests), and the chat says so.
+     only when the failure has nothing to do with the change, and the chat
+     says so.
    - **Never** skip, loosen or delete a test to get green.
    - Change a test only when Kaden's rules changed what it checks, and say
      which rule.
@@ -132,7 +132,8 @@ the weather layers or loading, and add `&off=<feature>` to compare.
   Nov 21).
 - **Gestures switch off while the area to save is traced.** Press-and-hold
   and map taps check `body[data-saving]`.
-- **Live-weather tests** (the summary window) are slow and can fail now and
-  then. One re-run is allowed; say so.
+- **Every test but radar runs on recorded weather** (the summary window
+  since Nov 28). A test that fails on recorded weather fails for a reason:
+  find it before re-running.
 - **A reference picture** (`e2e/*-snapshots`) is refreshed only after an
   intended change, and checked by eye.

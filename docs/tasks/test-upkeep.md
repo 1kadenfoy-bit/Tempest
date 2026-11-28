@@ -45,7 +45,7 @@ Do not record the new day in this task unless it is quick; task 3 does it.
 
 ## 3. Record a new day; every test green (Data, with every area's tests; Opus)
 
-- [ ] Done
+- [x] Done (Nov 28: the Nov 28 set; the summary tests on recorded weather; a briefly refused pin no longer reads thousands of map-file pieces, Data rule 3; `docs/testing.md`, "The Nov 28 set")
 
 ```
 You are working on Tempest. I'm Kaden; I design and test, I don't read code. Talk to me in plain language.

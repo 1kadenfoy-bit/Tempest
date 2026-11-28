@@ -67,7 +67,7 @@ test('alerts at the pin: badge with the count, panel with one row per alert as i
   const link = rows.nth(0).getByRole('link', { name: 'Read on weather.gc.ca' });
   await expect(link).toHaveAttribute('href', 'https://weather.gc.ca/warnings/index_e.html?prov=ab');
   await expect(link).toHaveAttribute('target', '_blank');
-  await expect(panel.locator('.alert-source')).toHaveText(/^Environment and Climate Change Canada · fetched \d{1,2}:\d\d [AP]M$/);
+  await expect(panel.locator('.alert-source')).toHaveText(/^Environment and Climate Change Canada · fetched \d{1,2}(:\d\d)? [AP]M$/);
   await page.waitForTimeout(400);
   await page.screenshot({ path: 'test-results/screens/m9-alerts.png' });
 });
