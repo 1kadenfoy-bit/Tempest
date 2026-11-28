@@ -237,6 +237,12 @@ if (steps.includes('merge')) {
   for (const k of [...refused.keys()]) if (entries[k]) refused.delete(k);
   const changed = await runCheck(entries, readFileSync(join(dir, 'bodies.bin')));
   const raw = report(refused, failed, changed);
+  // GitHub refuses any single file over 100 MiB (bodies.bin holds every answer's bytes).
+  const bodiesSize = statSync(join(dir, 'bodies.bin')).size;
+  if (bodiesSize > 100 * 1024 * 1024 - 1e6) {
+    console.error(`bodies.bin is ${(bodiesSize / 1e6).toFixed(1)} MB: GitHub refuses a file over 100 MiB. Record less (fewer spots or layers) or split the file before keeping it.`);
+    process.exit(2);
+  }
   if (raw > maxMb * 1e6) {
     console.error(`The set is ${(raw / 1e6).toFixed(1)} MB, over the ${maxMb} MB limit (--max-mb). It is stored in git for good: find what grew before keeping it.`);
     process.exit(2);

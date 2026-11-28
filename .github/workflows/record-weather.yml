@@ -117,7 +117,12 @@ jobs:
       pull-requests: write
       actions: write
     steps:
+      # The newest commit of the branch the run started from, not the one it
+      # started on: the set's branch must not carry an older copy of the
+      # workflows (GitHub refuses a workflow's own token to change them, Nov 28).
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v7
         with:
           node-version: 22
