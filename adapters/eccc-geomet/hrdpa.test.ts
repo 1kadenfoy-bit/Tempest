@@ -26,4 +26,9 @@ describe('HRDPA adapter', () => {
     const obs = await fetchObserved(49, -123, new Date('2026-11-16T12:00:00Z'), new Date('2026-11-16T18:00:00Z'), fake);
     expect(obs.map((o) => [o.mm, o.prelim])).toEqual([[1, false], [0.9, true]]);
   });
+
+  it('fails without a connection, rather than saying nothing was measured', async () => {
+    const offline = (() => Promise.reject(new TypeError('Failed to fetch'))) as unknown as typeof fetch;
+    await expect(fetchObserved(49, -123, new Date('2026-11-16T12:00:00Z'), new Date('2026-11-16T18:00:00Z'), offline)).rejects.toThrow('Failed to fetch');
+  });
 });

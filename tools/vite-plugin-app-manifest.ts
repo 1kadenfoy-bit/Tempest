@@ -1,11 +1,14 @@
 // Writes manifest.webmanifest and the theme-colour meta from design/tokens.json,
 // so the installed app's colours come from the tokens like everything else.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
+import { stampServiceWorker } from './stamp-sw.ts';
 
 interface Tokens { color: Record<string, { dark?: string }> }
 
 export function appManifest(): Plugin {
+  let outDir = '';
   const tokens = JSON.parse(readFileSync(new URL('../design/tokens.json', import.meta.url), 'utf8')) as Tokens;
   const ground = tokens.color['map-ground']?.dark ?? '#000000';
   const surface = tokens.color['surface']?.dark ?? '#000000';
@@ -40,6 +43,13 @@ export function appManifest(): Plugin {
     },
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'manifest.webmanifest', source: manifest });
+    },
+    configResolved(config) { outDir = resolve(config.root, config.build.outDir); },
+    // The service worker names its copy after this build's files, so a new
+    // version installs as a new worker (tools/stamp-sw.ts, public/sw.js).
+    closeBundle() {
+      if (!outDir || !existsSync(join(outDir, 'asset-manifest.json'))) return;
+      if (!stampServiceWorker(outDir)) throw new Error('public/sw.js has no "const VERSION = …;" line to stamp');
     },
   };
 }

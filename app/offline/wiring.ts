@@ -20,7 +20,8 @@ import { savePrefs } from '../shell/prefs';
 import { colorToken, type Theme } from '../theme/tokens';
 import { progressText, savedAreasBody } from './offline-panel';
 import { openSaveMode } from './save-mode';
-import { deleteArea, listSavedAreas, saveArea } from './saved-areas';
+import { deleteArea, listSavedAreas, saveArea, tidyUnfinishedSaves } from './saved-areas';
+import { notify } from '../notify/store';
 import { readFile, storageState } from './storage';
 
 type Box = [number, number, number, number];
@@ -41,6 +42,17 @@ export async function registerSavedAreas() {
       if (file) S.basemap.addSaved(a.id, file, a.bbox, a.basemap.minzoom, a.basemap.maxzoom);
     }
   } catch { S.savedAreas = []; S.savedParts = []; }
+}
+/**
+ * At start: what a save cut short left (the app closed mid-save) is removed,
+ * and the Notification Centre says which save did not finish, so it can be
+ * started again (Nov 28).
+ */
+export async function tidyAfterClose(): Promise<void> {
+  const stopped = await tidyUnfinishedSaves();
+  for (const name of stopped) {
+    notify({ id: `stopped-${name}-${Date.now()}`, kind: 'info', text: `Download did not finish: ${name} · the app closed while saving. Save it again from settings`, time: new Date() });
+  }
 }
 export const H_MS = 3_600_000;
 /** The chain a save holds: HRDPS, then RDPS for the hours past its end. */

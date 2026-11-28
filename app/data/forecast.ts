@@ -137,8 +137,22 @@ export async function loadObserved() {
   } catch (err) {
     observedFor = '';
     console.warn('no observed precipitation', err);
+    // Asked again soon, then less often, and at once when the signal is back
+    // (before Nov 28 a drop mid-load left the model's guess in its place until the pin moved).
+    clearTimeout(observedRetry.timer);
+    const wait = retryDelay(observedRetry.tries++);
+    if (wait !== null && navigator.onLine) observedRetry.timer = window.setTimeout(() => void loadObserved(), wait);
+    return;
   }
+  clearTimeout(observedRetry.timer);
+  observedRetry = { timer: 0, tries: 0 };
 }
+let observedRetry = { timer: 0, tries: 0 };
+addEventListener('online', () => {
+  if (!observedRetry.tries) return;
+  observedRetry.tries = 0;
+  void loadObserved();
+});
 /**
  * The runs a saved area holds, by model, for use without signal: the area
  * the pin is in (else the newest saved), its first model and any later ones.
@@ -237,6 +251,7 @@ export async function loadRun() {
       void loadSeries();
       void app.loadSummarySeries();
     }
+    runsCame();
     app.renderRunAge();
     document.body.dataset.run = 'ready';
     return;
@@ -260,9 +275,27 @@ export async function loadRun() {
     return;
   }
   document.body.dataset.run = 'error';
+  retryRuns();
   if (S.active.frames) { app.renderRunAge(); return; }
   $('run-age').textContent = 'Weather unavailable · tap to retry';
-  S.scrubber.setStatus('Could not reach the weather data');
+  S.scrubber.setStatus(navigator.onLine ? 'Could not reach the weather data' : 'No signal · the weather will load when it is back');
+}
+
+/**
+ * No run reached and nothing saved: asked again soon, then less often, and
+ * not at all after six tries (core/time/retry.ts); at once when the signal
+ * comes back, or on a tap. Before Nov 28 the app stayed on "Weather
+ * unavailable" until tapped, or for up to 10 minutes.
+ */
+let runsRetry = { timer: 0, tries: 0 };
+function retryRuns(): void {
+  clearTimeout(runsRetry.timer);
+  const wait = retryDelay(runsRetry.tries++);
+  if (wait !== null && navigator.onLine) runsRetry.timer = window.setTimeout(() => void loadRun(), wait);
+}
+function runsCame(): void {
+  clearTimeout(runsRetry.timer);
+  runsRetry = { timer: 0, tries: 0 };
 }
 export let seriesSeq = 0;
 /**
@@ -293,7 +326,19 @@ function resumeSeries() {
   void loadSeries();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeSeries(); });
-addEventListener('online', resumeSeries);
+/**
+ * The signal is back: what did not come is asked for now, not at the next
+ * try (which can be a minute or more away): the runs when none was reached
+ * (or the app fell back on a saved area), and the pin's forecast.
+ */
+addEventListener('online', () => {
+  if (document.body.dataset.run === 'error' || (S.usingSaved && !savedOnlyActive())) { runsRetry.tries = 0; void loadRun(); return; }
+  if (seriesRetry.key) {
+    clearTimeout(seriesRetry.timer);
+    seriesRetry = { timer: 0, key: '', tries: 0, stopped: false };
+    void loadSeries();
+  }
+});
 
 /** One model's part of the pin's series, for the active layer. */
 export async function modelSeries(layer: LayerSlots, m: ModelId, first: boolean, lat: number, lng: number, onPartial?: (s: PointSeries) => void, onLater?: (s: PointSeries) => void): Promise<PointSeries> {
@@ -431,6 +476,8 @@ export async function loadSeries() {
       if (mine !== seriesSeq) return;
       console.error(err);
       if (S.usingSaved) { S.scrubber.setStatus('The pin is outside the saved area'); return; }
+      // No signal: said as such (not "busy"), and asked for again once it is back.
+      if (!navigator.onLine) { retrySeries(key); S.scrubber.setStatus('No signal · the pin’s forecast will load when it is back'); app.renderReadout(); return; }
       if (retrySeries(key)) { S.scrubber.setStatus('The forecast service is busy · trying again shortly'); return; }
       S.scrubber.setStatus(STOPPED_STATUS);
       app.renderReadout();

@@ -56,10 +56,16 @@ export function periodEnds(from: Date, to: Date): Date[] {
   return out;
 }
 
+/**
+ * The value, or null when the analysis has none. No connection (the request
+ * itself failed) throws: that is not "no rain measured", and must not be kept
+ * as such (Nov 28: a signal drop mid-load left the model's guess in place for
+ * 6 hours).
+ */
 async function valueAt(layer: string, lat: number, lon: number, end: Date, fetchFn: typeof fetch): Promise<number | null> {
+  const res = await fetchFn(featureInfoUrl(layer, lat, lon, end));
+  if (!res.ok) return null;
   try {
-    const res = await fetchFn(featureInfoUrl(layer, lat, lon, end));
-    if (!res.ok) return null;
     return parseFeatureInfo(await res.json());
   } catch {
     return null;

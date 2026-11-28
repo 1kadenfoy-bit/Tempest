@@ -1,5 +1,5 @@
 {
-  "$comment": "About how long each browser test file takes on one of GitHub's machines (seconds, one test at a time; the sum of each file's tests in the last green run, the pull request run of Nov 28, 2026, 16:33 UTC). tools/test-plan.mjs splits the files among the machines with it so they finish together. A file not listed counts 60 s. Update a number when a file's time changes a lot (the CI log prints each test's time).",
+  "$comment": "About how long each browser test file takes on one of GitHub's machines (seconds, one test at a time; the sum of each file's tests in the last green run, the pull request run of Nov 28, 2026, 16:33 UTC). tools/test-plan.mjs splits the files among the machines with it so they finish together. A file not listed counts 60 s. Update a number when a file's time changes a lot (the CI log prints each test's time). The four sequence tests of Nov 28 (signal, new-run, save-interrupted, update) are estimates from the build machine, times 1.3, until a green run measures them.",
   "seconds": {
     "e2e/3d.spec.ts": 145,
     "e2e/air-quality.spec.ts": 49,
@@ -10,17 +10,21 @@
     "e2e/details.spec.ts": 37,
     "e2e/effects.spec.ts": 6,
     "e2e/models.spec.ts": 30,
+    "e2e/new-run.spec.ts": 95,
     "e2e/offline.spec.ts": 261,
     "e2e/perf.spec.ts": 190,
     "e2e/phone-tests.spec.ts": 75,
     "e2e/radar.spec.ts": 41,
     "e2e/requests.spec.ts": 122,
+    "e2e/save-interrupted.spec.ts": 270,
     "e2e/search.spec.ts": 26,
     "e2e/settings.spec.ts": 93,
     "e2e/shell.spec.ts": 205,
+    "e2e/signal.spec.ts": 60,
     "e2e/stations.spec.ts": 88,
     "e2e/summary.spec.ts": 69,
     "e2e/temperature.spec.ts": 15,
+    "e2e/update.spec.ts": 260,
     "e2e/wind.spec.ts": 78
   }
 }

@@ -237,10 +237,10 @@ show up in a test.
 | Layer switched while the last one is loading | `consistency`: quick taps |
 | Pin moved again before its forecast came | `consistency`: quick taps |
 | Time dragged, then Now | `consistency`: quick taps; `shell`: one cursor |
-| Signal lost while a layer or the forecast loads | partly: `stations`, `search` (no connection); **not covered** mid-load |
-| A new run lands while the app is open (every 10 minutes) and the readout mixes two runs | **not covered** (needs two recorded runs) |
-| The app closed or reloaded while saving an area | **not covered** |
-| A new version of the app installed over an old offline copy | **not covered** |
+| Signal lost while a layer or the forecast loads | `signal` (before the runs are known, and while the map and the pin's forecast load); `stations`, `search` (no connection) |
+| A new run lands while the app is open (every 10 minutes) and the readout mixes two runs | `new-run` (the next HRDPS run made from the recorded one) |
+| The app closed or reloaded while saving an area | `save-interrupted` |
+| A new version of the app installed over an old offline copy | `update` (a second version served at the same address) |
 | The forecast service refuses (limits) and the pin waits forever | `requests`: temperature at a refused pin is asked six times in about 3 minutes, then the app stops and says "The forecast service is not answering · move the pin to try again" (before Nov 27 it asked every minute for good); `models` (model unavailable). The map-file route for temperature is still used only once the service is out for hours (performance task 6) |
 
 ### Found while writing these tests
@@ -263,6 +263,91 @@ show up in a test.
   Since Nov 28 they run on the recording, which holds the forecast where they
   press and tap. One read the window's time while a drag was still being
   drawn; it now waits for the drawing.
+
+## The sequences (Nov 28, task 5)
+
+Four browser tests for the sequences that were "not covered" above, each
+in the Data area, on recorded weather. Each found something; each was fixed
+in the same round, and each test was seen failing without its fix.
+
+**`e2e/signal.spec.ts`: the signal drops mid-load, then comes back** (about
+45 s). The weather servers' answers and the terrain pieces are held at the
+door until the test cuts the connection, so the drop always lands mid-load.
+Twice: before the app knows the models' runs, and while the map and the
+pin's forecast load. It checks what the app says while the signal is gone,
+then that within a minute of its return, without a tap, the app shows
+exactly what an uninterrupted load shows (`e2e/readings.ts`, the same reader
+as `consistency`), with its age and a next update. Found and fixed:
+- no run reached: "Weather unavailable" stayed until tapped, or for up to 10
+  minutes; now asked again (3 s, 6 s… then stop) and at once when the signal
+  returns (`app/data/forecast.ts`);
+- the map's weather fill was never asked again after a failed load: the map
+  stayed without weather, saying nothing, until moved (`app/weather/fills.ts`);
+- the observed precipitation counted a failed request as "nothing measured"
+  and kept that for 6 hours: the last 24 h showed the model's guess instead
+  (`adapters/eccc-geomet/hrdpa.ts`);
+- the pin's height never came when its terrain piece failed: the pin's wheel
+  spun for good (`app/shell/pin.ts`);
+- the chart said "Loading the pin's forecast…" or "the forecast service is
+  busy" with no signal, and nothing at all before a run was known; it now says
+  "No signal · … will load when it is back" (`app/shell/scrubber.ts` showed
+  its words only once there was a time line).
+
+**`e2e/new-run.spec.ts`: a new run arrives while the app is open** (about
+70 s). The recording holds one run per model, so HRDPS's next run (6 hours
+later) is made from it: the same map files for the same hours, and the point
+service's answers delayed by 6 hours, so its numbers at the pin differ. The
+page's clock runs to when that run could be out; the map files publish it
+first, the point service 10 minutes later. Checks: while only the map files
+are new nothing changes; at no moment does the readout show one run under
+the other's age (watched in the page at every change); then the map, the
+readout, the chart, the summaries, the age and the details' footer all name
+the new run and equal an app opened on it. The page names the run behind the
+readout, the map and the age (`data-series-run`, `data-fill-run`,
+`data-age-run`). Found and fixed: when the new run's map pieces failed, the
+old run's picture stayed on the map under the new run's age; it now goes, and
+the chart says the map did not load until the next try fills it. (The new
+run's air profiles over the view are not recorded; the snow line there reads
+the map files, and the log lists them.)
+
+**`e2e/save-interrupted.spec.ts`: the app closed while an area is saved**
+(about 3.5 minutes: two saves of the `offline` test's area). The app is
+closed late in the save (weather and base map written, terrain pieces being
+kept) and opened again. Checks: the area was never listed while unfinished;
+nothing of it is left on the phone; the Notification Centre says it did not
+finish; without signal there is no saved area to fall back on; the save
+started again finishes and works without signal. Found and fixed: the
+unfinished save's files (155 files, 3 MB for this small area; tens of MB for a
+big one) and its kept map pieces stayed on the phone for good, unlisted and
+unused, and nothing said the save had stopped. Saves under way are now noted
+on the phone and hold a lock; at the next start what they left is removed and
+the Notification Centre says "Download did not finish: … Save it again from
+settings" (`app/offline/saved-areas.ts`, `wiring.ts`).
+
+**`e2e/update.spec.ts`: a new version installed over an old offline copy**
+(about 3 minutes). The test serves `dist/` from its own small server, then a
+second version at the same address: the same build with every built file
+renamed, as a new build's are, and a mark in the page. An area is saved on
+the first version. The second is published, the signal drops while its files
+are being kept, and the app is opened without signal: the whole old copy
+must open, with the saved area. Then the new version arrives whole: without
+signal the new one must open, with the saved area; the old copy's files are
+gone; the saved area's pieces and the forecasts kept on the phone stay.
+Found and fixed: `public/sw.js` never changed between versions, so a phone
+never installed a new one. Without signal it always opened the **first
+version it ever installed**, and kept every old file. Had a new version
+changed how saved areas are stored, they would not have opened without
+signal. The build now stamps the worker with a fingerprint of its file list
+(`tools/stamp-sw.ts`, from `tools/vite-plugin-app-manifest.ts`): each version
+is a new worker that keeps all its files before taking over and then drops
+only the old copy of the app (saved areas' pieces, kept bulletins and
+forecasts stay; before, a new worker would have deleted them). A cut install
+leaves the old copy whole. Pages are no longer kept as they arrive: one could
+belong to a version whose files were not kept, which would open blank.
+
+**Not changed:** what the app looks like, apart from the new words above. No
+test was loosened. `consistency` reads through `e2e/readings.ts` (moved, the
+same code).
 
 ## The Nov 28 set (task 3)
 

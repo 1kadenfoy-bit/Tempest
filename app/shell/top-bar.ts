@@ -111,8 +111,9 @@ export function renderRunAge() {
   el.dataset.stale = String(runAgeHours(r.referenceTime, new Date()) >= 12 || missing.length > 0);
   const name = seg ? REGISTRY[seg.model as ModelId]?.label ?? seg.model : MODELS[r.model]?.label ?? r.model;
   $('model-pill-label').textContent = choiceOf(S.active.id) === AUTO ? 'Auto' : name;
-  // The model under the cursor, for tests (Auto does not name it on screen).
+  // The model under the cursor, for tests (Auto does not name it on screen), and the run the age is of.
   document.body.dataset.modelInView = String(seg?.model ?? r.model);
+  document.body.dataset.ageRun = `${seg?.model ?? r.model}@${r.referenceTime.toISOString()}`;
 }
 export function syncAtesThumb() {
   atesThumb.style.display = S.active.id === 'avalanche' ? '' : 'none';

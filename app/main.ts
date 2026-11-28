@@ -164,6 +164,10 @@ function renderReadout() {
   const r = S.active.readout(pinData(), i, settingsFor(S.active));
   // No longer asked for (the service refused, Data rule 1): no spinning wheel; the time line says why.
   S.pin.setReadout(seriesRetry.stopped && !S.series && r.value === '…' ? { value: '' } : r);
+  // The run the readout and chart read at the cursor, for tests (e2e/new-run.spec.ts: never two runs at once).
+  const t = S.cursor.time?.getTime();
+  const seg = t === undefined ? undefined : S.series?.segments?.find((x) => x.kind === 'forecast' && x.from.getTime() <= t && t <= x.to.getTime());
+  document.body.dataset.seriesRun = seg ? `${seg.model}@${seg.run.toISOString()}` : '';
   scheduleDetails();
 }
 
@@ -200,7 +204,9 @@ S.cursor.subscribe(() => {
 
 setInterval(() => { if (document.visibilityState === 'visible') renderRunAge(); }, 60_000);
 // A new run can land while the app stays open: look every 10 minutes while it is on screen.
-setInterval(() => { if (document.visibilityState === 'visible' && !S.usingSaved) void loadRun(); }, 10 * 60_000);
+// Also on a saved area when no signal sent the app there (not "saved data only"):
+// the signal can come back without the phone saying so (Nov 28).
+setInterval(() => { if (document.visibilityState === 'visible' && !savedOnlyActive()) void loadRun(); }, 10 * 60_000);
 // Radar: ECCC adds a frame every 6 minutes; ask again once one is due, while it is on screen.
 setInterval(() => { if (document.visibilityState === 'visible' && S.active.frames) { void loadRadarFrames(); renderRunAge(); S.scrubber.refresh(); } }, 60_000);
 addEventListener('online', () => void loadRadarFrames(true));
@@ -398,18 +404,15 @@ if (preview) {
 
 if ('serviceWorker' in navigator && import.meta.env.PROD && !preview) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* runs without it */ });
-  // Files loaded before the worker took charge (a first visit) are not in its
-  // cache yet: keep them now, so the app opens without signal next time.
-  void navigator.serviceWorker.ready.then(async () => {
-    try {
-      const cache = await caches.open('tempest-app-v2');
-      const urls = new Set<string>([new URL('./', document.baseURI).href]);
-      for (const e of performance.getEntriesByType('resource')) {
-        const u = new URL(e.name);
-        if (u.origin === location.origin && !u.pathname.endsWith('.pmtiles') && !u.pathname.includes('/tiles/')) urls.add(u.href);
-      }
-      urls.add(new URL('tiles/basemap.json', document.baseURI).href);
-      for (const url of urls) if (!(await cache.match(url))) await cache.add(url).catch(() => undefined);
-    } catch { /* storage unavailable */ }
+  // Files loaded before the worker took charge (a first visit) may not be in
+  // its copy yet: the worker keeps them now (public/sw.js), in its own
+  // version's copy, so the app opens without signal next time.
+  void navigator.serviceWorker.ready.then((reg) => {
+    const urls = new Set<string>();
+    for (const e of performance.getEntriesByType('resource')) {
+      const u = new URL(e.name);
+      if (u.origin === location.origin && !u.pathname.endsWith('.pmtiles') && !u.pathname.includes('/tiles/')) urls.add(u.href);
+    }
+    reg.active?.postMessage({ keep: [...urls] });
   });
 }

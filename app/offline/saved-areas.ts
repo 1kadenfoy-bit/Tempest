@@ -15,7 +15,7 @@ import { REGION_FILE_VERSION, decodeRegionFile, encodeRegionFile } from '../../c
 import type { VariableName } from '../../core/vocabulary';
 import type { Basemap } from '../map/basemap-router';
 import { terrainSource } from '../map/terrain';
-import { readFile, readJson, removeFile, requestPersistence, writeFile } from './storage';
+import { listFiles, readFile, readJson, removeFile, requestPersistence, writeFile } from './storage';
 
 const INDEX = 'saved-areas.json';
 export const SAVED_CACHE = 'tempest-saved-v1';
@@ -139,24 +139,80 @@ type SaveOptions = {
   onProgress: (p: SaveProgress) => void;
 };
 
-/** Save an area. A cancelled or failed save removes the files it had written. */
+/**
+ * Saves under way, kept on the phone (not in memory), so an app closed in the
+ * middle of one knows at its next start that it did not finish.
+ */
+const RUNNING_KEY = 'tempest.saving.v1';
+type Running = { id: string; name: string };
+function running(): Running[] {
+  try { return JSON.parse(localStorage.getItem(RUNNING_KEY) ?? '[]') as Running[]; } catch { return []; }
+}
+function setRunning(list: Running[]): void {
+  try { if (list.length) localStorage.setItem(RUNNING_KEY, JSON.stringify(list)); else localStorage.removeItem(RUNNING_KEY); } catch { /* storage unavailable */ }
+}
+/**
+ * Held (shared) by every save while it runs, in any window of the app: the
+ * tidying at start (tidyUnfinishedSaves) waits for none and skips while one
+ * runs, so it never removes the files of a save still going on.
+ */
+const SAVING_LOCK = 'tempest-saving';
+function whileSaving<T>(fn: () => Promise<T>): Promise<T> {
+  return navigator.locks ? navigator.locks.request(SAVING_LOCK, { mode: 'shared' }, fn) : fn();
+}
+
+/**
+ * Save an area. A cancelled or failed save removes the files it had written.
+ * The area is listed only once every file is written (the list is written
+ * last), so a save cut short is never used as if whole.
+ */
 export async function saveArea(opts: SaveOptions): Promise<SavedArea> {
   const written: string[] = [];
+  const id = `a${Date.now().toString(36)}`;
+  setRunning([...running(), { id, name: opts.name }]);
   try {
-    return await saveAreaInner(opts, written);
+    return await whileSaving(() => saveAreaInner(opts, written, id));
   } catch (err) {
     for (const f of written) await removeFile(f).catch(() => undefined);
     throw err;
+  } finally {
+    setRunning(running().filter((r) => r.id !== id));
   }
 }
 
-async function saveAreaInner(opts: SaveOptions, written: string[]): Promise<SavedArea> {
+/**
+ * What saves cut short left on the phone (the app was closed or reloaded
+ * mid-save): files no saved area names, and saved map pieces no area uses,
+ * are removed. Returns the names of the saves that did not finish, for the
+ * Notification Centre. Skipped while a save runs (in another window).
+ * Before Nov 28 their files stayed for good, unlisted and unused.
+ */
+export async function tidyUnfinishedSaves(): Promise<string[]> {
+  const tidy = async (): Promise<string[]> => {
+    const areas = await listSavedAreas();
+    const keepFiles = new Set([INDEX, ...areas.flatMap((a) => [...weatherFiles(a), a.basemap.file])]);
+    for (const f of await listFiles()) if (!keepFiles.has(f)) await removeFile(f);
+    const keepUrls = new Set(areas.flatMap((a) => a.cached.map((u) => new Request(u).url)));
+    const cache = await caches.open(SAVED_CACHE);
+    for (const req of await cache.keys()) if (!keepUrls.has(req.url)) await cache.delete(req);
+    const stopped = running().filter((r) => !areas.some((a) => a.id === r.id)).map((r) => r.name);
+    setRunning([]);
+    return stopped;
+  };
+  try {
+    if (!navigator.locks) return await tidy();
+    return await navigator.locks.request(SAVING_LOCK, { ifAvailable: true }, (lock) => (lock ? tidy() : []));
+  } catch {
+    return [];
+  }
+}
+
+async function saveAreaInner(opts: SaveOptions, written: string[], id: string): Promise<SavedArea> {
   const { bbox, basemap } = opts;
   const amounts = opts.variables;
   const plain = opts.plainVariables ?? [];
   const variables = [...amounts, ...plain];
   void requestPersistence();
-  const id = `a${Date.now().toString(36)}`;
   const now = Date.now();
   const H = 3_600_000;
   const until = opts.span ? opts.span.to.getTime() : opts.hours === null ? Infinity : now + opts.hours * H;

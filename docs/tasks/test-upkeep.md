@@ -78,7 +78,7 @@ The task: make GitHub's test run shorter and steadier without dropping or loosen
 
 ## 5. Sequences no test covers yet (Data and Interface; Opus, high effort)
 
-- [ ] Done
+- [x] Done (Nov 28: `signal`, `new-run`, `save-interrupted`, `update`; each found a bug, fixed; `docs/testing.md`, "The sequences")
 
 ```
 You are working on Tempest. I'm Kaden; I design and test, I don't read code. Talk to me in plain language.

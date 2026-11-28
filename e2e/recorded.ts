@@ -175,3 +175,16 @@ export async function useRecordedWeather(context: BrowserContext, set = 'default
   });
   return meta;
 }
+
+/**
+ * The recorded answer to one request, as the replay gives it (null when the
+ * set lacks it). For tests that build a variation of the recorded day, such
+ * as a newer model run (e2e/new-run.spec.ts).
+ */
+export function recordedAnswer(set: string, method: string, url: string, range: string | null = null): { status: number; headers: Record<string, string>; body: Buffer } | null {
+  const { replay, bodies } = load(set);
+  const hit = replay.find(method, url, range);
+  if (!hit) return null;
+  const body = Buffer.concat(hit.parts.map((p) => bodies.subarray(p.offset, p.offset + p.length)));
+  return { status: hit.status, headers: { ...hit.headers, 'access-control-allow-origin': '*' }, body };
+}
