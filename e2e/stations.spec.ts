@@ -126,7 +126,7 @@ test('weather stations: wind layer labels with arrows, units follow the setting;
   expect(await marker.locator('.station-dot').evaluate((e) => getComputedStyle(e).borderTopColor)).toBe('rgb(20, 24, 29)');
   // 3D terrain: tilted, the markers stand on the ground (MapLibre raises them with the terrain).
   await page.evaluate(() => (window as unknown as { tempestMap: { jumpTo(o: unknown): void } }).tempestMap.jumpTo({ center: [-123.1, 49.75], zoom: 9.5, pitch: 55 }));
-  await page.waitForFunction(() => document.body.dataset.stations !== 'loading', undefined, { timeout: 30_000 });
+  await page.waitForFunction(() => document.body.dataset.stations !== 'loading', undefined, { timeout: 60_000 });
   await page.waitForTimeout(2500);
   await page.screenshot({ path: `${SHOTS}/light-3d-wind.png` });
 });

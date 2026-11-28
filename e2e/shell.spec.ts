@@ -300,7 +300,13 @@ test.describe('shell pixels (map hidden)', () => {
     // The panel grows open (Kaden's interface rules, Nov 26): wait until its animations end,
     // which takes longer than half a second on GitHub's slower machines.
     await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
-    await page.waitForTimeout(200);
+    // The Satellite tile says "Loading…" and is greyed out until the satellite picture is in (a few
+    // seconds later on a busy machine); the picture is of the finished panel, so wait for that, and
+    // for the fonts, before the frames that settle it.
+    await expect(page.locator('.ground-tile[data-ground="satellite"]')).toBeEnabled({ timeout: 60_000 });
+    await expect(page.locator('.ground-tile[data-ground="satellite"] .tile-soon')).toHaveCount(0);
+    await page.evaluate(() => document.fonts.ready.then(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))));
+    await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
     await expect(page).toHaveScreenshot('shell-map-panel.png', live(page));
   });
   test('pulled up', async ({ page }) => {

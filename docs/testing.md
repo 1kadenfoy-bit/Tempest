@@ -24,7 +24,11 @@ A machine stops at the first step that fails, so a run that is going to fail
 says so in minutes. `npm run test:plan` shows the plan for a working copy;
 `tools/test-plan.mjs` makes it. The machines' shares are balanced by how long
 each file takes (`e2e/durations.json`), so they finish together (before: 6,
-13 and 17 minutes on the three machines; now about 10 each).
+13 and 17 minutes on the three machines; Nov 28, from the last green run: 7.6,
+8.2, 8.2 and 10.4 minutes of tests on four machines, 11.5 minutes in all;
+with the Nov 28 numbers the plan is 9, 9, 9 and 8). A runner can be half as
+fast again as another (the same tests took 8.2 and 12.5 minutes on the same
+machine number in two runs), so the numbers are for balancing, not promises.
 
 Locally, `npm run check:section -- <area>` runs last time's failures first,
 then the area's tests and those of every other area whose files changed.
@@ -312,3 +316,27 @@ refused at once.
 (ECCC, saved Nov 17, moved to the present) and refuses the point service;
 the frames follow the real clock, which recorded weather would freeze. It
 reads only the models' run lists live, from the map-file bucket.
+
+## Where the slow files wait (Nov 28, measured on the build machine)
+
+The slow files wait for the page, not for pauses: nearly all of
+`consistency` (about 3 minutes for the zoom check, 1.5 for quick taps), `3d`
+and `offline` is the map and the weather loading and drawing in software.
+- **Cut:** `consistency` read the screen from the test every 1.5 s; on the
+  Wind layer each read had to wait for a turn of the page (2 to 5 s, the streaks
+  keep it busy). The wait now runs inside the page with the same 1.5 s gap,
+  loading test and 20 tries: the zoom check went from 3.4 to 3.0 minutes.
+- **Not cut:** the fixed pauses that remain add up to under half a minute a run
+  (`3d` 0.8 s ×2, `offline` 2 s ×2 and 1.5 s after each drag, `consistency`
+  0.3 s and 0.2 s); each stands between a change and a read of it, so removing
+  one would trade time for a flaky check. `3d`'s 20 to 30 s waits are the map
+  loading its tiles after a jump (`areTilesLoaded`), `offline`'s 2 minutes is
+  the save itself.
+- **Runs after a red run are longer:** the failed tests run first, and then
+  again with the rest of their files.
+- **The map panel picture** (`shell pixels › map panel`) now also waits for
+  the Satellite tile to stop saying "Loading…" and for the fonts, as well as
+  the panel's animations. The Nov 27 failure could not be reproduced (6 of 6 pass
+  here, also with the processor 8 times slower and with the satellite picture
+  20 s late), so this closes the one slow-machine state found, not a proven
+  cause.
