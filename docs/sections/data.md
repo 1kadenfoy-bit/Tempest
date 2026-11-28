@@ -81,7 +81,7 @@ You keep the recorded sets.
   bigger.
 - **Size:** keep sets to tens of MB. A set is stored in the repository for
   good, so replace sets rarely. The recorder reports the size and stops over
-  60 MB (`--max-mb=`).
+  120 MB on disk (`--max-mb=`; Kaden, Nov 28: a set covering every test is about 110 MB, 75 MB in git).
 
 ## Rules for this section
 

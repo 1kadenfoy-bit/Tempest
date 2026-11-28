@@ -21,7 +21,7 @@ on:
         default: ''
       max_mb:
         description: Stop if the set is bigger than this many MB (it is stored in git for good)
-        default: '60'
+        default: '120'
 
 # One recording at a time.
 concurrency:

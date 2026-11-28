@@ -27,7 +27,7 @@
 // --shard=<i>/<n> (step 2 on one machine of n), --tests=<files> (step 2 with
 // these test files only, comma-separated; for a trial), --add (keep what the set holds
 // and add to it; the frozen time stays: only while its runs still exist),
-// --max-mb=<n> (default 60: stop with an error when the set is bigger),
+// --max-mb=<n> (default 120 on disk, about 80 in git: stop with an error when the set is bigger),
 // --summary=<file> (also write the report there, for the pull request).
 // Without --add (or --step) the set is replaced. Needs the base map pieces
 // (npm run tiles) and the browser (Playwright).
@@ -48,7 +48,7 @@ const play = arg('play', '25');
 const step = arg('step', 'all');
 const shard = arg('shard', '');
 const testFiles = arg('tests', '').split(',').filter(Boolean);
-const maxMb = Number(arg('max-mb', '60'));
+const maxMb = Number(arg('max-mb', '120'));
 const summaryFile = arg('summary', '');
 const add = flag('add');
 const dir = join('recorded', set);
@@ -169,7 +169,7 @@ async function runCheck(entries, bodies) {
   return changed;
 }
 
-function report(refused, failed, changed) {
+function report(refused, failed, changed) { // refused is narrowed below
   const entries = JSON.parse(readFileSync(join(dir, 'index.json'), 'utf8')).entries;
   const bodies = readFileSync(join(dir, 'bodies.bin'));
   const meta = JSON.parse(readFileSync(join(dir, 'meta.json'), 'utf8'));
@@ -183,6 +183,9 @@ function report(refused, failed, changed) {
     hosts.set(h, x);
   }
   const mb = (b) => `${(b / 1e6).toFixed(1)} MB`;
+  // A request the page itself cancelled (it moved on, or a newer ask replaced it) is not a refusal.
+  const cancelled = [...refused].filter(([, why]) => /ERR_ABORTED/.test(why)).length;
+  refused = new Map([...refused].filter(([, why]) => !/ERR_ABORTED/.test(why)));
   const byHost = [...refused].reduce((m, [k, why]) => { const h = new URL(k.split(' ')[1]).hostname; m.set(h, [...(m.get(h) ?? []), why]); return m; }, new Map());
   const lines = [
     `**Set "${set}"**: ${meta.description || '(no description)'}`,
@@ -194,6 +197,7 @@ function report(refused, failed, changed) {
     '',
     refused.size ? `**Refused by the servers and not recorded: ${refused.size}** (tests reading these will find them missing)` : 'Nothing was refused by the servers.',
     ...[...byHost].map(([h, whys]) => `- ${h}: ${whys.length} (${[...new Set(whys)].join(', ')})`),
+    ...(cancelled ? [`(${cancelled} asked and then cancelled by the app itself, not needed: not counted.)`] : []),
     '',
     changed.length ? `**A newer run came out during the recording** (the set may mix two runs; record again once the runs are settled):\n${changed.map((c) => `- ${c}`).join('\n')}` : 'No model’s run changed during the recording.',
     '',
