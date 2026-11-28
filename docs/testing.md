@@ -31,7 +31,8 @@ then the area's tests and those of every other area whose files changed.
 
 ## Recorded weather is strict
 
-The tests run on a recorded day (`recorded/default`, Nov 20). Until Nov 27,
+The tests run on a recorded day (`recorded/default`: Nov 28, 2026, 07:00 UTC,
+which is Fri Nov 27, 11 PM in BC; before Nov 28, Nov 20). Until Nov 27,
 anything the recording did not hold was fetched live. Open-Meteo deletes a
 run a few days after it is made, so those tests passed for a week, then
 waited minutes and failed. That is why the wind, saved-area and phone-tests
@@ -42,8 +43,8 @@ once, and the test's log lists what was missing:
 [wind: …] 24 answer(s) not in the recorded weather "default" (a new set must cover them …)
 ```
 
-The fix for those three is a new recording that covers what they read
-(`docs/tasks/test-upkeep.md`, task 3).
+The fix for those three was a new recording that covers what they read
+(`docs/tasks/test-upkeep.md`, task 3: the Nov 28 set, below).
 
 ## Recording a set that covers every test (Nov 27)
 
@@ -56,8 +57,8 @@ overlap (the same recorded bytes, so the same numbers). A file's size is
 answered from any recorded piece of it. One lookup does this for the tests
 (`e2e/recorded.ts`) and the dev server (`public/recorded-sw.js`):
 `app/data/recorded-replay.ts`, with its unit tests. The Nov 20 set's missing
-pieces are truly missing (not other ranges of recorded ones), so the three
-tests stay red until the new recording.
+pieces were truly missing (not other ranges of recorded ones), so the three
+tests stayed red until the Nov 28 recording.
 
 **The tests record what they read.** `npm run weather:record -- --set=<name>`:
 1. the tour: each layer at each spot, the hours played through, the forecast
@@ -102,11 +103,12 @@ refresh the pictures in `docs/reports/` on purpose: `REPORTS=1 npx playwright te
 to?** A normal session on recorded weather: open, every layer, the pin
 dropped in three places and back, the time dragged and Now, the forecast
 summary (press-and-hold), Temperature at that last pin, then an hour left
-open and untouched (the page's clock fast-forwarded), then two hours more to
-when HRDPS's next run could exist. The recording has the point forecast at
-your location only, so at the dropped pins the point service refuses, as it
-does when its free limit is spent: the refused case is part of the session
-on purpose. About 2 minutes. It fails when:
+open and untouched (the page's clock fast-forwarded), then on to just after
+HRDPS's next run could exist (worked out from the runs the set holds, so it
+fits any recorded day; Nov 28). The test answers the point forecast at your
+location only, so at the dropped pins the point service refuses (busy), as
+it does when it is overloaded: the refused case is part of the session on
+purpose. About 3 minutes. It fails when:
 - a server is asked more than its budget in the session;
 - anything at all is asked between 10 and 60 minutes of the untouched hour;
 - more than 20 answered requests are asked again in the same words;
@@ -139,10 +141,30 @@ minute, plus the map-file pieces read for it each time). After: 9 and 177 extra
 (the refused pin's forecast 21 times in all, every one in the first minutes,
 then the app stops and says so).
 
-**What the map files' count is.** Most of the map-file pieces (about 1,800)
-are the three dropped pins' forecasts read from the map files hour by hour,
-because the point service refuses there. With the service answering, those
-are a few point requests instead.
+**What the map files' count is.** Most of the map-file pieces are the
+dropped pins' rain and snow amounts for the next 48 hours, read from the map
+files because the point service refuses there. With the service answering,
+those are a few point requests instead.
+
+**Nov 28: the new day showed what a refusal really cost.** The Nov 20 set
+lacked most map-file pieces at the dropped pins, so the app's reads there
+failed fast and the counts above looked small. The Nov 28 set holds them (the
+tests recorded them), and the same session then asked for **30,612 map-file
+pieces and 61 point forecasts**: on Precipitation, a briefly refused pin read
+its whole air profile hour by hour from the map files (about 6,000 pieces a
+pin), and the longer models' amounts too. Kaden chose (Nov 28, Data rule 3)
+that a brief refusal reads only the quick part from the map files (the next
+48 hours of amounts) and waits for the service for the rest, as Temperature
+already did; reading everything from the files stays for long outages (the
+daily limit). Measured on the build machine, Nov 28 set:
+
+| Server | Before the fix | After | Budget |
+| --- | --- | --- | --- |
+| Open-Meteo point API (forecasts) | 61 | 31 | 45 |
+| Open-Meteo map files (pieces and sizes) | 30,612 | 426 | 2,800 |
+| ECCC | 179 | 179 | 260 |
+
+The other servers were unchanged and within budget.
 
 ## New tests (Nov 27)
 
@@ -183,7 +205,7 @@ show up in a test.
 | A time or day shown in the phone's own time zone instead of BC's | `consistency`: time zone; all tests in BC time |
 | The data's age wrong (day boundaries, UTC versus local) | `consistency`: the data's age |
 | A unit converted in one place and not another | `consistency`: imperial units; `settings`: units everywhere |
-| Saved (offline) numbers differ from the live ones | `offline` (red until tasks 2 and 3 of `docs/tasks/test-upkeep.md` are done) |
+| Saved (offline) numbers differ from the live ones | `offline` |
 | Safety data re-scored or recoloured | `avalanche`, `alerts`, `air-quality` (ECCC's own colours and words) |
 | Readouts blended between model steps | `shell`: one cursor (steps are whole hours) |
 | Auto picks the wrong model past HRDPS's end | `offline` (RDPS past HRDPS), `models` |
@@ -232,7 +254,44 @@ show up in a test.
 - **The save card's "midnight"** (`app/shell/save-card.ts`) uses the phone's
   own time zone, while every other time uses BC's. The same in BC; a day off
   for a phone set elsewhere. Not covered; for the Interface area to decide.
-- **The forecast-summary tests use live weather**, so they fail when the
-  point service refuses (it refused this build machine all day on Nov 27).
-  Two of the five pass on the recording; three drop the pin where the
-  recording has no forecast (`docs/tasks/test-upkeep.md`, task 3).
+- **The forecast-summary tests used live weather**, so they failed when the
+  point service refused (it refused this build machine all day on Nov 27).
+  Since Nov 28 they run on the recording, which holds the forecast where they
+  press and tap. One read the window's time while a drag was still being
+  drawn; it now waits for the drawing.
+
+## The Nov 28 set (task 3)
+
+Recorded on GitHub by the "Record weather" workflow: Nov 28, 2026, 07:00 UTC
+(Fri Nov 27, 11 PM in BC), at Mt Seymour, Bowen Island and Manning Park, every
+layer, then every browser test filling its gaps. 107 MB on disk, about 75 MB
+in git; its largest file (`bodies.bin`) is 98.6 MiB, just under GitHub's
+100 MiB limit for one file. The models' runs: HRDPS, RDPS, GDPS and ECMWF
+00Z.
+
+**Tests whose expectation was tied to the Nov 20 day** (changed with Kaden's
+word, Nov 28):
+- `alerts`: the "fetched" time had to have minutes. The new clock stands at
+  exactly 11 PM, which the app writes "11 PM" like every other on-the-hour
+  time. Both forms are accepted now.
+- `requests`: "two hours later" reached HRDPS's next run but not RDPS's only
+  with the Nov 20 runs. The moment is now worked out from the set's runs.
+
+**"Not in the recorded weather" lines that remain, and why.** A few view
+grids: the temperature layer asks the point service for its air profile at
+a lattice of points over the map view, and a view reached in the middle of
+a move (3D tilt, zooming, the model menu) gives a slightly different lattice
+on each machine, depending on its speed. The recording holds the lattices
+GitHub's machines reached while recording; another run can reach a
+neighbouring one. The app then reads that hour from the map files instead,
+as it does when the service refuses, and the tests pass. Also refused, and
+not checked by the tests that ask: the observed rain at the last pin used
+(`shell`, no location permission), the Mountain Information Network reports
+and BC fire points in the server-budget session (asked once each, counted,
+not shown). Nothing is read live by accident: an answer not in the set is
+refused at once.
+
+**The one test on live data:** `radar` brings its own radar pictures
+(ECCC, saved Nov 17, moved to the present) and refuses the point service;
+the frames follow the real clock, which recorded weather would freeze. It
+reads only the models' run lists live, from the map-file bucket.

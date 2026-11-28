@@ -199,9 +199,8 @@ What broke when sections met. Check these before a handoff.
   page's clock, never a date typed into a test.
 - **Pictures redrawn by tests** (`docs/reports/…`) are committed only when
   you meant to change them.
-- **Live-weather tests are slow and can be flaky** on GitHub (the summary
-  window still runs on live weather). A failure there is worth one re-run
-  before you look for a bug.
+- **Every test but radar runs on recorded weather** (the summary window
+  since Nov 28), so a failure has a reason; find it before re-running.
 
 ## Showing your work
 
