@@ -5,10 +5,9 @@ import { expect, test, type Page, reportDir } from './fixtures';
 
 // Mt Seymour area, where the v8 screens place "You · 1,180 m".
 test.use({ geolocation: { latitude: 49.3895, longitude: -122.948 }, permissions: ['geolocation'] });
-// Live data for now: the starter recording (Nov 19) was made while the point
-// API's daily limit was spent, so it lacks the longer models the window reads.
-// Back to recorded weather once a fuller set is recorded (Data section).
-test.use({ weather: 'live' });
+// On recorded weather (Nov 28): the set holds the forecast where these tests
+// press (200, 300) and tap (120, 300), so they no longer fail when the point
+// service refuses. Until Nov 28 they read live weather.
 const HOME = '/?insets=47,34';
 const SHOTS = reportDir('summary');
 
@@ -73,6 +72,9 @@ test('dragging the shared time line moves the app’s one cursor', async ({ page
   await page.mouse.down();
   await page.mouse.move(c.x + c.width * 0.3, c.y + 30, { steps: 10 });
   await page.mouse.up();
+  // The window redraws on the next frame: read its time once the drag is drawn,
+  // not on the way (seen Nov 28: "Sat 10 PM" read on the way to "Sun 12 AM").
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   const shown = win(page).locator('.summary-time');
   await expect(shown).not.toHaveText(before!);
   await expect(win(page).locator('.summary-time-note')).toHaveText(/^in \d+ h$/);
