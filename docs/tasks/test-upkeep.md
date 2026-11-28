@@ -29,7 +29,7 @@ The task: make the app polite to the weather and safety servers without making i
 
 ## 2. Recorded weather that lasts, and a way to record it (Data; Opus, high effort)
 
-- [ ] Done
+- [x] Done (Nov 27: replay by the bytes a range holds, the tests fill the recording, the "Record weather" workflow; `docs/testing.md`)
 
 ```
 You are working on Tempest. I'm Kaden; I design and test, I don't read code. Talk to me in plain language.

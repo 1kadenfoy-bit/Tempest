@@ -246,10 +246,12 @@ test('imperial units show the same weather, converted', async ({ page, context }
   await page.goto(HOME);
   await pick(page, 'Temperature');
   await settled(page);
+  await steady(page); // parts of a forecast still land after "ready" on a slow machine (seen Nov 28: 1 km/h, then 5)
   const c = (await page.locator('.readout-text strong').textContent())!;
   const high = (await page.locator('#summary-before').textContent())!;
   await pick(page, 'Wind');
   await settled(page);
+  await steady(page);
   const kmh = (await page.locator('.readout-text strong').textContent())!;
   const gusts = (await page.locator('#summary-before').textContent())!;
 
@@ -259,10 +261,12 @@ test('imperial units show the same weather, converted', async ({ page, context }
   });
   await page.reload();
   await settled(page);
+  await steady(page);
   const mph = (await page.locator('.readout-text strong').textContent())!;
   const gustsMph = (await page.locator('#summary-before').textContent())!;
   await pick(page, 'Temperature');
   await settled(page);
+  await steady(page);
   const f = (await page.locator('.readout-text strong').textContent())!;
   const highF = (await page.locator('#summary-before').textContent())!;
   console.log(`${c} = ${f}; ${high} = ${highF}; ${kmh} = ${mph}; ${gusts} = ${gustsMph}`);

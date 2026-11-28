@@ -4,10 +4,13 @@ name: CI
 # an open pull request used to start two identical runs at once, and together
 # they used up Open-Meteo's free per-minute and hourly limits (tests then
 # timed out waiting for the forecast).
+# Also started by hand or by the Record weather workflow (workflow_dispatch):
+# GitHub does not start the tests on a pull request a workflow opened.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}

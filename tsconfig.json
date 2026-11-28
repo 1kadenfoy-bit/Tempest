@@ -18,5 +18,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["tools/vite-plugin-app-manifest.ts", "app", "core", "adapters", "layers", "render", "e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["tools/vite-plugin-app-manifest.ts", "tools/record", "app", "core", "adapters", "layers", "render", "e2e", "vite.config.ts", "playwright.config.ts"]
 }

@@ -11,7 +11,9 @@
 //
 // How: the clock is frozen at the moment the set was recorded, so the app asks
 // for exactly what it asked for then, and a small service worker
-// (public/recorded-sw.js) answers those requests from the set's files. What
+// (public/recorded-sw.js) answers those requests from the set's files, with
+// the same lookup as the browser tests (app/data/recorded-replay.ts: a piece
+// of a file is answered from any recorded pieces that hold it). What
 // the set does not hold goes to the network as usual, except the Open-Meteo
 // point API, which answers "not recorded" so the app reads the recorded run's
 // map files instead (and the free limit is never touched).
@@ -73,7 +75,8 @@ async function useWorker(set: string, base: string): Promise<void> {
   const sw = navigator.serviceWorker;
   if (sw.controller?.scriptURL === url.href) return;
   const changed = new Promise<void>((resolve) => sw.addEventListener('controllerchange', () => resolve(), { once: true }));
-  await sw.register(url.href, { scope: new URL('./', base).pathname });
+  // A module worker: it imports the lookup (app/data/recorded-replay.ts), which the dev server serves.
+  await sw.register(url.href, { scope: new URL('./', base).pathname, type: 'module', updateViaCache: 'none' });
   // The worker claims this page as soon as it is active.
   await Promise.race([changed, new Promise((r) => setTimeout(r, 5000))]);
   if (sw.controller?.scriptURL !== url.href) {

@@ -2,7 +2,10 @@
 // weather and safety servers from a recorded set in recorded/<set>/, so the
 // dev server shows the same weather every time without asking the servers.
 // Only registered by the dev server with ?weather=recorded; the installed app
-// never uses it.
+// never uses it. A module worker: it finds answers with the same code as the
+// browser tests (app/data/recorded-replay.ts, served by the dev server).
+import { makeReplay } from './app/data/recorded-replay.ts';
+
 const set = new URL(self.location.href).searchParams.get('set') || 'default';
 const root = new URL('./', self.location.href).href;
 const dir = `${root}recorded/${set}/`;
@@ -13,15 +16,12 @@ const dir = `${root}recorded/${set}/`;
 // run's map files instead.
 const NEVER_LIVE = new Set(['api.open-meteo.com', 'air-quality-api.open-meteo.com']);
 
-let index = null;
-function loadIndex() {
-  index ??= fetch(`${dir}index.json`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : { entries: {} }));
-  return index;
-}
-
-/** The same key tools/record-weather.mjs and e2e/recorded.ts use. */
-function keyOf(method, url, range) {
-  return `${method} ${url}${range ? ` ${range}` : ''}`;
+let replay = null;
+function loadReplay() {
+  replay ??= fetch(`${dir}index.json`, { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : { entries: {} }))
+    .then((index) => makeReplay(index.entries));
+  return replay;
 }
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -35,17 +35,21 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(answer(req, url));
 });
 
+/** Bytes [offset, offset + length) of the set's bodies.bin, where every answer's bytes sit. */
+async function slice({ offset, length }) {
+  const res = await fetch(`${dir}bodies.bin`, { headers: { range: `bytes=${offset}-${offset + length - 1}` } });
+  const body = await res.arrayBuffer();
+  return res.status === 200 ? body.slice(offset, offset + length) : body; // a server without range reads
+}
+
 async function answer(req, url) {
-  const { entries } = await loadIndex();
-  const hit = entries[keyOf(req.method, req.url, req.headers.get('range'))];
+  const hit = (await loadReplay()).find(req.method, req.url, req.headers.get('range'));
   if (hit) {
     const headers = { ...hit.headers, 'access-control-allow-origin': '*', 'x-tempest-recorded': set };
-    if (req.method === 'HEAD' || hit.length === undefined) return new Response(null, { status: hit.status, headers });
-    // Every answer's bytes sit in one file, at their offset.
-    const res = await fetch(`${dir}bodies.bin`, { headers: { range: `bytes=${hit.offset}-${hit.offset + hit.length - 1}` } });
-    let body = await res.arrayBuffer();
-    if (res.status === 200) body = body.slice(hit.offset, hit.offset + hit.length); // a server without range reads
-    return new Response(body, { status: hit.status, headers: { ...headers, 'content-length': String(body.byteLength) } });
+    if (req.method === 'HEAD' || !hit.parts.length) return new Response(null, { status: hit.status, headers });
+    const parts = await Promise.all(hit.parts.map(slice));
+    const body = new Blob(parts);
+    return new Response(body, { status: hit.status, headers: { ...headers, 'content-length': String(body.size) } });
   }
   if (NEVER_LIVE.has(url.hostname)) {
     return new Response('Not in the recorded weather', { status: 503, headers: { 'content-type': 'text/plain', 'access-control-allow-origin': '*' } });

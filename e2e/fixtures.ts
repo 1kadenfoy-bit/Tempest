@@ -4,18 +4,29 @@
 //
 // A test file that needs live data says test.use({ weather: 'live' }).
 // WEATHER=live (or WEATHER=<set>) changes it for a whole run.
-import { test as base } from '@playwright/test';
-import { useRecordedWeather, type Missing } from './recorded';
+//
+// While a set is recorded (RECORD=<set>, tools/record-weather.mjs) every test
+// runs on that set, live-weather ones too, and what the set lacks is asked
+// live and kept (e2e/recorded.ts). Checks do not stop a test then (they are
+// "soft"): a check that fails on the new day must not stop the test before
+// it has asked for everything it reads.
+import { expect as baseExpect, test as base } from '@playwright/test';
+import { RECORDING, useRecordedWeather, type Missing } from './recorded';
 
 export * from '@playwright/test';
 
+export const expect = RECORDING ? baseExpect.configure({ soft: true }) : baseExpect;
+
 export const test = base.extend<{ weather: string }>({
-  weather: [process.env.WEATHER ?? 'default', { option: true }],
+  weather: [RECORDING ?? process.env.WEATHER ?? 'default', { option: true }],
   context: async ({ context, weather }, use, testInfo) => {
     const missing: Missing = [];
-    if (weather !== 'live') await useRecordedWeather(context, weather, missing);
+    const set = RECORDING ?? weather;
+    if (set !== 'live') await useRecordedWeather(context, set, missing);
     await use(context);
-    if (missing.length) {
+    if (missing.length && RECORDING) {
+      console.log(`[${testInfo.title}] asked ${new Set(missing).size} answer(s) live for the set "${RECORDING}"`);
+    } else if (missing.length) {
       // Not a failure by itself (a test may expect a gap), but the likely cause of one.
       const unique = [...new Set(missing)];
       const note = `${unique.length} answer(s) not in the recorded weather "${weather}" (a new set must cover them: docs/tasks/test-upkeep.md):\n  ${unique.slice(0, 8).join('\n  ')}${unique.length > 8 ? `\n  … and ${unique.length - 8} more` : ''}`;
@@ -37,4 +48,4 @@ export const reportDir = (name: string) => `${process.env.REPORTS === '1' ? 'doc
  * refuse), cut on recorded weather, which answers at once: there a missing
  * answer fails in a minute or two instead of after ten (Kaden, Nov 27).
  */
-export const upTo = (liveMs: number, recordedMs = 90_000) => (process.env.WEATHER === 'live' ? liveMs : Math.min(liveMs, recordedMs));
+export const upTo = (liveMs: number, recordedMs = 90_000) => (process.env.WEATHER === 'live' || RECORDING ? liveMs : Math.min(liveMs, recordedMs));
