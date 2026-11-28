@@ -23,37 +23,48 @@ type MapHandle = {
 };
 const jump = (page: Page, o: object) => page.evaluate((v) => (window as unknown as { tempestMap: MapHandle }).tempestMap.jumpTo(v), o);
 
-/** Everything the app shows for the pin at the cursor, as text, and a fingerprint of the chart's pixels. */
+/**
+ * Everything the app shows for the pin at the cursor, as text, and a fingerprint of the chart's pixels.
+ * Read in one go: on the Wind layer the streaks redraw the map every frame, and GitHub's
+ * machines draw in software, so each separate read waited a second or more for the page
+ * (one reading took about 50 s there, and the test ran out of time; Nov 28).
+ */
 async function readings(page: Page) {
-  // The pin's place name comes from the nearest map label, which depends on
-  // the labels drawn at that zoom: the weather and the height are compared.
-  const readout = await page.locator('.pin-readout .readout-text').evaluate((el) => {
-    const c = el.cloneNode(true) as HTMLElement;
-    c.querySelector('.pin-name')?.remove();
-    return c.textContent?.replace(/^\s*·\s*/, '').trim();
+  return page.evaluate(() => {
+    const text = (sel: string) => document.querySelector(sel)?.textContent?.trim();
+    // The pin's place name comes from the nearest map label, which depends on
+    // the labels drawn at that zoom: the weather and the height are compared.
+    const el = document.querySelector('.pin-readout .readout-text');
+    let readout: string | undefined;
+    if (el) {
+      const c = el.cloneNode(true) as HTMLElement;
+      c.querySelector('.pin-name')?.remove();
+      readout = c.textContent?.replace(/^\s*·\s*/, '').trim();
+    }
+    const canvas = document.querySelector('#chart-canvas') as HTMLCanvasElement | null;
+    let chart = '';
+    if (canvas) {
+      const d = canvas.toDataURL();
+      let h = 0;
+      for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0;
+      chart = `${canvas.width}x${canvas.height}:${h}`;
+    }
+    return {
+      layer: text('#layer-name'),
+      readout,
+      place: text('#place-text'),
+      time: text('#cursor-time'),
+      note: text('#cursor-note'),
+      age: text('#run-age')?.split(' · ')[0],
+      before: text('#summary-before'),
+      beforeLabel: text('#summary-before-label'),
+      after: text('#summary-after'),
+      afterLabel: text('#summary-after-label'),
+      week: text('#week-days'),
+      legend: text('#legend-row'),
+      chart,
+    };
   });
-  const text = (sel: string) => page.locator(sel).first().textContent().then((t) => t?.trim());
-  const chart = await page.locator('#chart-canvas').evaluate((c) => {
-    const d = (c as HTMLCanvasElement).toDataURL();
-    let h = 0;
-    for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) | 0;
-    return `${(c as HTMLCanvasElement).width}x${(c as HTMLCanvasElement).height}:${h}`;
-  });
-  return {
-    layer: await text('#layer-name'),
-    readout,
-    place: await text('#place-text'),
-    time: await text('#cursor-time'),
-    note: await text('#cursor-note'),
-    age: (await text('#run-age'))?.split(' · ')[0],
-    before: await text('#summary-before'),
-    beforeLabel: await text('#summary-before-label'),
-    after: await text('#summary-after'),
-    afterLabel: await text('#summary-after-label'),
-    week: await text('#week-days'),
-    legend: await text('#legend-row'),
-    chart,
-  };
 }
 
 /**
@@ -104,7 +115,11 @@ async function dragChart(page: Page, share: number) {
 }
 
 test('zooming, panning and tilting the map never change the numbers', async ({ page }) => {
-  test.setTimeout(240_000);
+  // Three layers, each at four views. On Wind the streaks redraw the map every
+  // frame, which GitHub's machines draw in software: about 3.6 minutes on the
+  // build machine with the Nov 28 set (the Nov 20 set lacked the wind, so it
+  // did not animate). The time allowed, not any check, went from 4 to 6 minutes.
+  test.setTimeout(360_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(HOME);
