@@ -135,7 +135,7 @@ export async function updateTemperature(r: RunMetadata, t: Date, mine: number, c
   tempLayer.feels = feels;
   tempLayer.setProfiles(packLattice(grid));
   setLine(grid);
-  fillCame();
+  fillCame(r);
   document.body.dataset.fill = 'ready';
   // The next hour ahead of time (instant when the point API answered).
   const i = S.cursor.allSteps.findIndex((s) => s.getTime() === t.getTime());
@@ -165,7 +165,25 @@ export function unavailable(what: string) {
  * until it was moved.
  */
 let fillRetry = { timer: 0, tries: 0, said: '' };
-function fillFailed(what: string): void {
+/** The run whose weather the map shows. */
+let drawnRun = '';
+const runId = (r: RunMetadata) => `${r.model}@${r.referenceTime.toISOString()}`;
+/**
+ * The fill for run `r` did not come. A picture from another run must not stay
+ * on the map under this run's age (a new run whose map pieces failed, Nov 28):
+ * it goes, and the chart says the map did not load.
+ */
+function dropOtherRun(r: RunMetadata): void {
+  if (!drawnRun || drawnRun === runId(r)) return;
+  drawnRun = '';
+  precipLayer.setFields([]);
+  tempLayer.setProfiles(null);
+  windLayer.setProfiles(null);
+  setLine(null);
+  delete document.body.dataset.fillRun;
+}
+function fillFailed(what: string, r?: RunMetadata): void {
+  if (r) dropOtherRun(r);
   if (S.usingSaved) return;
   clearTimeout(fillRetry.timer);
   const wait = retryDelay(fillRetry.tries++);
@@ -176,7 +194,8 @@ function fillFailed(what: string): void {
   if (wait !== null && navigator.onLine) fillRetry.timer = window.setTimeout(() => void updateFills(), wait);
 }
 /** A fill came: the tries start afresh, and the chart's words about it go. */
-function fillCame(): void {
+function fillCame(r: RunMetadata): void {
+  drawnRun = runId(r);
   clearTimeout(fillRetry.timer);
   if (fillRetry.said && S.scrubber.status === fillRetry.said) S.scrubber.setStatus('');
   fillRetry = { timer: 0, tries: 0, said: '' };
@@ -217,6 +236,7 @@ export async function updateWind(r: RunMetadata, t: Date, mine: number, cachedOn
   windLayer.setElevation(m, windGround.data, gkey);
   windLayer.gusts = app.settingsFor(wind).map === 'gusts';
   windLayer.setProfiles(packWind(grid, profilesAt));
+  fillCame(r);
   document.body.dataset.fill = 'ready';
   // The 3D streaks and In view need the wind over the view: not while dragging (the release does it).
   if (!cachedOnly) {
@@ -366,14 +386,14 @@ export async function updateFills(moving = false) {
     precipLayer.setFields([]);
     tempLayer.visible = false;
     setLine(null);
-    await updateWind(at, when, ++fillSeq, moving).catch((err) => { console.error(err); fillFailed('Wind'); });
+    await updateWind(at, when, ++fillSeq, moving).catch((err) => { console.error(err); fillFailed('Wind', at); });
     return;
   }
   windLayer.setProfiles(null);
   if (S.active.id === 'temperature') {
     precipLayer.setFields([]);
     tempLayer.visible = true;
-    await updateTemperature(at, when, ++fillSeq, moving).catch((err) => { console.error(err); fillFailed('Temperature'); });
+    await updateTemperature(at, when, ++fillSeq, moving).catch((err) => { console.error(err); fillFailed('Temperature', at); });
     return;
   }
   tempLayer.visible = false;
@@ -387,8 +407,10 @@ export async function updateFills(moving = false) {
     const f = await getField(r, t, req);
     if (mine !== fillSeq) return;
     precipLayer.setFields([precip.precipDrawField(f.field, f.key)]);
-    fillCame();
+    fillCame(r);
     document.body.dataset.fill = 'ready';
+    // The run the map shows, for tests (e2e/new-run.spec.ts).
+    document.body.dataset.fillRun = `${segmentAt(S.timeline, t)?.model ?? r.model}@${r.referenceTime.toISOString()}`;
     // In view: the rates on screen, heaviest first.
     const field = f.field;
     const cells: ViewSample['cells'] = [];
@@ -413,7 +435,7 @@ export async function updateFills(moving = false) {
   } catch (err) {
     if (mine !== fillSeq) return;
     console.error(err);
-    fillFailed('Precipitation');
+    fillFailed('Precipitation', r);
   }
 }
 export const scheduleFills = (ms: number) => { clearTimeout(fillTimer); fillTimer = window.setTimeout(() => void updateFills(), ms); };

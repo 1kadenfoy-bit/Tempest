@@ -164,6 +164,10 @@ function renderReadout() {
   const r = S.active.readout(pinData(), i, settingsFor(S.active));
   // No longer asked for (the service refused, Data rule 1): no spinning wheel; the time line says why.
   S.pin.setReadout(seriesRetry.stopped && !S.series && r.value === '…' ? { value: '' } : r);
+  // The run the readout and chart read at the cursor, for tests (e2e/new-run.spec.ts: never two runs at once).
+  const t = S.cursor.time?.getTime();
+  const seg = t === undefined ? undefined : S.series?.segments?.find((x) => x.kind === 'forecast' && x.from.getTime() <= t && t <= x.to.getTime());
+  document.body.dataset.seriesRun = seg ? `${seg.model}@${seg.run.toISOString()}` : '';
   scheduleDetails();
 }
 

@@ -68,8 +68,9 @@ async function recovered(page: Page, expected: Awaited<ReturnType<typeof uninter
   } finally {
     await page.screenshot({ path: `test-results/screens/${shot}.png` });
   }
-  const now = await steady(page);
-  expect(now).toEqual(expected);
+  // Parts asked again come back one after another (the observed rain can be a
+  // few seconds behind, when its first new try was already on its way): the end state within a minute.
+  await expect.poll(() => steady(page), { timeout: 60_000, intervals: [1000] }).toEqual(expected);
   // The age, and a next update again (no "offline" once the signal is back).
   await expect(page.locator('#run-age')).toHaveText(/^\d+ h old · next /);
   await expect(page.locator('#chart-status')).toHaveText('');
